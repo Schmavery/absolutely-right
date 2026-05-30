@@ -1,14 +1,18 @@
 import type { EventDef, GameState, LogEntry, LogEntryType } from '../types';
 import { EVENTS } from './data';
 import { EVENT_COOLDOWN_MS, THRESHOLDS } from './constants';
+import { render } from '../lib/template';
 
 export type AddLogFn = (prev: GameState, text: string, type: LogEntryType) => GameState;
 
 /**
  * Stable per-event dedup key derived from the event's first non-empty line.
- * Slug-based so authors don't have to maintain explicit ids — editing an
- * event's first line resets dedup for that event, which matches the
- * authoring intent (a meaningfully changed line is effectively a new event).
+ * Keyed off the raw template source (pre-`render()`), so `{{rand}}` /
+ * variables inside an event don't fragment dedup across fires — a single
+ * `EventDef` always collapses to one key regardless of its rendered output.
+ * Editing an event's first line resets dedup for that event, which matches
+ * the authoring intent (a meaningfully changed line is effectively a new
+ * event).
  */
 function eventKey(e: EventDef): string {
   const firstLine = e.text.split('\n').find((l) => l.trim().length > 0) ?? e.text;
@@ -67,7 +71,7 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
 
   const logType: LogEntry['type'] =
     ev.type === 'news' ? 'news' : ev.type === 'bad' ? 'bad' : ev.type === 'event' ? 'event' : 'info';
-  next = addLog(next, ev.text, logType);
+  next = addLog(next, render(ev.text), logType);
   next = { ...next, lastEventTime: now };
   if (eligible.length > 0) next = { ...next, usedEventIds: [...next.usedEventIds, eventKey(ev)] };
   return next;

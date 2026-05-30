@@ -3,6 +3,8 @@
 All game-tunable content lives in this directory as YAML. The Vite build
 parses these files at compile time (see `vite/yaml-plugin.ts`) and emits
 plain JS modules — there is **no** YAML parser shipped to the browser.
+`vite/validate-data.ts` checks shapes, duplicate ids, action ids, and
+`requires:` references on every dev/build import of `data/*.yaml`.
 
 ## Files
 
@@ -81,13 +83,32 @@ than checking `state.upgrades.includes('some_id')`.
 
 ## Templating
 
-Strings in `actions.yaml` and `events.yaml` are rendered through Handlebars
-(see `src/lib/template.ts`). The full Handlebars surface is available; in
-particular:
+Every author-supplied log string in this folder is rendered through
+Handlebars (see `src/lib/template.ts`) — action message pools, event
+text, milestones (LOC + test), upgrade `purchaseMsg`, first-prompt and
+first-purchase flavor. Literal text passes through unchanged, so you
+only pay the cost of templating when you opt in.
+
+The full Handlebars surface is available; in particular:
 
 - `{{var}}` — variable substitution
 - `{{plural n "bug" "bugs"}}` — picks the singular form when `n === 1`
+- `{{rand 3 47}}` — random integer in `[min, max]` (inclusive); rerolls
+  on every render
 - `{{#if cond}}…{{else}}…{{/if}}` — conditional sections
+
+Variables passed per call site:
+
+| Where | Vars |
+|-------|------|
+| `actions.yaml` `run_tests.messages` | `n` (bugs fixed) |
+| `actions.yaml` `bug_bounty.runMsg` | `converted`, `ninesGain` |
+| `actions.yaml` `new_free_account.messages` | `n` (accounts) |
+| `actions.yaml` `buy_gen.firstPurchaseMsg` | `name`, `desc` |
+| `actions.yaml` `write_test.milestones[].text` | `n` (test count) |
+| `milestones.yaml` `text` | `loc` (threshold) |
+| `upgrades.yaml` `purchaseMsg` | `name`, `desc` |
+| everything else | `{}` (use `{{rand}}` / `{{#if}}` only) |
 
 HTML escaping is disabled because text is rendered into a styled log
 panel, never `innerHTML`.

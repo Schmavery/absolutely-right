@@ -80,7 +80,7 @@
   cost: 600000
   unlockAt: 250000
   bugMult: 0.8
-  purchaseMsg: ESLint is now active. I've already ignored 14 rules. The important ones.
+  purchaseMsg: ESLint is now active. I've already ignored {{rand 8 24}} rules. The important ones.
 - id: typescript
   name: TypeScript
   desc: −50% bug generation (after initial +200% bug introduction phase)
@@ -107,7 +107,7 @@
   requires:
     - code_review
   requiresLaunch: true
-  purchaseMsg: "AI code review enabled. Review time: instant. I've approved 12 PRs today. Bug count is trending up. The tests aren't really containing it anymore. Unrelated."
+  purchaseMsg: "AI code review enabled. Review time: instant. I've approved {{rand 8 22}} PRs today. Bug count is trending up. The tests aren't really containing it anymore. Unrelated."
   flags:
     - ai_review
 - id: cicd
@@ -117,7 +117,7 @@
   unlockAt: 6000000
   bugMult: 0.4
   testFixRate: 0.03
-  purchaseMsg: CI/CD pipeline live. I've blocked 3 deployments. Two were mine.
+  purchaseMsg: CI/CD pipeline live. I've blocked {{rand 3 7}} deployments. Two were mine.
 - id: multi_agent
   name: Parallel Agents
   desc: 2× agent LOC/s — two agents, neither aware of the other

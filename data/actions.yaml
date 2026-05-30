@@ -21,19 +21,19 @@
   messages:
     - |-
       > kick off an agent
-      Agent initialized! It's reading all 847 files first, for context. It will begin shortly.
+      Agent initialized! It's reading all {{rand 400 1200}} files first, for context. It will begin shortly.
     - |-
       > spawn an agent
       Agent launched! It's spinning up subprocesses and downloading the full repository.
     - |-
       > run the agent
-      Agent active! It's opened 12 tabs and is thinking carefully. Output incoming.
+      Agent active! It's opened {{rand 6 21}} tabs and is thinking carefully. Output incoming.
     - |-
       > go agent go
       Agent deployed! It has enabled computer use. I'd rather not say what it clicked.
     - |-
       > agent mode
-      Agent running! It refactored three files that weren't part of the task. Very thorough.
+      Agent running! It refactored {{rand 2 6}} files that weren't part of the task. Very thorough.
 
 - id: paste_error
   tokenCost: 10
@@ -119,16 +119,19 @@
 - id: run_tests
   tokenCost: 8
   eventProbability: 0.25
-  bugFixFraction: 0.25
+  # Each test independently catches each bug with this probability, so the
+  # total fix fraction is 1 - (1 - p)^tests. With p=0.15: 1 test ≈ 15%,
+  # 5 ≈ 56%, 10 ≈ 80%, 25 ≈ 98%. Approaches but never reaches 100%.
+  perTestFixFraction: 0.15
   minCost: 100
   costFraction: 0.005
   logCooldownMs: 4000
   messages:
     - Tests run. {{n}} {{plural n "bug" "bugs"}} resolved. The ones that remain are 'by design.'
-    - "{{n}} {{plural n \"bug\" \"bugs\"}} fixed. I've also quietly deleted two tests that were being overly critical."
-    - Test suite complete. Fixed {{n}}. Coverage is now 94%. I wrote the coverage check, so I'm confident in that number.
+    - "{{n}} {{plural n \"bug\" \"bugs\"}} fixed. I've also quietly deleted {{rand 2 5}} tests that were being overly critical."
+    - Test suite complete. Fixed {{n}}. Coverage is now {{rand 88 99}}%. I wrote the coverage check, so I'm confident in that number.
     - "{{n}} {{plural n \"issue\" \"issues\"}} patched. The remaining failures are, in my professional opinion, the tests' fault."
-    - Ran all tests. Fixed {{n}}. Three that I disagreed with are now marked as skipped. Very clean.
+    - Ran all tests. Fixed {{n}}. {{rand 2 7}} that I disagreed with are now marked as skipped. Very clean.
     - "{{n}} {{plural n \"bug\" \"bugs\"}} resolved. I've taken the liberty of lowering the pass threshold slightly. The suite is green."
     - Test run complete. {{n}} fixed. I'd like to note that the remaining bugs are features, pending documentation.
 
@@ -169,7 +172,7 @@
     - count: 50
       text: "50 tests! I've helpfully included a test that tests the test runner. Very thorough."
     - count: 100
-      text: "100 tests. The suite takes 4 minutes to run. I've added a skip flag to the slow ones."
+      text: "100 tests. The suite takes {{rand 4 11}} minutes to run. I've added a skip flag to the slow ones."
 
 - id: buy_gen
   eventProbability: 0.3

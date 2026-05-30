@@ -2,7 +2,7 @@ import type { GameState } from '../types';
 import { action } from '../game/data';
 import { deriveGame } from '../game/derive';
 import { calcTokenConfig } from '../game/rates';
-import { runTestsCost, writeTestCost } from '../game/actions';
+import { runTestsCost, runTestsFixFraction, writeTestCost } from '../game/actions';
 import { fmt } from '../lib/format';
 import { Button } from './Button';
 
@@ -123,19 +123,22 @@ export function ActionBar({
         );
       })()}
 
-      {ui.showRunTests && (
-        <Button
-          off={!canRunTests}
-          onClick={canRunTests ? onRunTests : undefined}
-          title={`costs ${fmt(tCost)} loc, fixes ~${Math.round(A.runTests.bugFixFraction! * 100)}% of bugs`}
-          progress={resourceProgress(
-            state.loc / tCost,
-            state.tokens / A.runTests.tokenCost!,
-          )}
-        >
-          run tests [−{fmt(tCost)} loc · {A.runTests.tokenCost}t]
-        </Button>
-      )}
+      {ui.showRunTests && (() => {
+        const fixPct = Math.round(runTestsFixFraction(state.tests ?? 0) * 100);
+        return (
+          <Button
+            off={!canRunTests}
+            onClick={canRunTests ? onRunTests : undefined}
+            title={`costs ${fmt(tCost)} loc, fixes ~${fixPct}% of bugs (${state.tests ?? 0} ${(state.tests ?? 0) === 1 ? 'test' : 'tests'})`}
+            progress={resourceProgress(
+              state.loc / tCost,
+              state.tokens / A.runTests.tokenCost!,
+            )}
+          >
+            run tests [−{fmt(tCost)} loc · {A.runTests.tokenCost}t]
+          </Button>
+        );
+      })()}
 
       {ui.showClearContext && (() => {
         const cdElapsed = now - (state.actionCooldowns['clear_context'] ?? 0);

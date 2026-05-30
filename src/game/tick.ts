@@ -15,6 +15,7 @@ import {
 } from './rates';
 import { LOC_PER_CLICK_POWER, HYPE } from './constants';
 import { appendLog } from './log';
+import { render } from '../lib/template';
 
 /**
  * Advance the game state by one tick. Pure: takes prev, returns next. The
@@ -80,7 +81,7 @@ export function tickReducer(prev: GameState): GameState {
   // Milestones — one-shot observer-voice messages keyed by totalLoc thresholds.
   for (const m of MILESTONES) {
     if (next.totalLoc >= m.loc && !prev.milestonesSeen.includes(m.loc)) {
-      next = appendLog(next, m.text, 'milestone');
+      next = appendLog(next, render(m.text, { loc: m.loc }), 'milestone');
       next = {
         ...next,
         milestonesSeen: [...next.milestonesSeen, m.loc],

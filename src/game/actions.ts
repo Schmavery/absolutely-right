@@ -63,7 +63,7 @@ export function promptAction(prev: GameState): GameState {
     started: true,
   };
   if (!prev.started && a.firstPromptMsg) {
-    next = appendLog(next, a.firstPromptMsg, 'info');
+    next = appendLog(next, render(a.firstPromptMsg), 'info');
   }
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
@@ -79,7 +79,7 @@ export function kickAgentAction(prev: GameState): GameState {
     ...spendTokens(prev, a.tokenCost!),
     agentBuffExpires: Date.now() + a.buffMs!,
   };
-  if (a.messages) next = appendLog(next, pick(a.messages), 'info');
+  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'info');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
@@ -100,7 +100,7 @@ export function pasteErrorAction(prev: GameState): GameState {
     : Math.random() < 0.5
       ? a.badMessages!
       : a.neutralMessages!;
-  const msg = pick(pool);
+  const msg = render(pick(pool));
 
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
@@ -125,7 +125,7 @@ export function clearContextAction(prev: GameState): GameState {
   const { maxTokens } = calcTokenConfig(prev.upgrades, prev.freeAccounts);
   let next: GameState = { ...prev, tokens: maxTokens };
   next = startCooldown(next, 'clear_context');
-  if (a.messages) next = appendLog(next, pick(a.messages), 'info');
+  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'info');
   return next;
 }
 
@@ -147,7 +147,7 @@ export function yoloMergeAction(prev: GameState): GameState {
     hype: prev.hype + (a.hypeReward ?? 0),
   };
   next = startCooldown(next, 'yolo_merge');
-  if (a.messages) next = appendLog(next, pick(a.messages), 'system');
+  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'system');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
@@ -156,10 +156,11 @@ export function yoloMergeAction(prev: GameState): GameState {
 
 export function runTestsAction(prev: GameState): GameState {
   const a = action('run_tests');
+  if ((prev.tests ?? 0) <= 0) return prev;
   if (!canAfford(prev, a)) return prev;
   const cost = runTestsCost(prev.totalLoc);
   if (prev.loc < cost) return prev;
-  const fixed = Math.max(1, Math.floor(prev.bugs * a.bugFixFraction!));
+  const fixed = Math.max(1, Math.floor(prev.bugs * runTestsFixFraction(prev.tests)));
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc - cost,
@@ -177,6 +178,17 @@ export function runTestsAction(prev: GameState): GameState {
 export function runTestsCost(totalLoc: number): number {
   const a = action('run_tests');
   return Math.max(a.minCost!, Math.floor(totalLoc * a.costFraction!));
+}
+
+/**
+ * Fraction of outstanding bugs caught by running the suite, scaled by test
+ * count. Each test independently catches each bug with probability `p`, so
+ * the suite catches `1 - (1 - p)^tests`. Returns 0 with no tests.
+ */
+export function runTestsFixFraction(tests: number): number {
+  if (tests <= 0) return 0;
+  const p = action('run_tests').perTestFixFraction!;
+  return 1 - Math.pow(1 - p, tests);
 }
 
 // ─── bug bounty ────────────────────────────────────────────────────────────
@@ -214,7 +226,7 @@ export function launchAction(prev: GameState): GameState {
   const a = action('launch');
   if (prev.launched) return prev;
   let next: GameState = { ...prev, launched: true, hype: prev.hype + (a.hypeReward ?? 0) };
-  if (a.messages) next = appendLog(next, pick(a.messages), 'system');
+  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'system');
   return next;
 }
 
@@ -252,7 +264,7 @@ export function writeTestAction(prev: GameState): GameState {
   };
   const milestone = a.milestones?.find((m) => m.count === next.tests);
   if (milestone) {
-    next = appendLog(next, milestone.text, 'info');
+    next = appendLog(next, render(milestone.text, { n: next.tests }), 'info');
   }
   return next;
 }
@@ -290,7 +302,7 @@ export function buyUpgradeAction(prev: GameState, upgId: string): GameState {
     next = { ...next, nines: Math.max(next.nines || 0, u.ninesFloor) };
   }
   const flavor = u.purchaseMsg ?? `${u.name} unlocked. ${u.desc}.`;
-  next = appendLog(next, flavor, 'info');
+  next = appendLog(next, render(flavor, { name: u.name, desc: u.desc }), 'info');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }

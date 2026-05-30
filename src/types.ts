@@ -168,7 +168,8 @@ export interface ActionDef {
   hypeReward?: number;
 
   // run_tests
-  bugFixFraction?: number;
+  /** Per-test independent fix probability. Total = `1 - (1 - p)^tests`. */
+  perTestFixFraction?: number;
   minCost?: number;
   costFraction?: number;
   /** Min ms between consecutive "ran tests" log lines. */

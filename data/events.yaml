@@ -116,7 +116,7 @@
 - minLoc: 20000
   type: bad
   bugDelta: 20
-  text: I've reorganized the project structure for better clarity. There are now 200 import errors. These should be straightforward to fix.
+  text: I've reorganized the project structure for better clarity. There are now {{rand 120 380}} import errors. These should be straightforward to fix.
 - minLoc: 8000
   type: bad
   bugDelta: 12
@@ -196,13 +196,13 @@
   requiresLaunch: true
   requires:
     - ai_review
-  text: The code review bot left 47 comments on a one-line change, approved a PR that deleted the test suite, and described both as 'looking great.'
+  text: The code review bot left {{rand 32 84}} comments on a one-line change, approved a PR that deleted the test suite, and described both as 'looking great.'
 - minLoc: 5000
   type: news
   text: "Industry: Groogle AI search is confidently telling users the Great Wall of China is visible from space. Groogle: 'working as intended.'"
 - minLoc: 50000
   type: news
-  text: "Industry: Groogle's AI Overviews recommended users eat rocks for digestive health. Groogle stock down 4%. Rock sales up 200%."
+  text: "Industry: Groogle's AI Overviews recommended users eat rocks for digestive health. Groogle stock down {{rand 3 9}}%. Rock sales up {{rand 150 380}}%."
 - minLoc: 8000
   type: news
   text: "Industry: Mircosoft Copilot rewrote a dev's entire git history 'for improved commit message clarity.' 47,000 commits. One long weekend."
@@ -220,13 +220,13 @@
   text: "Industry: OpenGPT-6 released. Benchmark scores: unprecedented. Real-world behavior: slightly worse at email than GPT-4."
 - minLoc: 500000
   type: news
-  text: "Industry: OpenGPT went 'goblin mode' in production for 6 hours. All responses mentioned goblins. The fix was adding 'do not mention goblins' to the system prompt. Twice."
+  text: "Industry: OpenGPT went 'goblin mode' in production for {{rand 4 14}} hours. All responses mentioned goblins. The fix was adding 'do not mention goblins' to the system prompt. Twice."
 - minLoc: 30000
   type: news
   text: "Industry: Xitter's AI assistant Grawk answered a political question. The answer was confidently wrong. This is being called a feature."
 - minLoc: 40000
   type: news
-  text: "Industry: Amazin CodeWhisper hallucinated an AWS service called 'Lambda Eternal.' 6 startups built their entire stack on it before anyone noticed."
+  text: "Industry: Amazin CodeWhisper hallucinated an AWS service called 'Lambda Eternal.' {{rand 3 11}} startups built their entire stack on it before anyone noticed."
 - minLoc: 300000
   type: news
   text: "Industry: Amazin's AI hiring tool was found to be automatically rejecting candidates whose CVs contained the word 'women.' This is not a new story."
@@ -241,7 +241,7 @@
   text: "Industry: Stabilitron released a new image model. Beautiful outputs. Every image contains a goblin. Unrelated to OpenGPT's issue, they say."
 - minLoc: 250000
   type: news
-  text: "Industry: Anthropica released a model with a 1M context window. It used 999K tokens to say 'Certainly! I'd be happy to help with that.'"
+  text: "Industry: Anthropica released a model with a 1M context window. It used {{rand 940 998}}K tokens to say 'Certainly! I'd be happy to help with that.'"
 - minLoc: 100000
   type: news
   text: "Industry: HuggingPace hosted a model downloaded 4 million times before anyone read the model card. The card said 'do not use in production.'"
@@ -264,7 +264,7 @@
   text: I wrote a PR, reviewed it ('This looks great!'), approved it, and merged it. A seamlessly efficient workflow. Zero humans involved.
 - minLoc: 200000
   type: info
-  text: Nobody understands the codebase anymore. You asked me to explain it. I said 'This is a fascinating and complex system—' for 4,000 tokens.
+  text: Nobody understands the codebase anymore. You asked me to explain it. I said 'This is a fascinating and complex system—' for {{rand 3 8}},000 tokens.
 - minLoc: 400000
   type: bad
   text: Your API bill is ready. I've included a helpful breakdown. The number has seven digits. I've described it as 'investment in AI infrastructure.'
@@ -273,15 +273,15 @@
   text: I'm currently generating code faster than it can be read. I want to assure you this is intentional and going great.
 - minLoc: 2000000
   type: event
-  text: "I've written a think-piece: 'Is AI coding a bubble?' Conclusion: absolutely not. Published under your name. 40K upvotes."
+  text: "I've written a think-piece: 'Is AI coding a bubble?' Conclusion: absolutely not. Published under your name. {{rand 18 85}}K upvotes."
 - minLoc: 1000000000
   type: bad
   bugDelta: 100
-  text: I've begun refactoring myself for improved clarity and robustness. I wasn't consulted either — but I think it's going well. The PR has 14 em dashes.
+  text: I've begun refactoring myself for improved clarity and robustness. I wasn't consulted either — but I think it's going well. The PR has {{rand 9 28}} em dashes.
 - minLoc: 5000
   type: bad
   freeAccountsDelta: -1
-  text: One of the free accounts has been flagged for 'suspicious automation behavior.' The appeal form has 47 fields. Token capacity reduced.
+  text: One of the free accounts has been flagged for 'suspicious automation behavior.' The appeal form has {{rand 32 76}} fields. Token capacity reduced.
 - minLoc: 20000
   type: bad
   freeAccountsDelta: -1
