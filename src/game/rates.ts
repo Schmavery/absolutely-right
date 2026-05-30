@@ -7,17 +7,9 @@
  * last-wins, max-wins). See `src/types.ts` for the full effect vocabulary.
  */
 
-import { GENS, UPGRADES } from './data';
+import { action, GENS, UPGRADES } from './data';
 import type { GenDef, UpgDef } from '../types';
-import {
-  AGENT_BUFF,
-  FREE_ACCOUNT,
-  MONEY,
-  PHASE_THRESHOLDS,
-  TOKENS,
-  UPTIME,
-  WRITE_TEST,
-} from './constants';
+import { MONEY, PHASE_THRESHOLDS, TOKENS, UPTIME } from './constants';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -78,7 +70,8 @@ export function calcRates(
   }
 
   // Each test reduces bug generation rate.
-  if (tests > 0) bugMult *= 1 / (1 + tests * WRITE_TEST.bugDamping);
+  const writeTestDamping = action('write_test').bugDamping ?? 0;
+  if (tests > 0) bugMult *= 1 / (1 + tests * writeTestDamping);
 
   for (const g of GENS) {
     const count = genCounts[g.id] ?? 0;
@@ -105,8 +98,9 @@ export function calcTokenConfig(
   let tokenRegen = TOKENS.baseRegen;
   // Each additional free account adds a little capacity.
   const extraAccounts = Math.max(0, freeAccounts - 1);
-  maxTokens += extraAccounts * FREE_ACCOUNT.maxTokensPerExtra;
-  tokenRegen += extraAccounts * FREE_ACCOUNT.tokenRegenPerExtra;
+  const newAccount = action('new_free_account');
+  maxTokens += extraAccounts * (newAccount.maxTokensPerExtra ?? 0);
+  tokenRegen += extraAccounts * (newAccount.tokenRegenPerExtra ?? 0);
 
   for (const u of ownedDefs(upgrades)) {
     if (u.maxTokensBonus) maxTokens += u.maxTokensBonus;

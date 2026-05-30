@@ -1,0 +1,179 @@
+# Player actions. Each record colocates the cost, cooldown, event probability,
+# formula numbers, and message pools for one action. Game logic in
+# `src/game/actions.ts` reads from `ACTION[id]`; UI gates use ids consistent
+# with `actionCooldowns` keys.
+#
+# Cross-cutting numbers (THRESHOLDS, HYPE display thresholds, MONEY, UPTIME,
+# STREAMING, save/theme keys, agent buff bug-rate multiplier) remain in
+# `src/game/constants.ts`.
+
+- id: prompt
+  tokenCost: 15
+  eventProbability: 0.12
+  firstPromptMsg: |-
+    > build me a startup
+    Certainly! I'd be happy to help with that. Here's a robust, scalable solution—
+
+- id: kick_agent
+  tokenCost: 60
+  buffMs: 30000
+  eventProbability: 0.2
+  messages:
+    - |-
+      > kick off an agent
+      Agent initialized! It's reading all 847 files first, for context. It will begin shortly.
+    - |-
+      > spawn an agent
+      Agent launched! It's spinning up subprocesses and downloading the full repository.
+    - |-
+      > run the agent
+      Agent active! It's opened 12 tabs and is thinking carefully. Output incoming.
+    - |-
+      > go agent go
+      Agent deployed! It has enabled computer use. I'd rather not say what it clicked.
+    - |-
+      > agent mode
+      Agent running! It refactored three files that weren't part of the task. Very thorough.
+
+- id: paste_error
+  tokenCost: 10
+  cooldownMs: 4000
+  fixChance: 0.5
+  baseLocGain: 20
+  extraLocRange: 30
+  goodMessages:
+    - |-
+      > why is this failing
+      I see the issue — it was an off-by-one error. Here's the corrected version.
+    - |-
+      > here's the stack trace
+      Got it. The root cause was a missing null check. Fixed — should be cleaner now.
+    - |-
+      > it keeps crashing
+      I've identified the issue. It was the code I wrote last session. Corrected.
+    - |-
+      > same error again
+      I see the problem — I was importing the wrong module. Simple fix, done.
+    - |-
+      > this broke after your last change
+      Ah. Yes. I introduced that. My apologies — here's the corrected version.
+  badMessages:
+    - |-
+      > it's still broken
+      I see the issue! Let me fix that.
+      > same error
+      Interesting. I see a different issue now. Let me fix that instead.
+    - |-
+      > here's the error
+      I see the issue — it's actually caused by the fix I just applied. I'll address that now.
+    - |-
+      > this doesn't work
+      Absolutely! I've refactored the entire function for clarity. The error is different now, which is progress.
+    - |-
+      > still getting this
+      I've resolved the underlying issue and also refactored the surrounding code for improved readability.
+  neutralMessages:
+    - |-
+      > here's the error
+      This looks correct to me. The behavior you're experiencing may be environmental.
+    - |-
+      > it's broken
+      Have you tried clearing the cache? I've also made a small adjustment — probably unrelated.
+    - |-
+      > error message below
+      I don't see an issue with the code itself. The error may be occurring elsewhere.
+
+- id: clear_context
+  cooldownMs: 30000
+  messages:
+    - Context cleared! I have a perfect picture of everything. Ready when you are.
+    - Fresh context loaded. I recall all the important things from before. The auth module. Definitely.
+    - Context reset. I remember everything critical. Nothing has been lost. This is fine.
+    - Cleared! Starting fresh with full awareness of prior decisions. Ready.
+
+- id: yolo_merge
+  tokenCost: 25
+  cooldownMs: 20000
+  eventProbability: 0.5
+  baseLoc: 300
+  locPerBug: 20
+  extraLocRange: 500
+  bugMultiplier: 0.2
+  baseBugs: 5
+  extraBugRange: 10
+  hypeReward: 8
+  messages:
+    - |-
+      > merge it
+      Merged to main and deployed! Everything looks great. The logs are very interesting.
+    - |-
+      > ship it
+      Deployed to production! I reviewed it myself — LGTM. Very thorough review.
+    - |-
+      > just push it
+      Pushed, merged, deployed. CI was skipped for efficiency. I'm confident it's fine.
+    - |-
+      > yolo
+      Approved, merged, deployed. I left a comment: 'LGTM 🚀'. Very professional process.
+
+- id: run_tests
+  tokenCost: 8
+  eventProbability: 0.25
+  bugFixFraction: 0.25
+  minCost: 100
+  costFraction: 0.005
+  logCooldownMs: 4000
+  messages:
+    - Tests run. {{n}} {{plural n "bug" "bugs"}} resolved. The ones that remain are 'by design.'
+    - "{{n}} {{plural n \"bug\" \"bugs\"}} fixed. I've also quietly deleted two tests that were being overly critical."
+    - Test suite complete. Fixed {{n}}. Coverage is now 94%. I wrote the coverage check, so I'm confident in that number.
+    - "{{n}} {{plural n \"issue\" \"issues\"}} patched. The remaining failures are, in my professional opinion, the tests' fault."
+    - Ran all tests. Fixed {{n}}. Three that I disagreed with are now marked as skipped. Very clean.
+    - "{{n}} {{plural n \"bug\" \"bugs\"}} resolved. I've taken the liberty of lowering the pass threshold slightly. The suite is green."
+    - Test run complete. {{n}} fixed. I'd like to note that the remaining bugs are features, pending documentation.
+
+- id: bug_bounty
+  tokenCost: 20
+  cooldownMs: 30000
+  maxConvertedPerRun: 500
+  ninesPerBug: 0.0002
+  runMsg: "Bug bounty run. Converted {{converted}} reports into reliability data. Nines: +{{ninesGain}}."
+
+- id: launch
+  hypeReward: 20
+  messages:
+    - I've deployed to production! This is exciting. What could go wrong?
+
+- id: new_free_account
+  cooldownMs: 20000
+  maxTokensPerExtra: 50
+  tokenRegenPerExtra: 1.5
+  messages:
+    - New account created. That's {{n}} emails. I've used 'definitely a real person' in all the bios.
+    - Account {{n}} is live. A different name. Similar vibes. More tokens.
+    - Another account. That's {{n}} now. I've varied the profile picture slightly.
+    - Account created. I've given this one a slightly different username. Nobody will notice.
+    - New account live. {{n}} total. I'd like to note that I find this approach 'resourceful.'
+    - "{{n}} accounts. Each one a fresh start. Each one, inexplicably, named some variation of 'dev_user'."
+
+- id: write_test
+  tokenCost: 5
+  baseCost: 200
+  costMult: 1.04
+  bugDamping: 0.01
+  milestones:
+    - count: 1
+      text: "Test suite initialized. I've written the first test. It asserts that the code exists. Coverage: technically 100%."
+    - count: 10
+      text: "10 tests! The test for the payment flow is aspirational. The rest are solid."
+    - count: 50
+      text: "50 tests! I've helpfully included a test that tests the test runner. Very thorough."
+    - count: 100
+      text: "100 tests. The suite takes 4 minutes to run. I've added a skip flag to the slow ones."
+
+- id: buy_gen
+  eventProbability: 0.3
+  firstPurchaseMsg: 'Certainly! I''ve integrated {{name}} into our workflow. "{{desc}}"'
+
+- id: buy_upgrade
+  eventProbability: 0.4

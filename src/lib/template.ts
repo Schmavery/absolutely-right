@@ -22,6 +22,12 @@ handlebars.registerHelper('plural', (n: unknown, singular: string, plural: strin
   return n === 1 ? singular : plural;
 });
 
+handlebars.registerHelper('rand', (min: unknown, max: unknown): number => {
+  const lo = Math.ceil(Number(min));
+  const hi = Math.floor(Number(max));
+  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+});
+
 const cache = new Map<string, HandlebarsTemplateDelegate>();
 
 function compile(source: string): HandlebarsTemplateDelegate {

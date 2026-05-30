@@ -1,6 +1,7 @@
 import type { GameState } from '../types';
-import { AGENT_BUFF, THRESHOLDS, TICK_MS } from './constants';
+import { AGENT_BUFF, TICK_MS } from './constants';
 import { MILESTONES, UPGRADES } from './data';
+import { computeFlags, effectiveThresholds, hasFlag } from './flags';
 import {
   calcAgentLocMult,
   calcAutoBugDrainRate,
@@ -22,6 +23,8 @@ import { appendLog } from './log';
  */
 export function tickReducer(prev: GameState): GameState {
   const dt = TICK_MS / 1000;
+  const flags = computeFlags(prev.upgrades);
+  const thresholds = effectiveThresholds(prev.upgrades);
   const { locRate, bugRate, fixRate } = calcRates(prev.genCounts, prev.upgrades, prev.tests);
   const { maxTokens, tokenRegen } = calcTokenConfig(prev.upgrades, prev.freeAccounts);
   const bugPenalty = calcBugPenalty(prev.bugs);
@@ -34,14 +37,14 @@ export function tickReducer(prev: GameState): GameState {
     : 0;
   const effectiveLoc = (locRate + agentBaseRate) * bugPenalty * dt;
   const effectiveBugRate =
-    prev.totalLoc >= THRESHOLDS.bugSpawnLoc
+    prev.totalLoc >= thresholds.bugSpawnLoc
       ? bugRate * (agentBuffActive ? AGENT_BUFF.bugRateMult : 1)
       : 0;
   const uptime = calcUptime(prev.bugs);
   const moneyDelta = calcMoneyRate(prev.upgrades, locRate, uptime.fraction, prev.launched) * dt;
 
-  const statusRevamped = prev.upgrades.includes('revamp_status_page');
-  const ninesRate = statusRevamped ? calcNinesRate(prev.upgrades, prev.bugs) : 0;
+  const ninesTracking = hasFlag(flags, 'nines_tracking');
+  const ninesRate = ninesTracking ? calcNinesRate(prev.upgrades, prev.bugs) : 0;
   const autoBugDrain = calcAutoBugDrainRate(prev.upgrades) * prev.bugs * dt;
 
   let next: GameState = {
@@ -52,7 +55,7 @@ export function tickReducer(prev: GameState): GameState {
     tokens: Math.min(maxTokens, prev.tokens + tokenRegen * dt),
     minTokensSeen: Math.min(prev.minTokensSeen ?? 9999, prev.tokens),
     money: prev.money + moneyDelta,
-    nines: statusRevamped
+    nines: ninesTracking
       ? (prev.nines || AGENT_BUFF.ninesFloorFallback) + ninesRate * dt
       : prev.nines,
   };
@@ -62,11 +65,14 @@ export function tickReducer(prev: GameState): GameState {
   for (const u of UPGRADES) {
     if (next.unlockedUpgrades.includes(u.id)) continue;
     if (next.upgrades.includes(u.id)) continue;
-    if (next.totalLoc < u.unlockAt * THRESHOLDS.upgradeUnlockFraction) continue;
-    if (next.loc < u.cost * THRESHOLDS.upgradeAffordFraction) continue;
+    if (next.totalLoc < u.unlockAt * thresholds.upgradeUnlockFraction) continue;
+    if (next.loc < u.cost * thresholds.upgradeAffordFraction) continue;
     if (u.requiresLaunch && !next.launched) continue;
     if (u.requires && !u.requires.every((r) => next.upgrades.includes(r))) continue;
-    if (u.id === 'revamp_status_page' && calcUptime(next.bugs).nines < THRESHOLDS.revampMinNines)
+    if (
+      u.unlockMinUptimeNines !== undefined &&
+      calcUptime(next.bugs).nines < u.unlockMinUptimeNines
+    )
       continue;
     next = { ...next, unlockedUpgrades: [...next.unlockedUpgrades, u.id] };
   }

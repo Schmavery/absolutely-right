@@ -1,11 +1,14 @@
 /**
- * Tunable balance and UX constants. Anything that shows up as a magic number
- * in the tick loop, action handlers, or the UI lives here so the game can be
- * retuned without spelunking through component code.
+ * Cross-cutting balance and UX constants. Anything that shows up as a magic
+ * number in the tick loop or UI lives here so the game can be retuned without
+ * spelunking through component code.
+ *
+ * Per-action knobs (cost, cooldown, formula numbers, message pools) live as
+ * fields on each entry in `data/actions.yaml` and are reached via
+ * `action(id)` in `src/game/data.ts`.
  *
  * Per-upgrade effects (token bonuses, drain rates, etc.) live as fields on
- * each upgrade definition in `data/upgrades.yaml`; only cross-cutting numbers
- * belong here.
+ * each upgrade definition in `data/upgrades.yaml`.
  */
 
 export const TICK_MS = 100;
@@ -18,45 +21,8 @@ export const SAVE_KEY = 'absolutely_right_v1';
 export const THEME_STORAGE_KEY = 'absolutely_right_theme';
 export const DEFAULT_THEME = 'terminal-dark';
 
-// ─── Cooldowns (ms) ────────────────────────────────────────────────────────
-
-export const COOLDOWNS = {
-  pasteError: 4000,
-  yoloMerge: 20000,
-  bugBounty: 30000,
-  clearContext: 30000,
-  freeAccount: 20000,
-  /** Minimum gap between random events firing from any single action. */
-  globalEvent: 5000,
-  /** Minimum gap between consecutive "ran tests" log lines. */
-  testLog: 4000,
-} as const;
-
-// ─── Token costs ───────────────────────────────────────────────────────────
-
-export const TOKEN_COSTS = {
-  prompt: 15,
-  agent: 60,
-  pasteError: 10,
-  yoloMerge: 25,
-  tests: 8,
-  bugBounty: 20,
-  writeTest: 5,
-} as const;
-
-/** How long the "kick off an agent" buff lasts (ms). */
-export const AGENT_BUFF_MS = 30000;
-
-// ─── Probability that an action fires a random event ───────────────────────
-
-export const EVENT_PROBABILITIES = {
-  prompt: 0.12,
-  kickAgent: 0.2,
-  runTests: 0.25,
-  buyGen: 0.3,
-  buyUpgrade: 0.4,
-  yoloMerge: 0.5,
-} as const;
+/** Min ms between any two random events firing across actions. */
+export const EVENT_COOLDOWN_MS = 5000;
 
 // ─── UI gating thresholds ──────────────────────────────────────────────────
 //
@@ -82,8 +48,6 @@ export const THRESHOLDS = {
   upgradeUnlockFraction: 0.7,
   /** And once the player can afford this fraction of its cost. */
   upgradeAffordFraction: 0.25,
-  /** revamp_status_page additionally requires this many uptime nines first. */
-  revampMinNines: 4,
 
   // Action visibility ─────────────────────────────────────────────────────
   showPasteErrorBugs: 1,
@@ -111,64 +75,22 @@ export const THRESHOLDS = {
   warnUptimeDegradedNines: 2,
 } as const;
 
-// ─── Hype rewards ──────────────────────────────────────────────────────────
+// ─── Hype display ──────────────────────────────────────────────────────────
 
 export const HYPE = {
+  /** Hype reward each time a milestone fires. */
   perMilestone: 5,
-  yoloMerge: 8,
-  launch: 20,
   /** Hype thresholds for the resource panel labels. */
   buildingMomentum: 20,
   goingViral: 100,
 } as const;
 
-// ─── Cost / yield formula constants ────────────────────────────────────────
+// ─── Manual prompt math ────────────────────────────────────────────────────
 
 /** Manual prompt LOC = `clickPower * LOC_PER_CLICK_POWER + clickBonuses`. */
 export const LOC_PER_CLICK_POWER = 10;
 
-export const PASTE_ERROR = {
-  /** Chance the paste actually fixes the bug. */
-  fixChance: 0.5,
-  baseLocGain: 20,
-  /** Random extra LOC up to this amount. */
-  extraLocRange: 30,
-} as const;
-
-export const YOLO_MERGE = {
-  baseLoc: 300,
-  locPerBug: 20,
-  extraLocRange: 500,
-  bugMultiplier: 0.2,
-  baseBugs: 5,
-  extraBugRange: 10,
-} as const;
-
-export const RUN_TESTS = {
-  /** Cost is `max(minCost, totalLoc * costFraction)`. */
-  minCost: 100,
-  costFraction: 0.005,
-  /** Fraction of outstanding bugs fixed per run. */
-  bugFixFraction: 0.25,
-} as const;
-
-export const WRITE_TEST = {
-  baseCost: 200,
-  costMult: 1.04,
-  /** Per-test bug-rate damping factor (`1 / (1 + tests * this)`). */
-  bugDamping: 0.01,
-} as const;
-
-export const BUG_BOUNTY = {
-  /** Max bugs converted per run. */
-  maxConvertedPerRun: 500,
-  ninesPerBug: 0.0002,
-} as const;
-
-export const FREE_ACCOUNT = {
-  maxTokensPerExtra: 50,
-  tokenRegenPerExtra: 1.5,
-} as const;
+// ─── Token capacity baseline ───────────────────────────────────────────────
 
 export const TOKENS = {
   baseMax: 120,
@@ -176,6 +98,8 @@ export const TOKENS = {
   /** Min token reading below which the "low" warning shows. */
   lowWarnThreshold: 20,
 } as const;
+
+// ─── Money / uptime / agent buff ───────────────────────────────────────────
 
 export const MONEY = {
   /** $/s of revenue per LOC/s, post-uptime, post-launch. */

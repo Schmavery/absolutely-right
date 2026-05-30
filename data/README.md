@@ -12,14 +12,18 @@ plain JS modules — there is **no** YAML parser shipped to the browser.
 | `upgrades.yaml`   | `UpgDef[]`                         | one-shot purchases — effects + flavor in one   |
 | `events.yaml`     | `EventDef[]`                       | random AI dialogue events fired during play    |
 | `milestones.yaml` | `{ loc, text }[]`                  | one-shot observer-voice messages at LOC totals |
-| `messages.yaml`   | `Record<string, string[]>`         | random message variants per player action      |
-| `ui.yaml`         | `{ phases, spinFrames, spinVerbs }` | UI strings and animation frames               |
+| `actions.yaml`    | `ActionDef[]`                      | per-action cost, cooldown, formulas, messages  |
+| `ui.yaml`         | `{ phases, spinFrames, spinVerbs }`| UI strings and animation frames                |
 
 The TypeScript shapes live in `src/types.ts`. `UpgDef` in particular has a
 rich set of optional effect fields that drive the game balance (token bonuses,
 review multipliers, auto-bug-drain rates, etc.) — see the inline comments
 there for combine semantics (multiplicative, additive, last-wins, max-wins).
-Cross-cutting balance numbers live in `src/game/constants.ts`.
+`ActionDef` colocates everything per-action (token cost, cooldown, event
+probability, formula constants, message pools) so retuning a single action
+doesn't require touching code. Cross-cutting balance numbers (THRESHOLDS,
+HYPE display, MONEY, UPTIME, STREAMING, save/theme keys) live in
+`src/game/constants.ts`.
 
 ## Authoring tips
 
@@ -46,19 +50,38 @@ block scalar (`|-`), or restructure.
 ### Identifiers
 
 Game objects whose state needs a stable cross-reference — generators
-(purchase counts), upgrades (`requires:`, owned set, on-purchase effects)
-— carry an explicit `id`. Events do **not**: their only stateful role is
-"don't repeat this one until the fresh pool runs out", and that dedup key
-is derived automatically from the first non-empty line of `text` (slugged,
-truncated to 60 chars). Editing an event's first line resets dedup for
-that event, which matches the authoring intent.
+(purchase counts), upgrades (`requires:`, owned set, on-purchase effects),
+actions (cooldown keys, code-side dispatch) — carry an explicit `id`.
+Events do **not**: their only stateful role is "don't repeat this one until
+the fresh pool runs out", and that dedup key is derived automatically from
+the first non-empty line of `text` (slugged, truncated to 60 chars).
+Editing an event's first line resets dedup for that event, which matches
+the authoring intent.
 
 Milestones are keyed by their `loc` threshold for the same reason — the
 unlock condition is the identity.
 
+### Feature flags
+
+Upgrades can grant **feature flags** while owned:
+
+```yaml
+flags:
+  - nines_tracking
+unlockMinUptimeNines: 4          # shop unlock gate (optional)
+thresholdOverrides:               # merge into UI/progression thresholds (optional)
+  showBugBountyBugs: 30
+```
+
+Known flag names live in `GAME_FLAGS` in `src/game/flags.ts`. The `money`
+flag is also set automatically when an upgrade has `enablesMoney: true`.
+
+Game logic and UI should use `deriveGame(state)` / `hasFlag(...)` rather
+than checking `state.upgrades.includes('some_id')`.
+
 ## Templating
 
-`messages.yaml` and `events.yaml` strings are rendered through Handlebars
+Strings in `actions.yaml` and `events.yaml` are rendered through Handlebars
 (see `src/lib/template.ts`). The full Handlebars surface is available; in
 particular:
 

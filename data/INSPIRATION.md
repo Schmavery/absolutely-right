@@ -1,6 +1,6 @@
 # Inspiration — AI/LLM cliches, moments, and tells
 
-A grab-bag for writing more `events.yaml`, `messages.yaml`, `milestones.yaml`,
+A grab-bag for writing more `events.yaml`, `actions.yaml`, `milestones.yaml`,
 and `ui.yaml` copy. Mine freely. Many of these are already lightly used in the
 data files — the goal here is to **expand the surface area** so we don't keep
 reusing "you're absolutely right" and goblins.

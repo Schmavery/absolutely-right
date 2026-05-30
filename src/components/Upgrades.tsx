@@ -27,7 +27,12 @@ export function Upgrades({ state, onBuyUpgrade }: Props) {
             className="grid grid-cols-[180px_56px_1fr] gap-[6px] items-baseline mb-[7px]"
           >
             <div className="text-fg">{u.name}</div>
-            <Button off={!canAfford} onClick={() => onBuyUpgrade(u.id)} title={u.desc}>
+            <Button
+              off={!canAfford}
+              onClick={() => onBuyUpgrade(u.id)}
+              title={u.desc}
+              progress={Math.max(0, Math.min(1, state.loc / u.cost))}
+            >
               buy
             </Button>
             <div className="text-[12px]">

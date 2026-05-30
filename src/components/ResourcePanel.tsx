@@ -17,9 +17,9 @@ import {
   LOC_PER_CLICK_POWER,
   THRESHOLDS,
   TOKENS,
-  WRITE_TEST,
 } from '../game/constants';
-import { UPGRADES } from '../game/data';
+import { deriveGame } from '../game/derive';
+import { action, UPGRADES } from '../game/data';
 
 interface RowProps {
   label: string;
@@ -39,27 +39,21 @@ interface Props {
 }
 
 export function ResourcePanel({ state }: Props) {
+  const derived = deriveGame(state);
+  const { ui, thresholds, hasFlag } = derived;
   const { locRate, bugRate, fixRate } = calcRates(state.genCounts, state.upgrades, state.tests ?? 0);
   const netBugRate = bugRate - fixRate;
   const bugPenalty = calcBugPenalty(state.bugs);
   const uptime = calcUptime(state.bugs);
   const { maxTokens, tokenRegen } = calcTokenConfig(state.upgrades, state.freeAccounts);
   const moneyRate = calcMoneyRate(state.upgrades, locRate, uptime.fraction, state.launched);
-  const statusRevamped = state.upgrades.includes('revamp_status_page');
   const ninesRate = calcNinesRate(state.upgrades, state.bugs);
-  const currentNines = statusRevamped
+  const currentNines = ui.ninesTracking
     ? Math.max(state.nines || 0, AGENT_BUFF.ninesFloorFallback)
     : 0;
   const ninesInt = Math.floor(currentNines);
   const showAsCounter = ninesInt >= 8;
   const agentBuffRemaining = Math.max(0, state.agentBuffExpires - Date.now());
-  const showMoney = state.upgrades.includes('pro_plan');
-  const hasAiReview = state.upgrades.includes('ai_review');
-
-  const showBugs = state.totalClicks >= THRESHOLDS.showBugsClicks || state.bugs > 0;
-  const showStats = state.totalLoc >= THRESHOLDS.showStatsLoc;
-  const showUptime = state.launched;
-  const showHype = state.launched;
 
   const uptimeColorClass =
     uptime.nines >= 4
@@ -104,7 +98,7 @@ export function ResourcePanel({ state }: Props) {
       </Row>
 
       {/* bugs */}
-      {showBugs && (
+      {ui.showBugs && (
         <Row label="bugs">
           <span className={state.bugs > 0 ? 'text-red' : 'text-green'}>{fmt(state.bugs)}</span>
           {netBugRate !== 0 && (
@@ -117,11 +111,11 @@ export function ResourcePanel({ state }: Props) {
       )}
 
       {/* tests */}
-      {(state.tests ?? 0) > 0 && !hasAiReview && (
+      {(state.tests ?? 0) > 0 && !hasFlag('ai_review') && (
         <Row label="tests">
           <span className="text-dim">{state.tests}</span>
           <span className="text-dimmer text-[12px]">
-            (−{Math.round(100 * (1 - 1 / (1 + state.tests * WRITE_TEST.bugDamping)))}% bugs
+            (−{Math.round(100 * (1 - 1 / (1 + state.tests * (action('write_test').bugDamping ?? 0))))}% bugs
             {state.upgrades.includes('cicd')
               ? ` · CI +${(state.tests * (UPGRADES.find((u) => u.id === 'cicd')?.testFixRate ?? 0)).toFixed(1)}/s fix`
               : ''}
@@ -131,13 +125,13 @@ export function ResourcePanel({ state }: Props) {
       )}
 
       {/* uptime / nines */}
-      {showUptime && !statusRevamped && (
+      {ui.showUptime && !ui.ninesTracking && (
         <Row label="uptime">
           <span className={uptimeColorClass}>{uptime.pct}</span>
           <span className={uptimeColorClass + ' text-[12px]'}>({uptime.label})</span>
         </Row>
       )}
-      {statusRevamped && !showAsCounter && (
+      {ui.ninesTracking && !showAsCounter && (
         <Row label="uptime">
           <span className="text-green">{formatNinesPct(ninesInt)}</span>
           <span className="text-green-dim text-[12px]">({ninesInt} nines)</span>
@@ -151,7 +145,7 @@ export function ResourcePanel({ state }: Props) {
       )}
 
       {/* hype */}
-      {showHype && (
+      {ui.showHype && (
         <Row label="hype">
           <span className="text-purple">{fmt(state.hype)}</span>
           {state.hype >= HYPE.goingViral && (
@@ -164,7 +158,7 @@ export function ResourcePanel({ state }: Props) {
       )}
 
       {/* money */}
-      {showMoney && (
+      {ui.showMoney && (
         <Row label="money">
           <span className={state.money < 0 ? 'text-red' : 'text-green'}>
             ${Math.floor(Math.abs(state.money))}
@@ -179,7 +173,7 @@ export function ResourcePanel({ state }: Props) {
       )}
 
       {/* stats */}
-      {showStats && (
+      {ui.showStats && (
         <>
           <Row label="total loc">
             <span className="text-dim">{fmt(state.totalLoc)}</span>
@@ -191,18 +185,18 @@ export function ResourcePanel({ state }: Props) {
       )}
 
       {/* warnings */}
-      {state.bugs > THRESHOLDS.warnBugsElevated && (
+      {state.bugs > thresholds.warnBugsElevated && (
         <div className="mt-2 text-red-dim text-[12px]">
-          ⚠ {state.bugs > THRESHOLDS.warnBugsCritical ? 'critical' : 'elevated'} bug load
-          {state.bugs > THRESHOLDS.warnBugsPenaltyShown
+          ⚠ {state.bugs > thresholds.warnBugsCritical ? 'critical' : 'elevated'} bug load
+          {state.bugs > thresholds.warnBugsPenaltyShown
             ? ` — output at ${Math.round(bugPenalty * 100)}%`
             : ''}
-          {showUptime && !statusRevamped && uptime.nines < THRESHOLDS.warnUptimeDegradedNines
+          {ui.showUptime && !ui.ninesTracking && uptime.nines < THRESHOLDS.warnUptimeDegradedNines
             ? ' — uptime degraded'
             : ''}
         </div>
       )}
-      {showUptime && !statusRevamped && uptime.nines < THRESHOLDS.warnUptimeFireNines && (
+      {ui.showUptime && !ui.ninesTracking && uptime.nines < THRESHOLDS.warnUptimeFireNines && (
         <div className="mt-1 text-red text-[12px]">⚠ production is on fire</div>
       )}
     </div>

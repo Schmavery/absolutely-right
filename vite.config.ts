@@ -5,6 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 import { yamlPlugin } from './vite/yaml-plugin';
 
 export default defineConfig({
+  // Set via the GitHub Pages workflow so assets resolve under
+  // https://<user>.github.io/<repo>/. Defaults to '/' for local dev.
+  base: process.env.BASE_PATH || '/',
   plugins: [yamlPlugin(), react(), tailwindcss()],
   resolve: {
     alias: {

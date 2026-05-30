@@ -72,6 +72,40 @@ export interface UpgDef {
   ninesFloor?: number;
   /** Flavor line shown in the conversation log when this upgrade is bought. */
   purchaseMsg?: string;
+
+  /**
+   * Feature flags this upgrade grants while owned. See `GAME_FLAGS` in
+   * `src/game/flags.ts` for the vocabulary.
+   */
+  flags?: string[];
+  /**
+   * While this upgrade is not yet owned, it only enters the unlock shop when
+   * uptime nines (from bugs) are at least this value.
+   */
+  unlockMinUptimeNines?: number;
+  /**
+   * Overrides entries in `THRESHOLDS` while this upgrade is owned (e.g. lower
+   * `showBugBountyBugs` once nines meta is in play). Later upgrades in
+   * `upgrades.yaml` win on duplicate keys.
+   */
+  thresholdOverrides?: Partial<
+    Record<
+      | 'showGeneratorsLoc'
+      | 'showUpgradesLoc'
+      | 'showPasteErrorBugs'
+      | 'showKickAgentClicks'
+      | 'showWriteTestsBugs'
+      | 'showRunTestsBugs'
+      | 'showClearContextLoc'
+      | 'showClearContextMinTokens'
+      | 'showYoloMergeLoc'
+      | 'showBugBountyBugs'
+      | 'showBugsClicks'
+      | 'showStatsLoc'
+      | 'showNewFreeAccountTokens',
+      number
+    >
+  >;
 }
 
 export interface EventDef {
@@ -94,6 +128,71 @@ export type LogEntryType =
   | 'milestone'
   | 'system'
   | 'user';
+
+/**
+ * Per-action data record — see `data/actions.yaml`. All numeric fields are
+ * optional because each action only uses a subset; required fields are
+ * enforced at use-sites by the corresponding action reducer.
+ */
+export interface ActionDef {
+  id: string;
+
+  // Common knobs
+  tokenCost?: number;
+  cooldownMs?: number;
+  eventProbability?: number;
+
+  // Random message pools (Handlebars-templated)
+  messages?: string[];
+
+  // prompt
+  firstPromptMsg?: string;
+
+  // kick_agent
+  buffMs?: number;
+
+  // paste_error
+  fixChance?: number;
+  baseLocGain?: number;
+  extraLocRange?: number;
+  goodMessages?: string[];
+  badMessages?: string[];
+  neutralMessages?: string[];
+
+  // yolo_merge
+  baseLoc?: number;
+  locPerBug?: number;
+  bugMultiplier?: number;
+  baseBugs?: number;
+  extraBugRange?: number;
+  hypeReward?: number;
+
+  // run_tests
+  bugFixFraction?: number;
+  minCost?: number;
+  costFraction?: number;
+  /** Min ms between consecutive "ran tests" log lines. */
+  logCooldownMs?: number;
+
+  // bug_bounty
+  maxConvertedPerRun?: number;
+  ninesPerBug?: number;
+  runMsg?: string;
+
+  // new_free_account
+  maxTokensPerExtra?: number;
+  tokenRegenPerExtra?: number;
+
+  // write_test
+  baseCost?: number;
+  costMult?: number;
+  /** Per-test bug-rate damping factor (`1 / (1 + tests * this)`). */
+  bugDamping?: number;
+  milestones?: { count: number; text: string }[];
+
+  // buy_gen
+  firstPurchaseMsg?: string;
+}
 
 export interface LogEntry {
   id: number;

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameState } from './types';
-import { LOC_PER_CLICK_POWER, SAVE_INTERVAL_MS, THRESHOLDS, TICK_MS, TOKEN_COSTS } from './game/constants';
-import { UI } from './game/data';
+import { LOC_PER_CLICK_POWER, SAVE_INTERVAL_MS, TICK_MS } from './game/constants';
+import { action, UI } from './game/data';
+import { deriveGame } from './game/derive';
 import { calcClickBonus, calcClickPower, getPhase } from './game/rates';
 import { clearSave, defaultState, initState, saveState } from './game/state';
 import { tickReducer } from './game/tick';
@@ -92,14 +93,30 @@ export function Game() {
   }, [resetStream]);
 
   // ── derived ──
+  const derived = deriveGame(state);
   const phase = getPhase(state.totalLoc);
   const showLog = state.log.length >= 1;
-  const showGenSection = state.totalLoc >= THRESHOLDS.showGeneratorsLoc;
-  const showUpgSection = state.totalLoc >= THRESHOLDS.showUpgradesLoc;
+  const { showGenSection, showUpgSection } = derived.ui;
 
+  // The queue panel only shows the *very next* pending entry, and only if
+  // it's a user line. Multi-turn events (e.g. `> X / AI / > Y / AI`) drop
+  // several user entries into the log at once, but the back-and-forth is
+  // inherently sequential — follow-up `>` lines should appear inline as
+  // the conversation unfolds, not stack up in the queue as if the player
+  // typed them ahead.
+  //
+  // An entry is "displayed" only once its streamed text matches the source
+  // text, so an AI line that's mid-stream still blocks the queue (rather
+  // than letting the next user line pop in behind it).
   const queuedUserEntries = useMemo(() => {
-    const displayedIds = new Set(displayLog.map((e) => e.id));
-    return state.log.filter((e) => e.type === 'user' && !displayedIds.has(e.id));
+    const srcById = new Map(state.log.map((e) => [e.id, e]));
+    const completedIds = new Set<number>();
+    for (const d of displayLog) {
+      const src = srcById.get(d.id);
+      if (src && d.text === src.text) completedIds.add(d.id);
+    }
+    const next = state.log.find((e) => !completedIds.has(e.id));
+    return next?.type === 'user' ? [next] : [];
   }, [displayLog, state.log]);
 
   const promptLabel =
@@ -158,7 +175,7 @@ export function Game() {
                 calcClickPower(state.upgrades) * LOC_PER_CLICK_POWER +
                 calcClickBonus(state.upgrades)
               ).toFixed(0)}{' '}
-              loc · {TOKEN_COSTS.prompt}t
+              loc · {action('prompt').tokenCost}t
             </span>
           )}
 

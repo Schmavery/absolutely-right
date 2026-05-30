@@ -3,26 +3,18 @@
  * The `Game` component wires them to `setState`. Cooldown/affordability
  * checks live here so the UI just needs to ask "could I run this right
  * now?" via the `can*` predicates exported alongside.
+ *
+ * Per-action tunables (cost, cooldown, event probability, formula numbers,
+ * message pools) live in `data/actions.yaml` and are reached via
+ * `action(id)`. Cross-cutting numbers stay in `./constants`.
  */
 
-import type { GameState } from '../types';
-import { GENS, MESSAGES, UPGRADES } from './data';
-import {
-  AGENT_BUFF_MS,
-  BUG_BOUNTY,
-  COOLDOWNS,
-  EVENT_PROBABILITIES,
-  HYPE,
-  LOC_PER_CLICK_POWER,
-  PASTE_ERROR,
-  RUN_TESTS,
-  THRESHOLDS,
-  TOKEN_COSTS,
-  WRITE_TEST,
-  YOLO_MERGE,
-} from './constants';
+import type { ActionDef, GameState } from '../types';
+import { action, GENS, UPGRADES } from './data';
+import { AGENT_BUFF, LOC_PER_CLICK_POWER } from './constants';
 import { appendLog } from './log';
 import { maybeFireEvent } from './events';
+import { computeFlags, effectiveThresholds, hasFlag } from './flags';
 import { calcClickBonus, calcClickPower, calcTokenConfig, genCost } from './rates';
 import { pick, render } from '../lib/template';
 
@@ -47,62 +39,71 @@ function startCooldown(prev: GameState, key: string): GameState {
   };
 }
 
+/** Returns true and short-circuits if the action's `tokenCost` isn't met. */
+function canAfford(prev: GameState, a: ActionDef): boolean {
+  return a.tokenCost === undefined || prev.tokens >= a.tokenCost;
+}
+
 // ─── prompt ────────────────────────────────────────────────────────────────
 
 export function promptAction(prev: GameState): GameState {
-  if (prev.tokens < TOKEN_COSTS.prompt) return prev;
+  const a = action('prompt');
+  if (!canAfford(prev, a)) return prev;
+  const thresholds = effectiveThresholds(prev.upgrades);
   const power = calcClickPower(prev.upgrades);
   const locGain = power * LOC_PER_CLICK_POWER + calcClickBonus(prev.upgrades);
   const bugFromPrompt =
-    prev.totalLoc >= THRESHOLDS.bugSpawnLoc && Math.random() < THRESHOLDS.promptBugChance ? 1 : 0;
+    prev.totalLoc >= thresholds.bugSpawnLoc && Math.random() < thresholds.promptBugChance ? 1 : 0;
   let next: GameState = {
-    ...spendTokens(prev, TOKEN_COSTS.prompt),
+    ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locGain,
     bugs: prev.bugs + bugFromPrompt,
     totalLoc: prev.totalLoc + locGain,
     totalClicks: prev.totalClicks + 1,
     started: true,
   };
-  if (!prev.started) {
-    next = appendLog(
-      next,
-      "> build me a startup\nCertainly! I'd be happy to help with that. Here's a robust, scalable solution—",
-      'info',
-    );
+  if (!prev.started && a.firstPromptMsg) {
+    next = appendLog(next, a.firstPromptMsg, 'info');
   }
-  next = maybeFireEvent(next, EVENT_PROBABILITIES.prompt, appendLog);
+  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
 
 // ─── agent ─────────────────────────────────────────────────────────────────
 
 export function kickAgentAction(prev: GameState): GameState {
-  if (prev.tokens < TOKEN_COSTS.agent) return prev;
+  const a = action('kick_agent');
+  if (!canAfford(prev, a)) return prev;
   if (Date.now() < (prev.agentBuffExpires ?? 0)) return prev;
   let next: GameState = {
-    ...spendTokens(prev, TOKEN_COSTS.agent),
-    agentBuffExpires: Date.now() + AGENT_BUFF_MS,
+    ...spendTokens(prev, a.tokenCost!),
+    agentBuffExpires: Date.now() + a.buffMs!,
   };
-  next = appendLog(next, pick(MESSAGES.agentMsgs), 'info');
-  next = maybeFireEvent(next, EVENT_PROBABILITIES.kickAgent, appendLog);
+  if (a.messages) next = appendLog(next, pick(a.messages), 'info');
+  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
 
 // ─── paste error ───────────────────────────────────────────────────────────
 
 export function pasteErrorAction(prev: GameState): GameState {
+  const a = action('paste_error');
   if (prev.bugs <= 0) return prev;
-  if (prev.tokens < TOKEN_COSTS.pasteError) return prev;
-  if (isOnCooldown(prev, 'paste_error', COOLDOWNS.pasteError)) return prev;
+  if (!canAfford(prev, a)) return prev;
+  if (isOnCooldown(prev, 'paste_error', a.cooldownMs!)) return prev;
 
-  const fixed = Math.random() < PASTE_ERROR.fixChance;
+  const fixed = Math.random() < a.fixChance!;
   const bugDelta = fixed ? -1 : 0;
-  const locDelta =
-    PASTE_ERROR.baseLocGain + Math.floor(Math.random() * PASTE_ERROR.extraLocRange);
-  const msg = fixed ? pick(MESSAGES.pasteErrorGood) : pick(MESSAGES.pasteErrorNeutral);
+  const locDelta = a.baseLocGain! + Math.floor(Math.random() * a.extraLocRange!);
+  const pool = fixed
+    ? a.goodMessages!
+    : Math.random() < 0.5
+      ? a.badMessages!
+      : a.neutralMessages!;
+  const msg = pick(pool);
 
   let next: GameState = {
-    ...spendTokens(prev, TOKEN_COSTS.pasteError),
+    ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locDelta,
     totalLoc: prev.totalLoc + locDelta,
     bugs: Math.max(0, prev.bugs + bugDelta),
@@ -119,151 +120,139 @@ export function pasteErrorAction(prev: GameState): GameState {
 // ─── clear context ─────────────────────────────────────────────────────────
 
 export function clearContextAction(prev: GameState): GameState {
-  if (isOnCooldown(prev, 'clear_context', COOLDOWNS.clearContext)) return prev;
+  const a = action('clear_context');
+  if (isOnCooldown(prev, 'clear_context', a.cooldownMs!)) return prev;
   const { maxTokens } = calcTokenConfig(prev.upgrades, prev.freeAccounts);
   let next: GameState = { ...prev, tokens: maxTokens };
   next = startCooldown(next, 'clear_context');
-  next = appendLog(next, pick(MESSAGES.clearContextMsgs), 'info');
+  if (a.messages) next = appendLog(next, pick(a.messages), 'info');
   return next;
 }
 
 // ─── yolo merge ────────────────────────────────────────────────────────────
 
 export function yoloMergeAction(prev: GameState): GameState {
-  if (prev.tokens < TOKEN_COSTS.yoloMerge) return prev;
-  if (isOnCooldown(prev, 'yolo_merge', COOLDOWNS.yoloMerge)) return prev;
+  const a = action('yolo_merge');
+  if (!canAfford(prev, a)) return prev;
+  if (isOnCooldown(prev, 'yolo_merge', a.cooldownMs!)) return prev;
   const locGain =
-    YOLO_MERGE.baseLoc +
-    Math.floor(prev.bugs * YOLO_MERGE.locPerBug + Math.random() * YOLO_MERGE.extraLocRange);
+    a.baseLoc! + Math.floor(prev.bugs * a.locPerBug! + Math.random() * a.extraLocRange!);
   const bugGain =
-    Math.floor(prev.bugs * YOLO_MERGE.bugMultiplier) +
-    YOLO_MERGE.baseBugs +
-    Math.floor(Math.random() * YOLO_MERGE.extraBugRange);
+    Math.floor(prev.bugs * a.bugMultiplier!) + a.baseBugs! + Math.floor(Math.random() * a.extraBugRange!);
   let next: GameState = {
-    ...spendTokens(prev, TOKEN_COSTS.yoloMerge),
+    ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locGain,
     totalLoc: prev.totalLoc + locGain,
     bugs: prev.bugs + bugGain,
-    hype: prev.hype + HYPE.yoloMerge,
+    hype: prev.hype + (a.hypeReward ?? 0),
   };
   next = startCooldown(next, 'yolo_merge');
-  next = appendLog(next, pick(MESSAGES.yoloMergeMsgs), 'system');
-  next = maybeFireEvent(next, EVENT_PROBABILITIES.yoloMerge, appendLog);
+  if (a.messages) next = appendLog(next, pick(a.messages), 'system');
+  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
 
 // ─── run tests ─────────────────────────────────────────────────────────────
 
 export function runTestsAction(prev: GameState): GameState {
-  if (prev.tokens < TOKEN_COSTS.tests) return prev;
+  const a = action('run_tests');
+  if (!canAfford(prev, a)) return prev;
   const cost = runTestsCost(prev.totalLoc);
   if (prev.loc < cost) return prev;
-  const fixed = Math.max(1, Math.floor(prev.bugs * RUN_TESTS.bugFixFraction));
+  const fixed = Math.max(1, Math.floor(prev.bugs * a.bugFixFraction!));
   let next: GameState = {
-    ...spendTokens(prev, TOKEN_COSTS.tests),
+    ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc - cost,
     bugs: Math.max(0, prev.bugs - fixed),
   };
   const now = Date.now();
-  if (now - prev.lastTestLogTime > COOLDOWNS.testLog) {
-    next = appendLog(next, render(pick(MESSAGES.testMessages), { n: fixed }), 'info');
+  if (a.messages && now - prev.lastTestLogTime > (a.logCooldownMs ?? 0)) {
+    next = appendLog(next, render(pick(a.messages), { n: fixed }), 'info');
     next = { ...next, lastTestLogTime: now };
   }
-  next = maybeFireEvent(next, EVENT_PROBABILITIES.runTests, appendLog);
+  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
 
 export function runTestsCost(totalLoc: number): number {
-  return Math.max(RUN_TESTS.minCost, Math.floor(totalLoc * RUN_TESTS.costFraction));
+  const a = action('run_tests');
+  return Math.max(a.minCost!, Math.floor(totalLoc * a.costFraction!));
 }
 
 // ─── bug bounty ────────────────────────────────────────────────────────────
 
 export function bugBountyAction(prev: GameState): GameState {
-  if (prev.tokens < TOKEN_COSTS.bugBounty) return prev;
+  const a = action('bug_bounty');
+  if (!canAfford(prev, a)) return prev;
   if (prev.bugs <= 0) return prev;
-  if (isOnCooldown(prev, 'bug_bounty', COOLDOWNS.bugBounty)) return prev;
-  const converted = Math.min(prev.bugs, BUG_BOUNTY.maxConvertedPerRun);
-  const ninesGain = converted * BUG_BOUNTY.ninesPerBug;
+  if (isOnCooldown(prev, 'bug_bounty', a.cooldownMs!)) return prev;
+  const converted = Math.min(prev.bugs, a.maxConvertedPerRun!);
+  const ninesGain = converted * a.ninesPerBug!;
+  const flags = computeFlags(prev.upgrades);
+  const ninesBase = hasFlag(flags, 'nines_tracking')
+    ? prev.nines || AGENT_BUFF.ninesFloorFallback
+    : prev.nines || 0;
   let next: GameState = {
-    ...spendTokens(prev, TOKEN_COSTS.bugBounty),
+    ...spendTokens(prev, a.tokenCost!),
     bugs: Math.max(0, prev.bugs - converted),
-    nines: (prev.nines || THRESHOLDS.revampMinNines) + ninesGain,
+    nines: ninesBase + ninesGain,
   };
   next = startCooldown(next, 'bug_bounty');
-  next = appendLog(
-    next,
-    `Bug bounty run. Converted ${Math.floor(converted)} reports into reliability data. Nines: +${ninesGain.toFixed(3)}.`,
-    'info',
-  );
+  if (a.runMsg) {
+    next = appendLog(
+      next,
+      render(a.runMsg, { converted: Math.floor(converted), ninesGain: ninesGain.toFixed(3) }),
+      'info',
+    );
+  }
   return next;
 }
 
 // ─── launch ────────────────────────────────────────────────────────────────
 
 export function launchAction(prev: GameState): GameState {
+  const a = action('launch');
   if (prev.launched) return prev;
-  let next: GameState = { ...prev, launched: true, hype: prev.hype + HYPE.launch };
-  next = appendLog(
-    next,
-    "I've deployed to production! This is exciting. What could go wrong?",
-    'system',
-  );
+  let next: GameState = { ...prev, launched: true, hype: prev.hype + (a.hypeReward ?? 0) };
+  if (a.messages) next = appendLog(next, pick(a.messages), 'system');
   return next;
 }
 
 // ─── new free account ──────────────────────────────────────────────────────
 
 export function newFreeAccountAction(prev: GameState): GameState {
-  if (isOnCooldown(prev, 'free_account', COOLDOWNS.freeAccount)) return prev;
+  const a = action('new_free_account');
+  if (isOnCooldown(prev, 'free_account', a.cooldownMs!)) return prev;
   let next: GameState = {
     ...prev,
     freeAccounts: (prev.freeAccounts ?? 1) + 1,
   };
   next = startCooldown(next, 'free_account');
-  next = appendLog(next, render(pick(MESSAGES.newAccountMsgs), { n: next.freeAccounts }), 'info');
+  if (a.messages) {
+    next = appendLog(next, render(pick(a.messages), { n: next.freeAccounts }), 'info');
+  }
   return next;
 }
 
 // ─── write test ────────────────────────────────────────────────────────────
 
 export function writeTestCost(tests: number): number {
-  return Math.ceil(WRITE_TEST.baseCost * Math.pow(WRITE_TEST.costMult, tests ?? 0));
+  const a = action('write_test');
+  return Math.ceil(a.baseCost! * Math.pow(a.costMult!, tests ?? 0));
 }
 
 export function writeTestAction(prev: GameState): GameState {
+  const a = action('write_test');
   const cost = writeTestCost(prev.tests ?? 0);
-  if (prev.loc < cost || prev.tokens < TOKEN_COSTS.writeTest) return prev;
+  if (prev.loc < cost || !canAfford(prev, a)) return prev;
   let next: GameState = {
-    ...spendTokens(prev, TOKEN_COSTS.writeTest),
+    ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc - cost,
     tests: (prev.tests ?? 0) + 1,
   };
-  const t = next.tests;
-  if (t === 1) {
-    next = appendLog(
-      next,
-      "Test suite initialized. I've written the first test. It asserts that the code exists. Coverage: technically 100%.",
-      'info',
-    );
-  } else if (t === 10) {
-    next = appendLog(
-      next,
-      '10 tests! The test for the payment flow is aspirational. The rest are solid.',
-      'info',
-    );
-  } else if (t === 50) {
-    next = appendLog(
-      next,
-      "50 tests! I've helpfully included a test that tests the test runner. Very thorough.",
-      'info',
-    );
-  } else if (t === 100) {
-    next = appendLog(
-      next,
-      "100 tests. The suite takes 4 minutes to run. I've added a skip flag to the slow ones.",
-      'info',
-    );
+  const milestone = a.milestones?.find((m) => m.count === next.tests);
+  if (milestone) {
+    next = appendLog(next, milestone.text, 'info');
   }
   return next;
 }
@@ -271,6 +260,7 @@ export function writeTestAction(prev: GameState): GameState {
 // ─── buy generator ─────────────────────────────────────────────────────────
 
 export function buyGenAction(prev: GameState, genId: string): GameState {
+  const a = action('buy_gen');
   const g = GENS.find((g) => g.id === genId);
   if (!g) return prev;
   const owned = prev.genCounts[genId] ?? 0;
@@ -281,20 +271,17 @@ export function buyGenAction(prev: GameState, genId: string): GameState {
     loc: prev.loc - cost,
     genCounts: { ...prev.genCounts, [genId]: owned + 1 },
   };
-  if (owned === 0) {
-    next = appendLog(
-      next,
-      `Certainly! I've integrated ${g.name} into our workflow. "${g.desc}"`,
-      'info',
-    );
+  if (owned === 0 && a.firstPurchaseMsg) {
+    next = appendLog(next, render(a.firstPurchaseMsg, { name: g.name, desc: g.desc }), 'info');
   }
-  next = maybeFireEvent(next, EVENT_PROBABILITIES.buyGen, appendLog);
+  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
 
 // ─── buy upgrade ───────────────────────────────────────────────────────────
 
 export function buyUpgradeAction(prev: GameState, upgId: string): GameState {
+  const a = action('buy_upgrade');
   const u = UPGRADES.find((u) => u.id === upgId);
   if (!u) return prev;
   if (prev.loc < u.cost || prev.upgrades.includes(upgId)) return prev;
@@ -304,6 +291,6 @@ export function buyUpgradeAction(prev: GameState, upgId: string): GameState {
   }
   const flavor = u.purchaseMsg ?? `${u.name} unlocked. ${u.desc}.`;
   next = appendLog(next, flavor, 'info');
-  next = maybeFireEvent(next, EVENT_PROBABILITIES.buyUpgrade, appendLog);
+  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }

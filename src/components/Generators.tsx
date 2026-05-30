@@ -1,8 +1,8 @@
 import type { GameState } from '../types';
-import { GENS } from '../game/data';
+import { action, GENS } from '../game/data';
 import { genCost } from '../game/rates';
 import { fmt, fmtRate } from '../lib/format';
-import { COOLDOWNS, FREE_ACCOUNT, THRESHOLDS } from '../game/constants';
+import { deriveGame } from '../game/derive';
 import { Button } from './Button';
 
 interface Props {
@@ -12,15 +12,20 @@ interface Props {
 }
 
 export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
+  const { thresholds } = deriveGame(state);
+  const newAccount = action('new_free_account');
   const visibleGens = GENS.filter(
-    (g) => state.totalLoc >= g.unlockAt * THRESHOLDS.generatorVisibleFraction,
+    (g) => state.totalLoc >= g.unlockAt * thresholds.generatorVisibleFraction,
   );
   const showNewFreeAccount =
-    (state.totalTokensSpent ?? 0) >= THRESHOLDS.showNewFreeAccountTokens ||
+    (state.totalTokensSpent ?? 0) >= thresholds.showNewFreeAccountTokens ||
     state.freeAccounts > 1;
   const freeAccountCDElapsed = Date.now() - (state.actionCooldowns['free_account'] ?? 0);
-  const freeAccountOnCD = freeAccountCDElapsed < COOLDOWNS.freeAccount;
-  const freeAccountProgress = Math.min(1, freeAccountCDElapsed / COOLDOWNS.freeAccount);
+  const freeAccountOnCD = freeAccountCDElapsed < (newAccount.cooldownMs ?? 0);
+  const freeAccountProgress = Math.min(
+    1,
+    freeAccountCDElapsed / (newAccount.cooldownMs ?? 1),
+  );
 
   return (
     <div>
@@ -35,19 +40,13 @@ export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
           <Button
             off={freeAccountOnCD}
             onClick={freeAccountOnCD ? undefined : onNewFreeAccount}
-            title={`+${FREE_ACCOUNT.maxTokensPerExtra} max tokens, +${FREE_ACCOUNT.tokenRegenPerExtra}/s regen · ${state.freeAccounts} account${
+            title={`+${newAccount.maxTokensPerExtra} max tokens, +${newAccount.tokenRegenPerExtra}/s regen · ${state.freeAccounts} account${
               state.freeAccounts !== 1 ? 's' : ''
             } active`}
-            className="relative overflow-hidden"
+            progress={freeAccountOnCD ? freeAccountProgress : 1}
+            progressClassName="bg-green/10"
           >
-            {freeAccountOnCD && (
-              <span
-                aria-hidden
-                className="absolute left-0 top-0 bottom-0 bg-green/10 pointer-events-none"
-                style={{ width: `${freeAccountProgress * 100}%` }}
-              />
-            )}
-            <span className="relative">create</span>
+            create
           </Button>
           <Desc>a different email. still free. just this once.</Desc>
         </Row>
@@ -63,7 +62,12 @@ export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
               {g.name}
               {owned > 0 && <span className="text-green"> [{owned}]</span>}
             </Name>
-            <Button off={!canAfford} onClick={() => onBuyGen(g.id)} title={g.desc}>
+            <Button
+              off={!canAfford}
+              onClick={() => onBuyGen(g.id)}
+              title={g.desc}
+              progress={Math.max(0, Math.min(1, state.loc / cost))}
+            >
               buy
             </Button>
             <div className="text-[12px]">

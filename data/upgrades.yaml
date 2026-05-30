@@ -108,6 +108,8 @@
     - code_review
   requiresLaunch: true
   purchaseMsg: "AI code review enabled. Review time: instant. I've approved 12 PRs today. Bug count is trending up. The tests aren't really containing it anymore. Unrelated."
+  flags:
+    - ai_review
 - id: cicd
   name: CI/CD Pipeline
   desc: −60% bugs; CI runs your tests automatically — fixRate += tests × 0.03/s
@@ -164,6 +166,9 @@
     - ai_review
   requiresLaunch: true
   purchaseMsg: "Status page revamped. Reliability is now a metric we manage, not a consequence of our actions. Introducing: nines."
+  flags:
+    - nines_tracking
+  unlockMinUptimeNines: 4
 - id: five_nines_sla
   name: 5 Nines SLA
   desc: Contractually guaranteed. Bumps reported reliability to 99.999%.
@@ -215,6 +220,8 @@
     - revamp_status_page
   requiresLaunch: true
   purchaseMsg: Bug bounty automated. Reports now convert continuously. The bugs aren't going away. They're going somewhere better.
+  flags:
+    - auto_bug_bounty
 - id: enhanced_bug_bounty
   name: Enhanced Bug Bounty
   desc: Higher conversion rate. The bugs are working for us now.

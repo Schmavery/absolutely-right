@@ -1,6 +1,6 @@
 import type { EventDef, GameState, LogEntry, LogEntryType } from '../types';
 import { EVENTS } from './data';
-import { COOLDOWNS, THRESHOLDS } from './constants';
+import { EVENT_COOLDOWN_MS, THRESHOLDS } from './constants';
 
 export type AddLogFn = (prev: GameState, text: string, type: LogEntryType) => GameState;
 
@@ -30,7 +30,7 @@ function eventKey(e: EventDef): string {
  */
 export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn): GameState {
   const now = Date.now();
-  if (now - prev.lastEventTime < COOLDOWNS.globalEvent) return prev;
+  if (now - prev.lastEventTime < EVENT_COOLDOWN_MS) return prev;
   if (Math.random() > prob) return prev;
 
   const eligible = EVENTS.filter((e) => {
