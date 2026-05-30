@@ -1,0 +1,81 @@
+- id: autocomplete
+  name: Autocomplete
+  desc: presses tab repeatedly until something compiles
+  locPerSec: 15
+  bugsPerSec: 0.02
+  fixPerSec: 0
+  baseCost: 1000
+  costMult: 1.12
+  unlockAt: 500
+- id: copilot
+  name: CodePilot
+  desc: expired trial. still works. do not ask why.
+  locPerSec: 30
+  bugsPerSec: 0.15
+  fixPerSec: 0
+  baseCost: 8000
+  costMult: 1.13
+  unlockAt: 5000
+- id: chatgpt
+  name: FreeChat
+  desc: rate limited. uses em dashes constantly.
+  locPerSec: 100
+  bugsPerSec: 0.4
+  fixPerSec: 0
+  baseCost: 50000
+  costMult: 1.14
+  unlockAt: 20000
+- id: claude
+  name: Anthropix
+  desc: 200K context. will genuinely try. may over-explain.
+  locPerSec: 250
+  bugsPerSec: 0.8
+  fixPerSec: 0.3
+  baseCost: 200000
+  costMult: 1.15
+  unlockAt: 80000
+- id: api
+  name: Direct API Calls
+  desc: billing dashboard open in another tab
+  locPerSec: 800
+  bugsPerSec: 2
+  fixPerSec: 0.5
+  baseCost: 1000000
+  costMult: 1.15
+  unlockAt: 400000
+- id: agent
+  name: AI Agent
+  desc: computer use enabled. god help you.
+  locPerSec: 3000
+  bugsPerSec: 6
+  fixPerSec: 2
+  baseCost: 6000000
+  costMult: 1.16
+  unlockAt: 2000000
+- id: swarm
+  name: Agent Swarm
+  desc: 47 sub-agents. none aware of the others. vibing.
+  locPerSec: 20000
+  bugsPerSec: 25
+  fixPerSec: 10
+  baseCost: 60000000
+  costMult: 1.17
+  unlockAt: 10000000
+- id: orchestrator
+  name: Meta-Orchestrator
+  desc: agents orchestrating agents orchestrating agents
+  locPerSec: 150000
+  bugsPerSec: 100
+  fixPerSec: 50
+  baseCost: 600000000
+  costMult: 1.18
+  unlockAt: 100000000
+- id: agi
+  name: ????
+  desc: you stopped reading its output three weeks ago
+  locPerSec: 2000000
+  bugsPerSec: 600
+  fixPerSec: 400
+  baseCost: 20000000000
+  costMult: 1.2
+  unlockAt: 5000000000

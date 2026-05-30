@@ -1,0 +1,34 @@
+phases:
+  - a new conversation
+  - you have a coding assistant now — going great
+  - the agents are taking over
+  - you're mostly just watching
+  - the AGI writes the code. you approve PRs. sometimes.
+spinFrames:
+  - ⠋
+  - ⠙
+  - ⠹
+  - ⠸
+  - ⠼
+  - ⠴
+  - ⠦
+  - ⠧
+  - ⠇
+  - ⠏
+spinVerbs:
+  - thinking
+  - ideating
+  - delving
+  - refactoring
+  - synergizing
+  - hallucinating
+  - vibe coding
+  - architecting
+  - tokenizing
+  - overthinking
+  - being robust
+  - being scalable
+  - consulting goblins
+  - adding em dashes
+  - being comprehensive
+  - pivoting

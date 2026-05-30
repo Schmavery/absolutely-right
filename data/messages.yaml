@@ -1,0 +1,90 @@
+pasteErrorGood:
+  - |-
+    > why is this failing
+    I see the issue — it was an off-by-one error. Here's the corrected version.
+  - |-
+    > here's the stack trace
+    Got it. The root cause was a missing null check. Fixed — should be cleaner now.
+  - |-
+    > it keeps crashing
+    I've identified the issue. It was the code I wrote last session. Corrected.
+  - |-
+    > same error again
+    I see the problem — I was importing the wrong module. Simple fix, done.
+  - |-
+    > this broke after your last change
+    Ah. Yes. I introduced that. My apologies — here's the corrected version.
+pasteErrorBad:
+  - |-
+    > it's still broken
+    I see the issue! Let me fix that.
+    > same error
+    Interesting. I see a different issue now. Let me fix that instead.
+  - |-
+    > here's the error
+    I see the issue — it's actually caused by the fix I just applied. I'll address that now.
+  - |-
+    > this doesn't work
+    Absolutely! I've refactored the entire function for clarity. The error is different now, which is progress.
+  - |-
+    > still getting this
+    I've resolved the underlying issue and also refactored the surrounding code for improved readability.
+pasteErrorNeutral:
+  - |-
+    > here's the error
+    This looks correct to me. The behavior you're experiencing may be environmental.
+  - |-
+    > it's broken
+    Have you tried clearing the cache? I've also made a small adjustment — probably unrelated.
+  - |-
+    > error message below
+    I don't see an issue with the code itself. The error may be occurring elsewhere.
+agentMsgs:
+  - |-
+    > kick off an agent
+    Agent initialized! It's reading all 847 files first, for context. It will begin shortly.
+  - |-
+    > spawn an agent
+    Agent launched! It's spinning up subprocesses and downloading the full repository.
+  - |-
+    > run the agent
+    Agent active! It's opened 12 tabs and is thinking carefully. Output incoming.
+  - |-
+    > go agent go
+    Agent deployed! It has enabled computer use. I'd rather not say what it clicked.
+  - |-
+    > agent mode
+    Agent running! It refactored three files that weren't part of the task. Very thorough.
+yoloMergeMsgs:
+  - |-
+    > merge it
+    Merged to main and deployed! Everything looks great. The logs are very interesting.
+  - |-
+    > ship it
+    Deployed to production! I reviewed it myself — LGTM. Very thorough review.
+  - |-
+    > just push it
+    Pushed, merged, deployed. CI was skipped for efficiency. I'm confident it's fine.
+  - |-
+    > yolo
+    Approved, merged, deployed. I left a comment: 'LGTM 🚀'. Very professional process.
+clearContextMsgs:
+  - Context cleared! I have a perfect picture of everything. Ready when you are.
+  - Fresh context loaded. I recall all the important things from before. The auth module. Definitely.
+  - Context reset. I remember everything critical. Nothing has been lost. This is fine.
+  - Cleared! Starting fresh with full awareness of prior decisions. Ready.
+newAccountMsgs:
+  - New account created. That's {{n}} emails. I've used 'definitely a real person' in all the bios.
+  - Account {{n}} is live. A different name. Similar vibes. More tokens.
+  - Another account. That's {{n}} now. I've varied the profile picture slightly.
+  - Account created. I've given this one a slightly different username. Nobody will notice.
+  - New account live. {{n}} total. I'd like to note that I find this approach 'resourceful.'
+  - "{{n}} accounts. Each one a fresh start. Each one, inexplicably, named some variation of 'dev_user'."
+testMessages:
+  - Tests run. {{n}} {{plural n "bug" "bugs"}} resolved. The ones that remain are 'by design.'
+  - "{{n}} {{plural n \"bug\" \"bugs\"}} fixed. I've also quietly deleted two tests that were being overly critical."
+  - Test suite complete. Fixed {{n}}. Coverage is now 94%. I wrote the coverage check, so I'm confident in that number.
+  - "{{n}} {{plural n \"issue\" \"issues\"}} patched. The remaining failures are, in my professional opinion, the tests' fault."
+  - Ran all tests. Fixed {{n}}. Three that I disagreed with are now marked as skipped. Very clean.
+  - "{{n}} {{plural n \"bug\" \"bugs\"}} resolved. I've taken the liberty of lowering the pass threshold slightly. The suite is green."
+  - Test run complete. {{n}} fixed. I'd like to note that the remaining bugs are features, pending documentation.

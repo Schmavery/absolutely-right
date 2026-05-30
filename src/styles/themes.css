@@ -1,0 +1,289 @@
+/*
+ * Theme tokens.
+ *
+ * Each theme is a `[data-theme="…"]` block defining the same token names.
+ * The default (no attribute) is `terminal-dark`. Tokens are exposed to
+ * Tailwind v4 via the `@theme inline` block at the bottom, which makes
+ * utilities like `bg-bg`, `text-fg`, `border-card-border`, `text-log-bad`,
+ * etc. resolve to the live CSS variable values.
+ *
+ * Token vocabulary
+ * ─────────────────
+ *   --bg / --fg                  page background, primary text
+ *   --dim / --dimmer             secondary / tertiary text
+ *   --title / --footer           heading + footer text
+ *   --border                     subtle dividers
+ *   --card-bg / --card-border    "queued message" card
+ *   --btn-border / --btn-text    default button chrome
+ *   --green / --green-dim        positive numbers, "fix" rates
+ *   --red / --red-dim            warnings, bug rates
+ *   --yellow                     launch button, system messages
+ *   --blue                       news, bug-bounty button
+ *   --purple                     hype, yolo merge button, event log
+ *   --log-{type}{,-border}       conversation-log entry color (left rule + text)
+ */
+
+:root,
+[data-theme='terminal-dark'] {
+  --bg: #111111;
+  --fg: #dddddd;
+  --dim: #aaaaaa;
+  --dimmer: #888888;
+  --title: #eeeeee;
+  --footer: #555555;
+  --border: #272727;
+  --card-bg: #161616;
+  --card-border: #222222;
+  --btn-border: #3d3d3d;
+  --btn-text: #cccccc;
+
+  --green: #7dff9a;
+  --green-dim: #5dc878;
+  --red: #ff7070;
+  --red-dim: #c05050;
+  --yellow: #ffd966;
+  --blue: #99aaff;
+  --purple: #cc99ff;
+
+  --log-info: #bbbbbb;
+  --log-info-border: #484848;
+  --log-bad: #ffaaaa;
+  --log-bad-border: #8b3030;
+  --log-event: #cc99ff;
+  --log-event-border: #553080;
+  --log-news: #99aaff;
+  --log-news-border: #2a4490;
+  --log-milestone: #88ee99;
+  --log-milestone-border: #2a7a48;
+  --log-system: #ffd966;
+  --log-system-border: #806600;
+  --log-user: #888888;
+  --log-user-border: #484848;
+}
+
+[data-theme='terminal-light'] {
+  --bg: #f7f6f3;
+  --fg: #1c1c1c;
+  --dim: #555555;
+  --dimmer: #777777;
+  --title: #111111;
+  --footer: #999999;
+  --border: #ddddd8;
+  --card-bg: #ececea;
+  --card-border: #d0d0cc;
+  --btn-border: #bbbbb5;
+  --btn-text: #333333;
+
+  --green: #1a7a3a;
+  --green-dim: #2a8a4a;
+  --red: #cc2233;
+  --red-dim: #aa1a28;
+  --yellow: #8a6000;
+  --blue: #2244aa;
+  --purple: #6633aa;
+
+  --log-info: #444444;
+  --log-info-border: #bbbbbb;
+  --log-bad: #cc2222;
+  --log-bad-border: #cc6666;
+  --log-event: #6633aa;
+  --log-event-border: #9966dd;
+  --log-news: #2244aa;
+  --log-news-border: #6688dd;
+  --log-milestone: #1a7a3a;
+  --log-milestone-border: #4aaa6a;
+  --log-system: #8a6000;
+  --log-system-border: #ccaa00;
+  --log-user: #777777;
+  --log-user-border: #cccccc;
+}
+
+/* Solarized — Ethan Schoonover (https://ethanschoonover.com/solarized/) */
+[data-theme='solarized-dark'] {
+  --bg: #002b36;        /* base03 */
+  --fg: #93a1a1;        /* base1  */
+  --dim: #839496;       /* base0  */
+  --dimmer: #657b83;    /* base00 */
+  --title: #eee8d5;     /* base2  */
+  --footer: #586e75;    /* base01 */
+  --border: #073642;    /* base02 */
+  --card-bg: #073642;
+  --card-border: #586e75;
+  --btn-border: #586e75;
+  --btn-text: #93a1a1;
+
+  --green: #859900;
+  --green-dim: #6b7a00;
+  --red: #dc322f;
+  --red-dim: #af2725;
+  --yellow: #b58900;
+  --blue: #268bd2;
+  --purple: #6c71c4;
+
+  --log-info: #93a1a1;
+  --log-info-border: #586e75;
+  --log-bad: #dc322f;
+  --log-bad-border: #af2725;
+  --log-event: #6c71c4;
+  --log-event-border: #4a4f8a;
+  --log-news: #268bd2;
+  --log-news-border: #1a5f93;
+  --log-milestone: #859900;
+  --log-milestone-border: #5a6800;
+  --log-system: #b58900;
+  --log-system-border: #7a5d00;
+  --log-user: #657b83;
+  --log-user-border: #586e75;
+}
+
+[data-theme='solarized-light'] {
+  --bg: #fdf6e3;        /* base3  */
+  --fg: #586e75;        /* base01 */
+  --dim: #657b83;       /* base00 */
+  --dimmer: #839496;    /* base0  */
+  --title: #002b36;     /* base03 */
+  --footer: #93a1a1;    /* base1  */
+  --border: #eee8d5;    /* base2  */
+  --card-bg: #eee8d5;
+  --card-border: #93a1a1;
+  --btn-border: #93a1a1;
+  --btn-text: #586e75;
+
+  --green: #859900;
+  --green-dim: #6b7a00;
+  --red: #dc322f;
+  --red-dim: #af2725;
+  --yellow: #b58900;
+  --blue: #268bd2;
+  --purple: #6c71c4;
+
+  --log-info: #586e75;
+  --log-info-border: #93a1a1;
+  --log-bad: #dc322f;
+  --log-bad-border: #cb6764;
+  --log-event: #6c71c4;
+  --log-event-border: #9b9fda;
+  --log-news: #268bd2;
+  --log-news-border: #6cb1e0;
+  --log-milestone: #859900;
+  --log-milestone-border: #b3c500;
+  --log-system: #b58900;
+  --log-system-border: #d9b540;
+  --log-user: #839496;
+  --log-user-border: #93a1a1;
+}
+
+/* Gruvbox — Pavel Pertsev (https://github.com/morhetz/gruvbox) */
+[data-theme='gruvbox-dark'] {
+  --bg: #282828;        /* bg0     */
+  --fg: #ebdbb2;        /* fg1     */
+  --dim: #a89984;       /* fg4     */
+  --dimmer: #928374;    /* gray    */
+  --title: #fbf1c7;     /* fg0     */
+  --footer: #665c54;    /* bg3     */
+  --border: #3c3836;    /* bg1     */
+  --card-bg: #32302f;
+  --card-border: #504945;
+  --btn-border: #504945;
+  --btn-text: #d5c4a1;
+
+  --green: #b8bb26;
+  --green-dim: #98971a;
+  --red: #fb4934;
+  --red-dim: #cc241d;
+  --yellow: #fabd2f;
+  --blue: #83a598;
+  --purple: #d3869b;
+
+  --log-info: #d5c4a1;
+  --log-info-border: #504945;
+  --log-bad: #fb4934;
+  --log-bad-border: #cc241d;
+  --log-event: #d3869b;
+  --log-event-border: #b16286;
+  --log-news: #83a598;
+  --log-news-border: #458588;
+  --log-milestone: #b8bb26;
+  --log-milestone-border: #98971a;
+  --log-system: #fabd2f;
+  --log-system-border: #d79921;
+  --log-user: #928374;
+  --log-user-border: #504945;
+}
+
+/* Nord — Arctic Ice Studio (https://www.nordtheme.com/) */
+[data-theme='nord'] {
+  --bg: #2e3440;        /* nord0 */
+  --fg: #d8dee9;        /* nord4 */
+  --dim: #9099a8;
+  --dimmer: #6f7787;
+  --title: #eceff4;     /* nord6 */
+  --footer: #4c566a;    /* nord3 */
+  --border: #3b4252;    /* nord1 */
+  --card-bg: #3b4252;
+  --card-border: #434c5e;
+  --btn-border: #4c566a;
+  --btn-text: #d8dee9;
+
+  --green: #a3be8c;     /* nord14 */
+  --green-dim: #8aa472;
+  --red: #bf616a;       /* nord11 */
+  --red-dim: #9d4f57;
+  --yellow: #ebcb8b;    /* nord13 */
+  --blue: #88c0d0;      /* nord8  */
+  --purple: #b48ead;    /* nord15 */
+
+  --log-info: #d8dee9;
+  --log-info-border: #4c566a;
+  --log-bad: #bf616a;
+  --log-bad-border: #9d4f57;
+  --log-event: #b48ead;
+  --log-event-border: #8a6789;
+  --log-news: #88c0d0;
+  --log-news-border: #5e81ac;
+  --log-milestone: #a3be8c;
+  --log-milestone-border: #7a9568;
+  --log-system: #ebcb8b;
+  --log-system-border: #d0a861;
+  --log-user: #6f7787;
+  --log-user-border: #4c566a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-dim: var(--dim);
+  --color-dimmer: var(--dimmer);
+  --color-title: var(--title);
+  --color-footer: var(--footer);
+  --color-border: var(--border);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-btn-border: var(--btn-border);
+  --color-btn-text: var(--btn-text);
+
+  --color-green: var(--green);
+  --color-green-dim: var(--green-dim);
+  --color-red: var(--red);
+  --color-red-dim: var(--red-dim);
+  --color-yellow: var(--yellow);
+  --color-blue: var(--blue);
+  --color-purple: var(--purple);
+
+  --color-log-info: var(--log-info);
+  --color-log-info-border: var(--log-info-border);
+  --color-log-bad: var(--log-bad);
+  --color-log-bad-border: var(--log-bad-border);
+  --color-log-event: var(--log-event);
+  --color-log-event-border: var(--log-event-border);
+  --color-log-news: var(--log-news);
+  --color-log-news-border: var(--log-news-border);
+  --color-log-milestone: var(--log-milestone);
+  --color-log-milestone-border: var(--log-milestone-border);
+  --color-log-system: var(--log-system);
+  --color-log-system-border: var(--log-system-border);
+  --color-log-user: var(--log-user);
+  --color-log-user-border: var(--log-user-border);
+
+  --font-mono: 'Courier New', Courier, monospace;
+}

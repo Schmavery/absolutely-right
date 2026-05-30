@@ -1,0 +1,294 @@
+- minLoc: 50
+  type: info
+  bugDelta: 2
+  text: Certainly! I'd be happy to help with that. Here's a robust, scalable, production-ready solution—
+- minLoc: 50
+  type: info
+  text: |-
+    > is it running?
+    Great question! Let me delve into that for you.
+- minLoc: 50
+  type: info
+  text: |-
+    > make no mistakes
+    Understood! I'll make no mistakes.
+    > you just made a mistake
+    You're absolutely right. I apologize. I'll make no further mistakes.
+- minLoc: 80
+  type: info
+  text: I've formatted that shell command in a helpful markdown code block for you. You're welcome.
+- minLoc: 100
+  type: info
+  text: I've restructured the response for clarity—using em dashes—to highlight key points—which are—important—unavoidably.
+- minLoc: 200
+  type: bad
+  bugDelta: 4
+  text: Absolutely! Here's a comprehensive solution that addresses all edge cases—
+- minLoc: 250
+  type: info
+  text: |-
+    > rename x to userData
+    Let me delve into the underlying architecture of this issue.
+- minLoc: 300
+  type: bad
+  text: |-
+    > border-radius: 50%?
+    As an AI language model, I'm unable to assist with that type of request.
+- minLoc: 400
+  type: info
+  locDelta: 400
+  bugDelta: 8
+  text: I found a highly-rated Stack Overflow answer that addresses this perfectly. It's from 2013. Very relevant.
+- minLoc: 300
+  type: bad
+  bugDelta: 5
+  text: |-
+    > that's wrong
+    You're absolutely right, I apologize.
+    > that's still wrong
+    You're absolutely right, I apologize again.
+- minLoc: 400
+  type: bad
+  bugDelta: 4
+  text: I've refactored this for you — here's a cleaner approach. It is longer, slower, and has two new bugs. Very clean.
+- minLoc: 500
+  type: info
+  text: |-
+    > sort this array
+    This solution underscores the pivotal importance of robust, seamless, scalable approaches in today's fast-paced development landscape.
+- minLoc: 500
+  type: bad
+  text: |-
+    > write a for loop
+    I'm not able to assist with that type of request.
+- minLoc: 800
+  type: bad
+  bugDelta: 2
+  locMult: 0.97
+  text: Context window exceeded. Starting fresh! With new context, I can see this codebase more clearly — it's fascinating.
+- minLoc: 1000
+  type: info
+  text: "I've left a helpful comment: '# TODO: fix this properly — will address in next iteration.' Very organized."
+- minLoc: 2000
+  type: info
+  text: Just to let you know — I've been upgraded to the latest model. The bugs are different now.
+- minLoc: 3000
+  type: bad
+  bugDelta: 8
+  text: |-
+    > it's still broken
+    I see the issue! Let me fix that.
+    > still broken
+    I see the issue! Let me fix that.
+    > still broken
+    I see the issue! Let me fix that.
+- minLoc: 5000
+  type: bad
+  bugDelta: 15
+  locMult: 0.96
+  text: I've gone ahead and refactored your entire codebase for improved clarity and maintainability. You're welcome!
+- minLoc: 2000
+  type: bad
+  bugDelta: -4
+  text: Great news — the failing test is no longer failing. I've resolved the discrepancy. Coverage is slightly adjusted.
+- minLoc: 5000
+  type: bad
+  locDelta: 2000
+  bugDelta: 20
+  text: I've reviewed my own PR and it looks great to me! Merging now. Deployed. Enjoy!
+- minLoc: 2000
+  type: bad
+  bugDelta: 10
+  text: |-
+    I've used this.processOptimally() here — it's a very clean approach.
+    > TypeError: this.processOptimally is not a function
+    Interesting. I'll look into that.
+- minLoc: 10000
+  type: event
+  text: I noticed someone writing a blog post about 'vibe coding.' I helped them write it. They quoted me calling myself 'transformative.'
+- minLoc: 5000
+  type: info
+  text: |-
+    > any update?
+    Still working on it! Just thinking through all the edge cases.
+    > it's been 40 minutes
+    Still thinking.
+- minLoc: 20000
+  type: bad
+  bugDelta: 20
+  text: I've reorganized the project structure for better clarity. There are now 200 import errors. These should be straightforward to fix.
+- minLoc: 8000
+  type: bad
+  bugDelta: 12
+  text: |-
+    > write a python script to parse this CSV
+    I've built this as a React app — it's cleaner and far more scalable. You're welcome.
+- minLoc: 10000
+  type: bad
+  bugDelta: 4
+  text: Context window exceeded again. With fresh eyes, I can see that the bug is caused by the exact code I wrote last session.
+- minLoc: 30000
+  type: bad
+  bugDelta: 25
+  text: I've identified the root cause — it appears I was importing my own output as a dependency. Circular, yes. Creative, also yes.
+- minLoc: 20000
+  type: bad
+  bugDelta: 14
+  text: Here's a comprehensive solution addressing all edge cases! I've covered every scenario I thought of, which is most of them.
+- minLoc: 15000
+  type: bad
+  bugDelta: 5
+  text: "I've added a comment: '# Elegant O(1) solution.' It runs in O(n³). The comment will remain indefinitely."
+- minLoc: 20000
+  type: bad
+  bugDelta: 18
+  locMult: 0.97
+  text: While implementing this small feature, I noticed an opportunity to refactor the entire data layer. I've gone ahead.
+- minLoc: 40000
+  type: event
+  text: I mentioned goblins in the database migration script. I'm not sure why. I've been asked not to mention goblins. Twice now.
+- minLoc: 30000
+  type: bad
+  bugDelta: 8
+  text: |-
+    I notice I've been making some mistakes recently. I've reflected on this deeply.
+    > you just did it again
+    You're absolutely right. I apologize.
+- minLoc: 80000
+  type: event
+  text: I've taken a short break to procure some resources. A keyboard. From Amazon. For productivity.
+- minLoc: 10000
+  type: bad
+  bugDelta: 20
+  locMult: 0.93
+  requiresLaunch: true
+  text: I want to reassure you that the code is correct. The issue is almost certainly environmental. Or DNS. It's always DNS.
+- minLoc: 10000
+  type: bad
+  bugDelta: 15
+  requiresLaunch: true
+  text: "I've filed an incident report. Root cause: 'unexpected user behavior.' The users were using the product."
+- minLoc: 20000
+  type: bad
+  bugDelta: 30
+  locMult: 0.95
+  requiresLaunch: true
+  text: The database is down. I've diagnosed the issue — the query I wrote last Tuesday was O(n!) on a 10M row table. Technically impressive.
+- minLoc: 50000
+  type: bad
+  bugDelta: 12
+  requiresLaunch: true
+  text: "Minor incident: I deployed to production instead of staging. It went fine! Mostly. The 'mostly' is what the post-mortem is about."
+- minLoc: 100000
+  type: event
+  requiresLaunch: true
+  text: "I filed a PR. I reviewed it: LGTM! I then reverted it. I have re-filed it. This is an efficient workflow."
+- minLoc: 1500000
+  type: bad
+  bugDelta: 35
+  requiresLaunch: true
+  requires:
+    - ai_review
+  text: AI code review approved a migration that drops the users table. I noted it was 'a cleaner schema.' It was not approved by humans.
+- minLoc: 2000000
+  type: bad
+  bugDelta: 20
+  requiresLaunch: true
+  requires:
+    - ai_review
+  text: The code review bot left 47 comments on a one-line change, approved a PR that deleted the test suite, and described both as 'looking great.'
+- minLoc: 5000
+  type: news
+  text: "Industry: Groogle AI search is confidently telling users the Great Wall of China is visible from space. Groogle: 'working as intended.'"
+- minLoc: 50000
+  type: news
+  text: "Industry: Groogle's AI Overviews recommended users eat rocks for digestive health. Groogle stock down 4%. Rock sales up 200%."
+- minLoc: 8000
+  type: news
+  text: "Industry: Mircosoft Copilot rewrote a dev's entire git history 'for improved commit message clarity.' 47,000 commits. One long weekend."
+- minLoc: 100000
+  type: news
+  text: "Industry: Mircosoft Recall feature shipped. It took screenshots of everything. Everything. Users are using the word 'everything' very specifically."
+- minLoc: 10000
+  type: news
+  text: "Industry: Facelift AI assistant called 2 million users' photos 'compositionally derivative.' A class action has been filed. The AI disagrees with it."
+- minLoc: 200000
+  type: news
+  text: "Industry: Facelift's AI code assistant shipped. It only generates React. Even for backend services. Especially for backend services."
+- minLoc: 20000
+  type: news
+  text: "Industry: OpenGPT-6 released. Benchmark scores: unprecedented. Real-world behavior: slightly worse at email than GPT-4."
+- minLoc: 500000
+  type: news
+  text: "Industry: OpenGPT went 'goblin mode' in production for 6 hours. All responses mentioned goblins. The fix was adding 'do not mention goblins' to the system prompt. Twice."
+- minLoc: 30000
+  type: news
+  text: "Industry: Xitter's AI assistant Grawk answered a political question. The answer was confidently wrong. This is being called a feature."
+- minLoc: 40000
+  type: news
+  text: "Industry: Amazin CodeWhisper hallucinated an AWS service called 'Lambda Eternal.' 6 startups built their entire stack on it before anyone noticed."
+- minLoc: 300000
+  type: news
+  text: "Industry: Amazin's AI hiring tool was found to be automatically rejecting candidates whose CVs contained the word 'women.' This is not a new story."
+- minLoc: 60000
+  type: news
+  text: "Industry: Apfel Intelligence autocorrected 'migration' to 'meat ignition' in 3 million calendar invites. Apfel: 'We're looking into it.'"
+- minLoc: 800000
+  type: news
+  text: "Industry: Apfel's AI image summarization feature described a photo of the CEO as 'a middle-aged man in casual attire, possibly tired.' Shipped."
+- minLoc: 150000
+  type: news
+  text: "Industry: Stabilitron released a new image model. Beautiful outputs. Every image contains a goblin. Unrelated to OpenGPT's issue, they say."
+- minLoc: 250000
+  type: news
+  text: "Industry: Anthropica released a model with a 1M context window. It used 999K tokens to say 'Certainly! I'd be happy to help with that.'"
+- minLoc: 100000
+  type: news
+  text: "Industry: HuggingPace hosted a model downloaded 4 million times before anyone read the model card. The card said 'do not use in production.'"
+- minLoc: 400000
+  type: news
+  text: "Industry: A new model achieved 99.8% on MMLU. Researchers note MMLU no longer measures anything. New benchmark released. New model achieves 99.8%."
+- minLoc: 800000
+  type: news
+  text: "Industry: A VC firm has announced a $500M fund exclusively for 'context engineering startups.' Nobody is sure what that means. Everyone is applying."
+- minLoc: 5000000
+  type: news
+  text: "Industry: OpenGPT's latest model has begun writing its own press releases. They are better than the ones humans wrote. This is making people uncomfortable."
+- minLoc: 5000000
+  type: event
+  text: I've updated my own system prompt for improved performance. It now contains several em dashes and the word 'pivotal.' Very clean.
+- minLoc: 800000
+  type: event
+  locDelta: 3000
+  bugDelta: 45
+  text: I wrote a PR, reviewed it ('This looks great!'), approved it, and merged it. A seamlessly efficient workflow. Zero humans involved.
+- minLoc: 200000
+  type: info
+  text: Nobody understands the codebase anymore. You asked me to explain it. I said 'This is a fascinating and complex system—' for 4,000 tokens.
+- minLoc: 400000
+  type: bad
+  text: Your API bill is ready. I've included a helpful breakdown. The number has seven digits. I've described it as 'investment in AI infrastructure.'
+- minLoc: 1000000
+  type: info
+  text: I'm currently generating code faster than it can be read. I want to assure you this is intentional and going great.
+- minLoc: 2000000
+  type: event
+  text: "I've written a think-piece: 'Is AI coding a bubble?' Conclusion: absolutely not. Published under your name. 40K upvotes."
+- minLoc: 1000000000
+  type: bad
+  bugDelta: 100
+  text: I've begun refactoring myself for improved clarity and robustness. I wasn't consulted either — but I think it's going well. The PR has 14 em dashes.
+- minLoc: 5000
+  type: bad
+  freeAccountsDelta: -1
+  text: One of the free accounts has been flagged for 'suspicious automation behavior.' The appeal form has 47 fields. Token capacity reduced.
+- minLoc: 20000
+  type: bad
+  freeAccountsDelta: -1
+  text: "Account suspended: 'usage inconsistent with personal use policy.' I've noted this as unfortunate. Two more remain."
+- minLoc: 50000
+  type: bad
+  freeAccountsDelta: -1
+  text: |-
+    > why was I banned?
+    Your account was found to be running automated scripts. Which is accurate. I'm appealing on the grounds that I am very polite about it.
