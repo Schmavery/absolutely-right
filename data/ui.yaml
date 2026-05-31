@@ -1,9 +1,11 @@
+# Flavor subtitles under the title. Index from `getPhase()` in `src/game/phases.ts`
+# (launch / upgrades / flags). Copy is mood, not a chapter summary — keep it vague.
 phases:
   - a new conversation
-  - you have a coding assistant now — going great
-  - the agents are taking over
-  - you're mostly just watching
-  - the AGI writes the code. you approve PRs. sometimes.
+  - it's running in prod
+  - additional capacity online
+  - waiting on sign-off
+  - no active incidents
 spinFrames:
   - ⠋
   - ⠙
@@ -15,6 +17,25 @@ spinFrames:
   - ⠧
   - ⠇
   - ⠏
+  - "|"
+  - "/"
+  - "-"
+  - "\\"
+  - ◴
+  - ◷
+  - ◶
+  - ◵
+  - ◐
+  - ◓
+  - ◑
+  - ◒
+  - ▁
+  - ▃
+  - ▅
+  - ▇
+  - ▓
+  - ▒
+  - ░
 spinVerbs:
   - thinking
   - ideating
@@ -26,9 +47,12 @@ spinVerbs:
   - architecting
   - tokenizing
   - overthinking
+  - "¯\\_(ツ)_/¯"
   - being robust
   - being scalable
   - consulting goblins
   - adding em dashes
   - being comprehensive
   - pivoting
+  - (╯°□°)╯︵ ┻━┻
+  - doing the thing

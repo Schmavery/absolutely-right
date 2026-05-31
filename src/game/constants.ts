@@ -125,9 +125,6 @@ export const AGENT_BUFF = {
   ninesFloorFallback: 4,
 } as const;
 
-/** Phase boundaries (totalLoc → phase index 0..4). */
-export const PHASE_THRESHOLDS = [5000, 500_000, 50_000_000, 5_000_000_000] as const;
-
 // ─── Simulator / pacing ────────────────────────────────────────────────────
 
 /**

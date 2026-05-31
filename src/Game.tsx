@@ -3,7 +3,8 @@ import type { GameState } from './types';
 import { LOC_PER_CLICK_POWER, SAVE_INTERVAL_MS, TICK_MS } from './game/constants';
 import { action, UI } from './game/data';
 import { deriveGame } from './game/derive';
-import { calcClickBonus, calcClickPower, getPhase } from './game/rates';
+import { calcClickBonus, calcClickPower } from './game/rates';
+import { getPhase } from './game/phases';
 import { clearSave, defaultState, initState, saveState } from './game/state';
 import { tickReducer } from './game/tick';
 import { appendLog } from './game/log';
@@ -25,12 +26,14 @@ import {
 import { useStreamingLog } from './lib/useStreamingLog';
 import { useIsMobile } from './lib/useWindowWidth';
 import { Button } from './components/Button';
+import { FooterBarrel } from './components/FooterBarrel';
 import { ResourcePanel } from './components/ResourcePanel';
 import { ActionBar } from './components/ActionBar';
 import { Generators } from './components/Generators';
 import { Upgrades, InstalledList } from './components/Upgrades';
 import { ConversationLog } from './components/ConversationLog';
 import { Settings } from './components/Settings';
+import { ResetConfirmModal } from './components/ResetConfirmModal';
 
 const PHASES = UI.phases;
 
@@ -38,6 +41,7 @@ export function Game() {
   const isMobile = useIsMobile();
 
   const [state, setState] = useState<GameState>(initState);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -85,17 +89,15 @@ export function Game() {
     [dispatch],
   );
 
-  const handleReset = useCallback(() => {
-    if (window.confirm('rewrite from scratch?\n\n(resets all progress)')) {
-      clearSave();
-      setState(defaultState());
-      resetStream();
-    }
+  const handleResetConfirm = useCallback(() => {
+    clearSave();
+    setState(defaultState());
+    resetStream();
   }, [resetStream]);
 
   // ── derived ──
   const derived = deriveGame(state);
-  const phase = getPhase(state.totalLoc);
+  const phase = getPhase(state);
   const showLog = state.log.length >= 1;
   const { showGenSection, showUpgSection } = derived.ui;
 
@@ -130,8 +132,8 @@ export function Game() {
   return (
     <div
       className={[
-        'h-screen overflow-hidden bg-bg text-fg font-mono text-[14px] leading-[1.65] flex flex-col relative',
-        isMobile ? 'px-[14px] pt-[14px] pb-0' : 'px-6 pt-7 pb-0',
+        'h-screen bg-bg text-fg font-mono text-[14px] leading-[1.65] flex flex-col relative overflow-x-hidden overflow-y-visible',
+        isMobile ? 'px-[14px] pt-[14px] pb-2' : 'px-6 pt-7 pb-2',
       ].join(' ')}
     >
       <Settings />
@@ -221,7 +223,7 @@ export function Game() {
 
           {state.totalLoc > 0 && (
             <div className="mt-11 pt-[14px] border-t border-border">
-              <Button variant="subtle" onClick={handleReset}>
+              <Button variant="subtle" onClick={() => setResetConfirmOpen(true)}>
                 rewrite from scratch
               </Button>
             </div>
@@ -240,9 +242,14 @@ export function Game() {
         )}
       </div>
 
-      <div className="py-3 text-center text-footer text-[11px] italic flex-shrink-0">
-        built with irony using cursor
-      </div>
+      <FooterBarrel />
+
+      {resetConfirmOpen && (
+        <ResetConfirmModal
+          onConfirm={handleResetConfirm}
+          onClose={() => setResetConfirmOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -34,6 +34,7 @@ data/                         # game content
   actions.yaml                # per-action cost / cooldown / formulas / messages
   ui.yaml                     # phase strings, spinner frames
   README.md                   # authoring guide
+  PHASES.md                   # mechanical chapter outline (design)
 
 src/
   main.tsx                    # react-dom entry; mounts <Game />

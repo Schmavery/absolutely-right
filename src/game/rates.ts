@@ -9,7 +9,7 @@
 
 import { action, GENS, UPGRADES } from './data';
 import type { GenDef, UpgDef } from '../types';
-import { MONEY, PHASE_THRESHOLDS, TOKENS, UPTIME } from './constants';
+import { MONEY, TOKENS, UPTIME } from './constants';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -169,13 +169,6 @@ export function calcUptime(bugs: number): Uptime {
               ? '1 nine'
               : 'no nines';
   return { fraction, nines, pct, label };
-}
-
-export function getPhase(totalLoc: number): number {
-  for (let i = 0; i < PHASE_THRESHOLDS.length; i++) {
-    if (totalLoc < PHASE_THRESHOLDS[i]) return i;
-  }
-  return PHASE_THRESHOLDS.length;
 }
 
 export function formatNinesPct(n: number): string {
