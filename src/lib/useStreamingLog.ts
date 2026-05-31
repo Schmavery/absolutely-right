@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogEntry, LogEntryType } from '../types';
 import { STREAMING } from '../game/constants';
+import { aiStreamPhases, effectiveStreamMs } from '../game/streamSchedule';
 
 /** Chat reply after a `>` line — not milestones/news (those use AI-only pacing). */
 const PROMPT_REPLY_TYPES: ReadonlySet<LogEntryType> = new Set(['info', 'bad', 'event']);
@@ -21,10 +22,7 @@ export function isLogEntryFullyDisplayed(
  * into a `displayLog` array word-by-word, with a brief pause before each
  * entry. User-authored lines appear after a short delay without streaming.
  *
- * `showThinking` drives the spinner in the pause after a user line (or before
- * AI-only replies) — hidden once the AI entry starts typing (`|` stream).
- * `isAnimating` is true until the display queue is fully drained — use this
- * to gate the prompt button so it stays off until streaming actually finishes.
+ * Playback uses each entry's enqueue-time `streamMs` (see `streamSchedule.ts`).
  */
 export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
   const [displayLog, setDisplayLog] = useState<LogEntry[]>(stateLog);
@@ -35,6 +33,7 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
   const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Set when a user line already scheduled the post-prompt thinking pause. */
   const spinnerPrimedRef = useRef(false);
+  const prevEntryWasUserRef = useRef(false);
   const [showThinking, setShowThinking] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [spinTick, setSpinTick] = useState(0);
@@ -59,6 +58,7 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     isProcessingRef.current = false;
     setIsAnimating(false);
     setShowThinking(false);
+    prevEntryWasUserRef.current = false;
   }, [clearThinkingTimer]);
 
   const processEntry = useCallback(() => {
@@ -67,10 +67,14 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
       return;
     }
     const entry = pendingRef.current.shift()!;
+    const prevWasUser = prevEntryWasUserRef.current;
+    const streamMs = effectiveStreamMs(entry, prevWasUser);
+    const afterUserReply = prevWasUser && entry.type !== 'user';
 
     if (entry.type === 'user') {
       clearThinkingTimer();
       setShowThinking(false);
+      const afterShowMs = Math.max(0, streamMs - STREAMING.userLeadInMs);
       setTimeout(() => {
         setDisplayLog((prev) => [...prev, entry]);
         const next = pendingRef.current[0];
@@ -78,11 +82,13 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
           spinnerPrimedRef.current = true;
           scheduleThinking(STREAMING.thinkingDelayMs);
         }
-        setTimeout(() => processRef.current(), STREAMING.afterUserMs);
+        prevEntryWasUserRef.current = true;
+        setTimeout(() => processRef.current(), afterShowMs);
       }, STREAMING.userLeadInMs);
       return;
     }
 
+    const phases = aiStreamPhases(afterUserReply);
     const chunks = entry.text.split(/(\s+)/);
     let i = 0;
 
@@ -97,7 +103,8 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
             if (next.length > 0) next[next.length - 1] = { ...entry, text: entry.text };
             return next;
           });
-          setTimeout(() => processRef.current(), STREAMING.afterAiMs);
+          prevEntryWasUserRef.current = false;
+          setTimeout(() => processRef.current(), phases.afterMs);
           return;
         }
         i++;
@@ -108,17 +115,19 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
           return next;
         });
         const isSpace = chunks[i - 1].trim() === '';
-        setTimeout(tick, isSpace ? 0 : STREAMING.charBaseMs + STREAMING.charJitterMs);
+        setTimeout(tick, isSpace ? 0 : phases.tokenDelayMs);
       };
-      setTimeout(tick, STREAMING.aiLeadInMs);
+      setTimeout(tick, phases.leadInMs);
     };
+
+    prevEntryWasUserRef.current = false;
 
     if (spinnerPrimedRef.current) {
       spinnerPrimedRef.current = false;
       startAiStream();
     } else {
       setShowThinking(true);
-      setTimeout(startAiStream, STREAMING.aiOnlySpinnerHoldMs);
+      setTimeout(startAiStream, phases.spinnerHoldMs);
     }
   }, [clearThinkingTimer, finishQueue, scheduleThinking]);
 
@@ -130,6 +139,9 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     lastSeenIdRef.current = stateLog[stateLog.length - 1]?.id ?? lastSeenIdRef.current;
     pendingRef.current.push(...newEntries);
     if (!isProcessingRef.current) {
+      const firstId = newEntries[0]!.id;
+      const prior = stateLog.filter((e) => e.id < firstId).at(-1);
+      prevEntryWasUserRef.current = prior?.type === 'user';
       isProcessingRef.current = true;
       setIsAnimating(true);
       processRef.current();
@@ -152,6 +164,7 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     pendingRef.current = [];
     isProcessingRef.current = false;
     spinnerPrimedRef.current = false;
+    prevEntryWasUserRef.current = false;
   }, [clearThinkingTimer]);
 
   return { displayLog, showThinking, isAnimating, spinTick, reset };

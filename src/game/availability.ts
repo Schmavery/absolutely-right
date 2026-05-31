@@ -22,7 +22,6 @@ import type { GameState } from '../types';
 import { LAUNCH_LOC } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
-import { inEarlyPromptScript } from './prompt';
 import { calcBugPenalty, calcRates, calcTokenConfig, genCost } from './rates';
 import {
   buyGenAction,
@@ -134,6 +133,15 @@ function cooldownProgressFromGates(gates: readonly Gate[]): number {
   return Math.min(...cd.map((g) => (g.kind === 'wait' ? (g.progress ?? 1) : 1)));
 }
 
+/** Bar fill for UI: wait-gate mins, and 0 when a bool gate blocks the move. */
+export function displayProgress(m: Move): number {
+  let p = Math.min(m.affordProgress, m.cooldownProgress);
+  for (const g of m.gates) {
+    if (g.kind === 'bool' && !g.ok) p = 0;
+  }
+  return p;
+}
+
 type BuildMoveOverlay = {
   /** `legal` also requires `base.visible` (section/row visibility). */
   requireVisible?: boolean;
@@ -199,10 +207,6 @@ function waitForCooldownMs(state: GameState, key: string, ms: number | undefined
 
 function waitForBuffExpiryMs(state: GameState, t: number): number {
   return Math.max(0, (state.agentBuffExpires ?? 0) - t);
-}
-
-function waitForChatMs(state: GameState, t: number): number {
-  return Math.max(0, (state.chatBusyUntil ?? 0) - t);
 }
 
 function waitForTokensMs(state: GameState, cost: number | undefined): number | null {
@@ -298,17 +302,6 @@ function cooldownGate(
   };
 }
 
-function chatGate(state: GameState, t: number): Gate {
-  const busy = t < (state.chatBusyUntil ?? 0);
-  return {
-    kind: 'wait',
-    ok: !busy,
-    waitMs: waitForChatMs(state, t),
-    role: 'cooldown',
-    progress: busy ? 0 : 1,
-  };
-}
-
 function buffGate(state: GameState, t: number, buffMs: number): Gate {
   const active = t < (state.agentBuffExpires ?? 0);
   const waitMs = waitForBuffExpiryMs(state, t);
@@ -319,12 +312,6 @@ function buffGate(state: GameState, t: number, buffMs: number): Gate {
     role: 'cooldown',
     progress: active ? clamp01(1 - waitMs / buffMs) : 1,
   };
-}
-
-// ─── chat-busy helper (also used by the React prompt button) ───────────────
-
-export function isChatBusy(state: GameState, t: number): boolean {
-  return t < (state.chatBusyUntil ?? 0);
 }
 
 // ─── per-action move builders ──────────────────────────────────────────────
@@ -338,9 +325,6 @@ interface Ctx {
 
 function prompt(c: Ctx): Move {
   const a = action('prompt');
-  const gates = inEarlyPromptScript(c.state)
-    ? [chatGate(c.state, c.t)]
-    : [tokenGate(c.state, a.tokenCost), chatGate(c.state, c.t)];
   return buildMove(
     {
       id: 'prompt',
@@ -349,7 +333,7 @@ function prompt(c: Ctx): Move {
       visible: true,
       apply: promptAction,
     },
-    gates,
+    [cooldownGate(c.state, 'prompt', a.cooldownMs, c.t)],
   );
 }
 

@@ -48,6 +48,7 @@ export const THRESHOLDS = {
   upgradeAffordFraction: 0.25,
 
   // Action visibility ─────────────────────────────────────────────────────
+  /** Reveal paste-the-error once `lifetimeBugs` reaches this (stays visible at 0 bugs). */
   showPasteErrorBugs: 1,
   showKickAgentClicks: 10,
   showWriteTestsBugs: 5,
@@ -160,9 +161,8 @@ export const STREAMING = {
   aiOnlySpinnerHoldMs: 800,
   /** Pause after the spinner before typing starts on post-user replies (ms). */
   aiLeadInMs: 90,
-  /** Per-character delay during AI streaming (ms): base + random extra. */
-  charBaseMs: 26,
-  charJitterMs: 26,
+  /** Per typed token during AI streaming (ms); fixed, set at enqueue. */
+  charMs: 52,
   /** Pause after an AI message finishes streaming (ms). */
   afterAiMs: 420,
   /** Spinner frame interval (ms). */

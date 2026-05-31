@@ -2,7 +2,7 @@ import type { GameState } from '../types';
 import { action } from '../game/data';
 import { calcTokenConfig } from '../game/rates';
 import { runTestsCost, runTestsFixFraction, writeTestCost } from '../game/actions';
-import { getMove, type Move } from '../game/availability';
+import { displayProgress, getMove } from '../game/availability';
 import { fmt } from '../lib/format';
 import { Button } from './Button';
 
@@ -16,14 +16,6 @@ interface Props {
   onLaunch: () => void;
   onYoloMerge: () => void;
   onRunBugBounty: () => void;
-}
-
-/**
- * Combine afford + cooldown progress into a single bar value. The UI shows
- * whichever gate is closer to clearing.
- */
-function comboProgress(m: Move): number {
-  return Math.min(m.affordProgress, m.cooldownProgress);
 }
 
 export function ActionBar({
@@ -77,7 +69,7 @@ export function ActionBar({
           off={!m.pasteError.legal}
           onClick={m.pasteError.legal ? onPasteError : undefined}
           title="paste the error back in"
-          progress={comboProgress(m.pasteError)}
+          progress={displayProgress(m.pasteError)}
         >
           paste the error [{A.pasteError.tokenCost}t]
         </Button>
@@ -88,7 +80,7 @@ export function ActionBar({
           off={!m.writeTest.legal}
           onClick={m.writeTest.legal ? onWriteTest : undefined}
           title="adds a test, reduces bug generation rate"
-          progress={comboProgress(m.writeTest)}
+          progress={displayProgress(m.writeTest)}
         >
           write a test [−{fmt(wTestCost)} loc · {A.writeTest.tokenCost}t]
         </Button>
@@ -123,7 +115,7 @@ export function ActionBar({
             off={!m.runTests.legal}
             onClick={m.runTests.legal ? onRunTests : undefined}
             title={`costs ${fmt(tCost)} loc, fixes ~${fixPct}% of bugs (${state.tests ?? 0} ${(state.tests ?? 0) === 1 ? 'test' : 'tests'})`}
-            progress={comboProgress(m.runTests)}
+            progress={displayProgress(m.runTests)}
           >
             run tests [−{fmt(tCost)} loc · {A.runTests.tokenCost}t]
           </Button>

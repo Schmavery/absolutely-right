@@ -49,7 +49,7 @@ export function deriveGame(state: GameState): DerivedGame {
 
   const ui: DerivedUi = {
     showTokens: !inEarlyPromptScript(state),
-    showPasteError: state.bugs >= thresholds.showPasteErrorBugs,
+    showPasteError: (state.lifetimeBugs ?? 0) >= thresholds.showPasteErrorBugs,
     showKickAgent: state.totalClicks >= thresholds.showKickAgentClicks,
     showWriteTests:
       (state.bugs >= thresholds.showWriteTestsBugs || (state.tests ?? 0) > 0) &&

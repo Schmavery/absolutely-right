@@ -1,10 +1,11 @@
+import { useLayoutEffect, useRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 type Variant = 'default' | 'primary' | 'launch' | 'yolo' | 'bounty' | 'subtle';
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'> {
   variant?: Variant;
-  /** Disabled-style without `pointer-events: none` so tooltips still work. */
+  /** Disabled-style without native `disabled` so tooltips still work. */
   off?: boolean;
   /** Extra className appended after the variant classes. */
   className?: string;
@@ -15,6 +16,11 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className
    * giving the button a solid background tint.
    */
   progress?: number;
+  /**
+   * When set, width eases upward between React updates (e.g. tick-quantized
+   * cooldowns). Decreases are always instant so resets do not lag.
+   */
+  progressEaseMs?: number;
   /**
    * Tailwind class for the progress fill. Defaults to a neutral
    * monochromatic tint (`bg-dim/20`) used for resource accumulation.
@@ -67,8 +73,8 @@ const VARIANTS: Record<Variant, { on: string; off: string }> = {
 
 /**
  * Tiny terminal-styled button. The "off" state is deliberately not the
- * `disabled` HTML attribute — it just changes appearance and drops the
- * onClick handler — so tooltips still appear on hover.
+ * `disabled` HTML attribute — it just changes appearance, drops the
+ * onClick handler, and uses `pointer-events-none` so clicks do not fire.
  *
  * Optionally renders an inline progress bar (`progress`, 0..1) to show
  * cooldown remaining or resource accumulation. When the bar is full the
@@ -80,6 +86,7 @@ export function Button({
   className,
   children,
   progress,
+  progressEaseMs,
   progressClassName = DEFAULT_PROGRESS_BG,
   ...rest
 }: Props) {
@@ -87,6 +94,13 @@ export function Button({
   const onClick = off ? undefined : rest.onClick;
   const hasProgress = progress !== undefined;
   const pct = hasProgress ? Math.max(0, Math.min(1, progress)) * 100 : 0;
+  const prevPctRef = useRef(pct);
+  const easing = progressEaseMs != null && progressEaseMs > 0;
+  const decreasing = pct < prevPctRef.current - 0.01;
+  useLayoutEffect(() => {
+    prevPctRef.current = pct;
+  }, [pct]);
+
   return (
     <button
       {...rest}
@@ -94,6 +108,7 @@ export function Button({
       className={[
         BASE,
         off ? v.off : v.on,
+        off ? 'pointer-events-none' : '',
         hasProgress ? 'relative overflow-hidden' : '',
         className ?? '',
       ].join(' ')}
@@ -102,7 +117,11 @@ export function Button({
         <span
           aria-hidden
           className={`absolute left-0 top-0 bottom-0 pointer-events-none ${progressClassName}`}
-          style={{ width: `${pct}%` }}
+          style={{
+            width: `${pct}%`,
+            transition:
+              easing && !decreasing ? `width ${progressEaseMs}ms linear` : undefined,
+          }}
         />
       )}
       {hasProgress ? <span className="relative">{children}</span> : children}

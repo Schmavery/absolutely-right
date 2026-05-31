@@ -40,7 +40,6 @@ export function defaultState(): GameState {
     agentBuffExpires: 0,
     unlockedUpgrades: [],
     nines: 0,
-    chatBusyUntil: 0,
   };
 }
 

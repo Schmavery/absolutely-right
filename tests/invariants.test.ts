@@ -15,7 +15,6 @@ import { Sim } from './sim/Sim';
 import { naiveGreedy, lazy, spammer, randomBot } from './sim/bots';
 import { calcTokenConfig } from '../src/game/rates';
 import {
-  isChatBusy,
   legalFromGates,
   moveTable,
   waitMsFromGates,
@@ -63,7 +62,7 @@ describe('invariants: numeric sanity', () => {
         for (const k of [
           'loc', 'bugs', 'lifetimeBugs', 'hype', 'tests', 'freeAccounts',
           'totalLoc', 'totalClicks', 'totalTokensSpent', 'minTokensSeen',
-          'tokens', 'money', 'agentBuffExpires', 'nines', 'chatBusyUntil',
+          'tokens', 'money', 'agentBuffExpires', 'nines',
           'lastEventTime', 'lastTestLogTime', 'logId',
         ] as const) {
           expect(isFiniteNumber(s[k]), `${k} = ${s[k]}`).toBe(true);
@@ -121,8 +120,6 @@ describe('invariants: monotonicity', () => {
         expect(s.usedEventIds.length).toBeGreaterThanOrEqual(prev.usedEventIds.length);
         expect(s.usedNewsIds.length).toBeGreaterThanOrEqual(prev.usedNewsIds.length);
         expect(s.milestonesSeen.length).toBeGreaterThanOrEqual(prev.milestonesSeen.length);
-        // chatBusyUntil only ever extends (max-merge in `appendLog`).
-        expect(s.chatBusyUntil ?? 0).toBeGreaterThanOrEqual(prev.chatBusyUntil ?? 0);
         if (prev.launched) expect(s.launched).toBe(true);
         prev = s;
       }
@@ -177,23 +174,6 @@ describe('invariants: determinism', () => {
       });
       expect(norm(a.state)).toEqual(norm(b.state));
     });
-  }
-});
-
-// ─── chat-busy gate ────────────────────────────────────────────────────────
-
-describe('invariants: chat-busy gate', () => {
-  for (const [name, bot] of POLICIES) {
-    for (const seed of SEEDS) {
-      it(`${name} (seed=${seed}): prompt is never legal while chat is busy`, () => {
-        const sim = new Sim({ seed, recordTrace: true }).run(bot, VIRTUAL_MIN);
-        for (const entry of sim.trace) {
-          if (!isChatBusy(entry.state, entry.t)) continue;
-          const promptMove = moveTable(entry.state, entry.t).byId['prompt'];
-          expect(promptMove.legal, `chat busy at t=${entry.t} but prompt was legal`).toBe(false);
-        }
-      });
-    }
   }
 });
 

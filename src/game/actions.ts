@@ -9,7 +9,7 @@
  * `action(id)`. Cross-cutting numbers stay in `./constants`.
  */
 
-import type { ActionDef, GameState } from '../types';
+import type { ActionDef, GameState, LogEntryType } from '../types';
 import { withBugs } from './state';
 import { action, GENS, UPGRADES } from './data';
 import { AGENT_BUFF, LOC_PER_CLICK_POWER } from './constants';
@@ -24,10 +24,13 @@ import {
   genCost,
 } from './rates';
 import { pick, render } from '../lib/template';
-import { inEarlyPromptScript } from './prompt';
 import { now, random } from './runtime';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
+
+function logFromUser(prev: GameState, text: string, type: LogEntryType): GameState {
+  return appendLog(prev, text, type);
+}
 
 function spendTokens(prev: GameState, n: number): GameState {
   return {
@@ -57,17 +60,14 @@ function canAfford(prev: GameState, a: ActionDef): boolean {
 
 export function promptAction(prev: GameState): GameState {
   const a = action('prompt');
-  const freeScript = inEarlyPromptScript(prev);
-  if (!freeScript && !canAfford(prev, a)) return prev;
-  // Player can't talk over the AI mid-stream.
-  if (now() < (prev.chatBusyUntil ?? 0)) return prev;
+  if (a.cooldownMs && isOnCooldown(prev, 'prompt', a.cooldownMs)) return prev;
   const thresholds = effectiveThresholds(prev.upgrades);
   const power = calcClickPower(prev.upgrades);
   const locGain = power * LOC_PER_CLICK_POWER + calcClickBonus(prev.upgrades);
   const bugFromPrompt =
     prev.totalLoc >= thresholds.bugSpawnLoc && random() < thresholds.promptBugChance ? 1 : 0;
   let next: GameState = {
-    ...(freeScript ? prev : spendTokens(prev, a.tokenCost!)),
+    ...prev,
     loc: prev.loc + locGain,
     ...withBugs(prev, prev.bugs + bugFromPrompt),
     totalLoc: prev.totalLoc + locGain,
@@ -76,12 +76,13 @@ export function promptAction(prev: GameState): GameState {
   };
   const scripted = a.earlyPromptMsgs ?? [];
   if (prev.totalClicks < scripted.length) {
-    next = appendLog(next, render(scripted[prev.totalClicks]), 'info');
+    next = logFromUser(next, render(scripted[prev.totalClicks]), 'info');
   } else if (a.eventProbability) {
     const past = prev.totalClicks - scripted.length;
     const prob = calcPromptEventProbability(a.eventProbability, past);
     next = maybeFireEvent(next, prob, appendLog);
   }
+  if (a.cooldownMs) next = startCooldown(next, 'prompt');
   return next;
 }
 
@@ -95,7 +96,7 @@ export function kickAgentAction(prev: GameState): GameState {
     ...spendTokens(prev, a.tokenCost!),
     agentBuffExpires: now() + a.buffMs!,
   };
-  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'info');
+  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'info');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
@@ -129,7 +130,7 @@ export function pasteErrorAction(prev: GameState): GameState {
   const lines = 2 + Math.floor(random() * 15);
   const ref = 1 + Math.floor(random() * 8);
   const suffixed = msg.replace(/^(>[^\n]*)/, `$1 [Pasted text #${ref} · ${lines} lines]`);
-  next = appendLog(next, suffixed, 'info');
+  next = logFromUser(next, suffixed, 'info');
   return next;
 }
 
@@ -141,7 +142,7 @@ export function clearContextAction(prev: GameState): GameState {
   const { maxTokens } = calcTokenConfig(prev.upgrades, prev.freeAccounts);
   let next: GameState = { ...prev, tokens: maxTokens };
   next = startCooldown(next, 'clear_context');
-  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'info');
+  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'info');
   return next;
 }
 
@@ -163,7 +164,7 @@ export function yoloMergeAction(prev: GameState): GameState {
     hype: prev.hype + (a.hypeReward ?? 0),
   };
   next = startCooldown(next, 'yolo_merge');
-  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'system');
+  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'system');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
@@ -184,7 +185,7 @@ export function runTestsAction(prev: GameState): GameState {
   };
   const t = now();
   if (a.messages && t - prev.lastTestLogTime > (a.logCooldownMs ?? 0)) {
-    next = appendLog(next, render(pick(a.messages), { n: fixed }), 'info');
+    next = logFromUser(next, render(pick(a.messages), { n: fixed }), 'info');
     next = { ...next, lastTestLogTime: t };
   }
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
@@ -227,7 +228,7 @@ export function bugBountyAction(prev: GameState): GameState {
   };
   next = startCooldown(next, 'bug_bounty');
   if (a.runMsg) {
-    next = appendLog(
+    next = logFromUser(
       next,
       render(a.runMsg, { converted: Math.floor(converted), ninesGain: ninesGain.toFixed(3) }),
       'info',
@@ -242,7 +243,7 @@ export function launchAction(prev: GameState): GameState {
   const a = action('launch');
   if (prev.launched) return prev;
   let next: GameState = { ...prev, launched: true, hype: prev.hype + (a.hypeReward ?? 0) };
-  if (a.messages) next = appendLog(next, render(pick(a.messages)), 'system');
+  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'system');
   return next;
 }
 
@@ -257,7 +258,7 @@ export function newFreeAccountAction(prev: GameState): GameState {
   };
   next = startCooldown(next, 'free_account');
   if (a.messages) {
-    next = appendLog(next, render(pick(a.messages), { n: next.freeAccounts }), 'info');
+    next = logFromUser(next, render(pick(a.messages), { n: next.freeAccounts }), 'info');
   }
   return next;
 }
@@ -280,7 +281,7 @@ export function writeTestAction(prev: GameState): GameState {
   };
   const milestone = a.milestones?.find((m) => m.count === next.tests);
   if (milestone) {
-    next = appendLog(next, render(milestone.text, { n: next.tests }), 'info');
+    next = logFromUser(next, render(milestone.text, { n: next.tests }), 'info');
   }
   return next;
 }
@@ -300,7 +301,7 @@ export function buyGenAction(prev: GameState, genId: string): GameState {
     genCounts: { ...prev.genCounts, [genId]: owned + 1 },
   };
   if (owned === 0 && a.firstPurchaseMsg) {
-    next = appendLog(next, render(a.firstPurchaseMsg, { name: g.name, desc: g.desc }), 'info');
+    next = logFromUser(next, render(a.firstPurchaseMsg, { name: g.name, desc: g.desc }), 'info');
   }
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
@@ -318,7 +319,7 @@ export function buyUpgradeAction(prev: GameState, upgId: string): GameState {
     next = { ...next, nines: Math.max(next.nines || 0, u.ninesFloor) };
   }
   const flavor = u.purchaseMsg ?? `${u.name} unlocked. ${u.desc}.`;
-  next = appendLog(next, render(flavor, { name: u.name, desc: u.desc }), 'info');
+  next = logFromUser(next, render(flavor, { name: u.name, desc: u.desc }), 'info');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }

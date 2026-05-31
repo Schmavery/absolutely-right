@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameState } from './types';
-import { LOC_PER_CLICK_POWER, SAVE_INTERVAL_MS, TICK_MS } from './game/constants';
-import { action, MILESTONES, UI } from './game/data';
+import { SAVE_INTERVAL_MS, TICK_MS } from './game/constants';
+import { MILESTONES, UI } from './game/data';
 import { deriveGame } from './game/derive';
-import { calcClickBonus, calcClickPower } from './game/rates';
 import { getPhase } from './game/phases';
 import { clearSave, defaultState, initState, saveState } from './game/state';
 import { tickReducer } from './game/tick';
 import { appendLog } from './game/log';
-import { isChatBusy } from './game/availability';
+import { displayProgress, getMove } from './game/availability';
 import {
   buyGenAction,
   buyUpgradeAction,
@@ -98,7 +97,7 @@ export function Game() {
   const derived = deriveGame(state);
   const phase = getPhase(state);
   const showLog = state.log.length >= 1;
-  const { showGenSection, showUpgSection, showTokens } = derived.ui;
+  const { showGenSection, showUpgSection } = derived.ui;
 
   // Queue panel: next user line only when a prior entry is still streaming
   // (multi-turn `> user / AI / > user`). Idle log and user lead-in never
@@ -172,33 +171,24 @@ export function Game() {
             </>
           )}
 
-          {/* Chat-busy gate: while the AI is mid-stream from a recent prompt
-              or event, "keep going" is disabled so the player can't talk
-              over it. The streaming animation itself is the progress
-              indicator, so no extra bar is needed. */}
           {(() => {
-            const chatBusy = isChatBusy(state, Date.now()) || isAnimating;
+            const t = Date.now();
+            const promptMove = getMove(state, 'prompt', t)!;
+            const waiting = isAnimating || !promptMove.legal;
+            const onCooldown = !promptMove.legal && !isAnimating;
             return (
               <Button
                 variant="primary"
-                off={chatBusy}
-                onClick={chatBusy ? undefined : handlers.prompt}
+                off={waiting}
+                onClick={waiting ? undefined : handlers.prompt}
+                progress={onCooldown ? displayProgress(promptMove) : undefined}
+                progressEaseMs={TICK_MS}
+                progressClassName="bg-green/10"
               >
                 {promptLabel}
               </Button>
             );
           })()}
-          {postStartupUi && state.totalClicks > 0 && (
-            <span className="text-dimmer text-[11px]">
-              +
-              {(
-                calcClickPower(state.upgrades) * LOC_PER_CLICK_POWER +
-                calcClickBonus(state.upgrades)
-              ).toFixed(0)}{' '}
-              loc
-              {showTokens && <> · {action('prompt').tokenCost}t</>}
-            </span>
-          )}
 
           <ActionBar
             state={state}

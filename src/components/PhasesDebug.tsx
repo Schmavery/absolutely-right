@@ -63,7 +63,7 @@ function upgradeNotes(u: UpgDef): string[] {
 const ACTION_GATES: Record<string, string> = {
   prompt: 'always (chat busy may block)',
   kick_agent: `≥ ${THRESHOLDS.showKickAgentClicks} prompts`,
-  paste_error: `≥ ${THRESHOLDS.showPasteErrorBugs} bugs`,
+  paste_error: `lifetime bugs ≥ ${THRESHOLDS.showPasteErrorBugs} (grey at 0)`,
   yolo_merge: `launched & ≥ ${fmtLoc(THRESHOLDS.showYoloMergeLoc)} LOC`,
   launch: `≥ ${fmtLoc(LAUNCH_LOC)} LOC, not launched`,
   bug_bounty: 'nines_tracking & bugs (not auto bounty)',
