@@ -16,6 +16,7 @@ import {
 } from './rates';
 import { LOC_PER_CLICK_POWER, HYPE } from './constants';
 import { appendLog } from './log';
+import { advanceMcpTiming } from './mcpApproval';
 import { render } from '../lib/template';
 import { now } from './runtime';
 
@@ -39,7 +40,8 @@ import { now } from './runtime';
  *     "post-expiry"; the event-driven sim mitigates by inserting buff
  *     expiry into its next-event boundary list.
  */
-export function tickReducer(prev: GameState, dtMs: number = TICK_MS): GameState {
+export function tickReducer(state: GameState, dtMs: number = TICK_MS): GameState {
+  let prev = advanceMcpTiming(state, now());
   const dt = dtMs / 1000;
   const flags = computeFlags(prev.upgrades);
   const thresholds = effectiveThresholds(prev.upgrades);
@@ -88,10 +90,10 @@ export function tickReducer(prev: GameState, dtMs: number = TICK_MS): GameState 
     if (next.loc < u.cost * thresholds.upgradeAffordFraction) continue;
     if (u.requiresLaunch && !next.launched) continue;
     if (u.requires && !u.requires.every((r) => next.upgrades.includes(r))) continue;
-    if (
-      u.unlockMinUptimeNines !== undefined &&
-      calcUptime(next.bugs).nines < u.unlockMinUptimeNines
-    )
+    const uptimeNines = calcUptime(next.bugs).nines;
+    if (u.unlockMinUptimeNines !== undefined && uptimeNines < u.unlockMinUptimeNines)
+      continue;
+    if (u.unlockMaxUptimeNines !== undefined && uptimeNines > u.unlockMaxUptimeNines)
       continue;
     next = { ...next, unlockedUpgrades: [...next.unlockedUpgrades, u.id] };
   }

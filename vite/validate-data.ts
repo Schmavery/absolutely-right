@@ -115,6 +115,35 @@ const uiSchema = z.object({
   spinVerbs: z.array(z.string().min(1)).min(1),
 });
 
+/**
+ * Story order for shop `cost` — each id must cost more than the previous (data/PHASES.md).
+ * Parallel branches use their own spine arrays below.
+ */
+export const UPGRADE_NARRATIVE_SPINE = [
+  'multi_agent',
+  'mcp_tools',
+  'always_allow',
+  'yolo_mode',
+  'upside_down_centaur_policy',
+  'code_review',
+  'code_review_review',
+  'ai_review',
+  'revamp_status_page',
+  'five_nines_sla',
+  'six_nines_guarantee',
+  'seven_nines_engineering',
+  'eight_nines_protocol',
+  'chaos_engineering',
+] as const;
+
+export const UPGRADE_BRANCH_SPINES: readonly (readonly string[])[] = [
+  ['model_update_1', 'model_update_2', 'model_update_3', 'model_update_4'],
+  ['better_prompts', 'few_shot', 'xml_tags'],
+  ['cot', 'extended_thinking'],
+  ['pro_plan', 'team_plan'],
+  ['auto_bug_bounty', 'enhanced_bug_bounty'],
+];
+
 const DATA_FILES = [
   'generators.yaml',
   'upgrades.yaml',
@@ -132,6 +161,42 @@ function assertUniqueIds(file: string, items: { id: string }[]): void {
       throw new Error(`[data/${file}] duplicate id: ${item.id}`);
     }
     seen.add(item.id);
+  }
+}
+
+function assertUpgradeNarrativeCosts(
+  upgrades: { id: string; cost: number; requires?: string[] }[],
+): void {
+  const byId = new Map(upgrades.map((u) => [u.id, u]));
+
+  const assertSpine = (spine: readonly string[], label: string) => {
+    for (let i = 1; i < spine.length; i++) {
+      const prev = byId.get(spine[i - 1]!);
+      const next = byId.get(spine[i]!);
+      if (!prev || !next) {
+        throw new Error(`[data/upgrades.yaml] ${label} spine missing id "${spine[i - 1]}" or "${spine[i]}"`);
+      }
+      if (next.cost <= prev.cost) {
+        throw new Error(
+          `[data/upgrades.yaml] ${label}: "${next.id}" cost ${next.cost} must exceed "${prev.id}" cost ${prev.cost}`,
+        );
+      }
+    }
+  };
+
+  assertSpine(UPGRADE_NARRATIVE_SPINE, 'main');
+  for (const spine of UPGRADE_BRANCH_SPINES) assertSpine(spine, 'branch');
+
+  for (const u of upgrades) {
+    const req = u.requires;
+    if (!req || req.length !== 1) continue;
+    const parent = byId.get(req[0]!);
+    if (!parent) continue;
+    if (u.cost <= parent.cost) {
+      throw new Error(
+        `[data/upgrades.yaml] "${u.id}" cost ${u.cost} must exceed requires "${parent.id}" cost ${parent.cost}`,
+      );
+    }
   }
 }
 
@@ -173,6 +238,7 @@ export function validateGameDataDir(dataDir: string): void {
       }
     }
   }
+  assertUpgradeNarrativeCosts(upgrades);
 
   const events = z.array(eventSchema).parse(raw['events.yaml']);
   for (const e of events) {

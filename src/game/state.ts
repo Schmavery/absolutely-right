@@ -42,6 +42,9 @@ export function defaultState(): GameState {
     unlockedUpgrades: [],
     nines: 0,
     mcpApprovalPending: null,
+    mcpAutoApproveAt: null,
+    mcpExecutingUntil: null,
+    mcpExecutingLine: null,
   };
 }
 

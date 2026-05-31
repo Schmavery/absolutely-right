@@ -23,13 +23,13 @@ const TARGET_CHAPTERS: { id: string; title: string; bugStrategy: string; status:
     id: 'mid',
     title: 'Mid — tools & approvals',
     bugStrategy: 'Approve/deny tool calls; then Always → YOLO upgrade',
-    status: 'MCP beats + Allow/Deny; yolo_mode skips',
+    status: 'MCP card; always_allow auto; yolo skips; 5s execute spinner',
   },
   {
     id: 'min-late',
     title: 'Min–late — review crises',
-    bugStrategy: 'Human review slows; AI review speeds + bugs',
-    status: 'Unlocks after pro_plan / mid band',
+    bugStrategy: 'Centaur policy → human review → review-of-review → AI review',
+    status: 'Crisis shop chain in upgrades.yaml',
   },
   {
     id: 'late',
@@ -53,6 +53,7 @@ function upgradeNotes(u: UpgDef): string[] {
   if (u.flags?.length) bits.push(`flags: ${u.flags.join(', ')}`);
   if (u.enablesMoney) bits.push('enables $');
   if (u.unlockMinUptimeNines != null) bits.push(`uptime nines ≥ ${u.unlockMinUptimeNines}`);
+  if (u.unlockMaxUptimeNines != null) bits.push(`uptime nines ≤ ${u.unlockMaxUptimeNines}`);
   if (u.bugMult != null) bits.push(`bug×${u.bugMult}`);
   if (u.reviewBugMult != null) bits.push(`review bug×${u.reviewBugMult}`);
   if (u.reviewLocMult != null) bits.push(`review loc×${u.reviewLocMult}`);

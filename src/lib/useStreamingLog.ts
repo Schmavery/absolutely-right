@@ -71,6 +71,15 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     const streamMs = effectiveStreamMs(entry, prevWasUser);
     const afterUserReply = prevWasUser && entry.type !== 'user';
 
+    if (entry.instant) {
+      clearThinkingTimer();
+      setShowThinking(false);
+      setDisplayLog((prev) => [...prev, entry]);
+      prevEntryWasUserRef.current = false;
+      setTimeout(() => processRef.current(), 0);
+      return;
+    }
+
     if (entry.type === 'user') {
       clearThinkingTimer();
       setShowThinking(false);

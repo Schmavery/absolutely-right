@@ -26,7 +26,7 @@ for the chapter (same energy as “a new conversation”).
 | 3 | `code_review` or `ai_review` | waiting on sign-off |
 | 4 | `revamp_status_page` (`nines_tracking`) | no active incidents |
 
-`mcp_tools` gates flavor index 2. Post-prompt MCP beats + Allow/Deny unless `always_allow` (auto) or `yolo_mode` (no beats, no UI).
+`mcp_tools` gates flavor index 2. Post-prompt MCP beats show an in-scroll card; manual Allow/Deny, `always_allow` (card then auto-allow + execute spinner), or `yolo_mode` (no beats/cards).
 
 ---
 
@@ -52,18 +52,21 @@ for the chapter (same energy as “a new conversation”).
 - **Bug strategy:** gate risky agent behavior before it lands (approval beats).
 - **Player role:** approver — chat may block on Allow / Deny (+ small fixed “click” cost in busy time).
 - **MCP chapter (target):** upgrade enables “tools”; events sometimes require approval.
-- **Progression:** per-call approve → **Always allow** upgrade → **YOLO mode** upgrade (auto tools *and* reckless ship — **upgrade, not a repeat button**).
+- **Progression:** per-call approve → **Always allow** (+2× bugs) → **YOLO mode** (+10× bugs, stacks — **upgrade, not a repeat button**).
+- **Pricing:** shop `cost` rises along each narrative chain (MCP → crisis review → nines); later theater costs more than earlier recklessness.
 - **Shipped today:** `multi_agent`, `kick_agent`, `mcp_tools` / `always_allow` / `yolo_mode` shop chain (no yolo button — upgrade only).
 - **Money (here):** `pro_plan` / `team_plan` — tokens up, $/s drain, “scale” fantasy.
 
 ### 4. Min–late — reliability crisis and review theater
 
-- **Bug strategy:** process — humans slow you down; AI review speeds you up and makes bugs worse.
+- **Bug strategy:** process — accountability theater, humans slow you down, meta-review fixes metrics but kills growth, AI review speeds you up and makes bugs worse.
 - **Player role:** “reverse centaur” — you exist for review/approval theater, not typing.
-- **Crisis 1:** after launch, **uptime** drops with bugs (honest coupling).
-- **Mandatory code review:** fewer bugs, less LOC/s.
-- **AI code review:** restores LOC/s, large bug multiplier — **crisis 2**.
-- **Retune note:** today `code_review` / `ai_review` unlock earlier than this chapter; move `unlockAt` / gates to match.
+- **Crisis 1:** after launch, **uptime** drops with bugs (honest coupling). Bug spawn scales **superlinearly** with generator stacks and LOC/s (`BUG_GENERATION` in `constants.ts`) so CI/tests cannot permanently zero it at scale.
+- **Shop chain (uptime ≤ ~1 nine, post-MCP):**
+  1. **Upside-down centaur policy** (`upside_down_centaur_policy`) — slide deck that you own what ships; **+15%** bugs.
+  2. **Mandatory code review** (`code_review`) — fewer bugs, less LOC/s.
+  3. **Mandatory code review review** (`code_review_review`) — review the reviewers; reliability recovers, growth stays low.
+  4. **AI code review** (`ai_review`) — restores LOC/s, large bug multiplier — **crisis 2** → chapter 5.
 
 ### 5. Late / end — status page, decoupling, nines
 
@@ -92,7 +95,7 @@ When an approval event fires:
 
 1. Stream the AI line (existing `chatBusyUntil` from `appendLog` / `streamingDurationMs`).
 2. Hold the prompt until the player clicks **Approve** or **Deny** (optional fixed ms on click so the gate isn’t instant).
-3. **Always allow** / **YOLO** upgrades skip or auto-resolve step 2.
+3. **Always allow** auto-fires Allow after the card; **YOLO** skips cards entirely. Both use a **5s execute spinner** (`MCP.executeSpinnerMs`) before the ack line (no token streaming).
 
 Implementation lives in game code + events/actions YAML; this doc only pins the intent.
 

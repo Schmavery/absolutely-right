@@ -21,6 +21,11 @@ export function persistSave(state: GameState): number {
   return saveState(state, 'editor');
 }
 
+/** Pretty-printed save JSON (import box, agents, issues). */
+export function serializeSaveJson(state: GameState): string {
+  return JSON.stringify(state, null, 2);
+}
+
 export function parseSaveJson(text: string): { ok: true; state: GameState } | { ok: false; error: string } {
   try {
     const parsed = JSON.parse(text) as unknown;
@@ -46,9 +51,11 @@ export function revealAllEligibleUpgrades(state: GameState): GameState {
     if (state.upgrades.includes(u.id)) continue;
     if (u.requiresLaunch && !state.launched) continue;
     if (u.requires && !u.requires.every((r) => state.upgrades.includes(r))) continue;
-    if (u.unlockMinUptimeNines !== undefined) {
-      if (calcUptime(state.bugs).nines < u.unlockMinUptimeNines) continue;
-    }
+    const uptimeNines = calcUptime(state.bugs).nines;
+    if (u.unlockMinUptimeNines !== undefined && uptimeNines < u.unlockMinUptimeNines)
+      continue;
+    if (u.unlockMaxUptimeNines !== undefined && uptimeNines > u.unlockMaxUptimeNines)
+      continue;
     unlocked.add(u.id);
   }
   return { ...state, unlockedUpgrades: [...unlocked] };
@@ -78,6 +85,9 @@ function baseProgress(loc: number, totalLoc: number, upgrades: string[]): Partia
     money: 0,
     nines: 0,
     mcpApprovalPending: null,
+    mcpAutoApproveAt: null,
+    mcpExecutingUntil: null,
+    mcpExecutingLine: null,
     log: [],
     logId: 0,
   };
@@ -171,7 +181,7 @@ export const SAVE_PRESETS: SavePreset[] = [
   {
     id: 'review',
     label: 'Ch3 — review',
-    hint: 'Mandatory code review crisis band.',
+    hint: 'MCP + uptime crisis; centaur policy → review chain.',
     apply: (prev) => {
       const upgrades = sanitizeUpgrades([
         'model_update_1',
@@ -182,14 +192,19 @@ export const SAVE_PRESETS: SavePreset[] = [
         'cicd',
         'multi_agent',
         'mcp_tools',
+        'always_allow',
+        'yolo_mode',
         'pro_plan',
+        'upside_down_centaur_policy',
         'code_review',
+        'code_review_review',
       ]);
       return revealAllEligibleUpgrades({
         ...prev,
         ...baseProgress(900_000, 1_200_000, upgrades),
         launched: true,
         upgrades,
+        bugs: 1500,
         money: 40_000,
       });
     },
@@ -209,7 +224,9 @@ export const SAVE_PRESETS: SavePreset[] = [
         'multi_agent',
         'mcp_tools',
         'pro_plan',
+        'upside_down_centaur_policy',
         'code_review',
+        'code_review_review',
         'ai_review',
         'revamp_status_page',
         'five_nines_sla',

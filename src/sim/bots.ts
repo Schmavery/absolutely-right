@@ -7,7 +7,7 @@ import {
   WEIGHTS_PROGRESS,
   type NeedWeights,
 } from '../game/moveIntent';
-import { mcpApprovalPending } from '../game/mcpApproval';
+import { mcpBlocksPlay } from '../game/mcpApproval';
 
 export type BotStrategyId = 'progress' | 'loc' | 'hygiene';
 
@@ -65,7 +65,7 @@ function pickPriorityMove(
   priorities: Record<string, number>,
   patienceMs: number,
 ): Move | null {
-  if (mcpApprovalPending(ctx.state)) {
+  if (mcpBlocksPlay(ctx.state)) {
     const mcp = ctx.legal.filter((m) => m.actionId === 'mcp_allow' || m.actionId === 'mcp_deny');
     if (mcp.length === 0) return null;
     const rank = (m: Move) => moveRank(m, priorities);

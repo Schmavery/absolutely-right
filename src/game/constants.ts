@@ -128,6 +128,18 @@ export const UPTIME = {
   bugFractionRate: 0.0001,
 } as const;
 
+/**
+ * Bug spawn scales faster than LOC as throughput rises (fixes stay ~linear in
+ * tests/gens). Tuned so CI-heavy midgame can still hit review-crisis uptime.
+ */
+export const BUG_GENERATION = {
+  /** Per-generator: bugs/s uses count^exp instead of count (1 = linear). */
+  genCountExponent: 1.14,
+  /** After summing generators: bugRate *= (1 + locRate/scale)^exp. */
+  throughputScale: 320,
+  throughputExponent: 0.3,
+} as const;
+
 export const AGENT_BUFF = {
   /** Bug-rate multiplier while the agent buff is active. */
   bugRateMult: 1.5,
@@ -149,6 +161,14 @@ export const AGENT_BUFF = {
 export const ACTION_DURATION_MS = 1500;
 
 // ─── Streaming / typing animation ──────────────────────────────────────────
+
+/** MCP tool-call approval UX (mid chapter). */
+export const MCP = {
+  /** Spinner after Allow (manual or auto) before the ack line appears (ms). */
+  executeSpinnerMs: 5000,
+  /** How long the approval card is visible before auto-allow fires (ms). */
+  autoApproveDelayMs: 400,
+} as const;
 
 export const STREAMING = {
   /** Pause before a user line appears (ms). */

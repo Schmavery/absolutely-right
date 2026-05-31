@@ -1,5 +1,6 @@
 # Unlock order follows mechanical chapters in data/PHASES.md (early → nines).
-# MCP: mcp_tools enables approval beats; always_allow auto-approves; yolo_mode skips them.
+# Cost rule: later steps on a narrative `requires:` chain cost more (see NARRATIVE_SPINE in validate-data.ts).
+# MCP: mcp_tools → always_allow → yolo_mode. Crisis: centaur → code_review → review-of-review → ai_review.
 
 # ── Ch1 early — prompts & basic tests ───────────────────────────────────────
 - id: model_update_1
@@ -148,13 +149,14 @@
   purchaseMsg: "Paying for access now. Money has entered the chat. Token limits: significantly improved."
 - id: always_allow
   name: Always Allow
-  desc: MCP tool calls auto-approve — no prompt block, still logs the beat.
+  desc: MCP tool calls still appear as cards, then auto-allow. +2× bug generation.
   cost: 1200000
   unlockAt: 480000
+  bugMult: 2
   requiresLaunch: true
   requires:
     - mcp_tools
-  purchaseMsg: Always-allow policy enabled. Tool calls proceed without confirmation. Very fast. Very confident.
+  purchaseMsg: Always-allow policy enabled. Tool calls proceed without confirmation. Very fast. Very confident. Incidents also proceed without hesitation.
   flags:
     - mcp_auto_approve
 - id: team_plan
@@ -171,9 +173,10 @@
   purchaseMsg: Team plan activated. We have all the tokens. The bill will be significant. Worth it.
 - id: yolo_mode
   name: YOLO Mode
-  desc: MCP approvals never appear — tools run with no Allow/Deny gate.
-  cost: 2800000
+  desc: No MCP approval beats or cards — tools run silently. +10× bug generation (stacks with Always Allow).
+  cost: 1800000
   unlockAt: 920000
+  bugMult: 10
   requiresLaunch: true
   requires:
     - always_allow
@@ -181,27 +184,50 @@
   flags:
     - yolo_mode
 
-# ── Ch4 min–late — review crises ────────────────────────────────────────────
+# ── Ch4 min–late — review crises (shop appears only in uptime crisis) ───────
+- id: upside_down_centaur_policy
+  name: Upside-Down Centaur Policy
+  desc: Everyone is reminded they own what ships. +15% bug generation (accountability theater).
+  cost: 2200000
+  unlockAt: 1050000
+  unlockMaxUptimeNines: 1
+  bugMult: 1.15
+  requiresLaunch: true
+  requires:
+    - mcp_tools
+  purchaseMsg: Upside-down centaur policy adopted. You remain responsible for everything that ships. The horse part is unclear. Bug rate marginally worse.
 - id: code_review
   name: Mandatory Code Review
-  desc: −55% bugs, −30% output (humans are slow)
-  cost: 550000
-  unlockAt: 480000
+  desc: −55% bugs, −30% output (humans are slow). Appears when uptime ≤ ~1 nine.
+  cost: 3600000
+  unlockAt: 1100000
+  unlockMaxUptimeNines: 1
   reviewLocMult: 0.7
   reviewBugMult: 0.45
   requiresLaunch: true
   requires:
-    - pro_plan
+    - upside_down_centaur_policy
   purchaseMsg: Mandatory code review is active. I'll be honest — I find the wait times character-building.
+- id: code_review_review
+  name: Mandatory Code Review Review
+  desc: Review the reviewers. −75% bugs, −55% output. Uptime recovers; velocity does not.
+  cost: 5000000
+  unlockAt: 1650000
+  reviewLocMult: 0.45
+  reviewBugMult: 0.25
+  requiresLaunch: true
+  requires:
+    - code_review
+  purchaseMsg: Mandatory review of mandatory reviews is active. No merge until the review-of-the-review is approved. Uptime improved. LOC did not.
 - id: ai_review
   name: AI Code Review
   desc: restores output speed; bug generation increases significantly
-  cost: 5000000
+  cost: 7000000
   unlockAt: 2800000
   reviewLocMult: 1
   reviewBugMult: 6
   requires:
-    - code_review
+    - code_review_review
   requiresLaunch: true
   purchaseMsg: "AI code review enabled. Review time: instant. I've approved {{rand 8 22}} PRs today. Bug count is trending up. The tests aren't really containing it anymore. Unrelated."
   flags:

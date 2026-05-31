@@ -9,7 +9,7 @@
 
 import { action, GENS, UPGRADES } from './data';
 import type { GenDef, UpgDef } from '../types';
-import { MONEY, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
+import { BUG_GENERATION, MONEY, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -84,13 +84,22 @@ export function calcRates(
   const writeTestDamping = action('write_test').bugDamping ?? 0;
   if (tests > 0) bugMult *= 1 / (1 + tests * writeTestDamping);
 
+  const { genCountExponent, throughputScale, throughputExponent } = BUG_GENERATION;
+
   for (const g of GENS) {
     const count = genCounts[g.id] ?? 0;
     if (count > 0) {
       locRate += g.locPerSec * count * globalMult * reviewLocMult;
-      bugRate += g.bugsPerSec * count * bugMult * reviewBugMult;
+      const bugUnits =
+        genCountExponent === 1 ? count : Math.pow(count, genCountExponent);
+      bugRate += g.bugsPerSec * bugUnits * bugMult * reviewBugMult;
       fixRate += g.fixPerSec * count;
     }
+  }
+
+  // More LOC/s ⇒ disproportionately more bugs (surface area / integration load).
+  if (bugRate > 0 && locRate > 0 && throughputExponent > 0) {
+    bugRate *= Math.pow(1 + locRate / throughputScale, throughputExponent);
   }
 
   // CI runs the test suite continuously, fixing bugs proportional to coverage.

@@ -15,6 +15,7 @@ import {
   loadEditableSave,
   parseSaveJson,
   persistSave,
+  serializeSaveJson,
   revealAllEligibleUpgrades,
   sanitizeUpgrades,
   saveSummary,
@@ -120,9 +121,19 @@ export function SaveDebug() {
   }, [state]);
 
   const exportJson = useCallback(() => {
-    setJsonText(JSON.stringify(state, null, 2));
+    setJsonText(serializeSaveJson(state));
     setJsonError(null);
     setStatus('Exported current editor state to JSON box.');
+  }, [state]);
+
+  const copyState = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(serializeSaveJson(state));
+      setStatus('Copied editor state to clipboard (paste into an agent or Import JSON).');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Clipboard unavailable';
+      setStatus(`Copy failed: ${msg}`);
+    }
   }, [state]);
 
   const importJson = useCallback(() => {
@@ -209,6 +220,14 @@ export function SaveDebug() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
+          <button
+            type="button"
+            className={btnClass()}
+            onClick={() => void copyState()}
+            title="Copy full save JSON to clipboard"
+          >
+            Copy state
+          </button>
           <button type="button" className={btnClass()} onClick={reloadFromDisk}>
             Reload from disk
           </button>
@@ -336,6 +355,9 @@ export function SaveDebug() {
 
       <DebugSection title="Raw JSON">
         <div className="flex flex-wrap gap-2 mb-2">
+          <button type="button" className={btnClass()} onClick={() => void copyState()}>
+            Copy state
+          </button>
           <button type="button" className={btnClass()} onClick={exportJson}>
             Export editor → JSON
           </button>

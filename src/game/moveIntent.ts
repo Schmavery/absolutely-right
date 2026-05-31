@@ -8,7 +8,7 @@ import type { Move } from './availability';
 import { LAUNCH_LOC, THRESHOLDS } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
-import { mcpApprovalPending } from './mcpApproval';
+import { mcpBlocksPlay } from './mcpApproval';
 import { calcTokenConfig, genCost } from './rates';
 import type { GameState } from '../types';
 import { now as runtimeNow } from './runtime';
@@ -175,7 +175,7 @@ export function pickAdaptiveMove(
   ctx: { state: GameState; visible: Move[]; legal: Move[]; t: number },
   opts: PickAdaptiveOpts,
 ): Move | null {
-  if (mcpApprovalPending(ctx.state)) {
+  if (mcpBlocksPlay(ctx.state)) {
     const mcp = ctx.legal.filter((m) => m.actionId === 'mcp_allow' || m.actionId === 'mcp_deny');
     if (mcp.length === 0) return null;
     const needs = assessNeeds(ctx.state, ctx.t);

@@ -84,6 +84,11 @@ export interface UpgDef {
    */
   unlockMinUptimeNines?: number;
   /**
+   * Shop unlock only when uptime nines (from current bugs) are at most this
+   * value — crisis upgrades when reliability has collapsed.
+   */
+  unlockMaxUptimeNines?: number;
+  /**
    * Overrides entries in `THRESHOLDS` while this upgrade is owned (e.g. lower
    * `showBugBountyBugs` once nines meta is in play). Later upgrades in
    * `upgrades.yaml` win on duplicate keys.
@@ -200,6 +205,8 @@ export interface LogEntry {
   type: LogEntryType;
   /** Ms for `useStreamingLog` to drain this entry; fixed in `appendLog`. */
   streamMs?: number;
+  /** Skip token streaming — show full line at once (MCP allow ack, etc.). */
+  instant?: boolean;
 }
 
 export interface GameState {
@@ -234,4 +241,10 @@ export interface GameState {
   nines: number;
   /** MCP tool-call line awaiting Allow/Deny; null when idle. */
   mcpApprovalPending: string | null;
+  /** Always-allow: fire `mcpAllow` after this timestamp (card still shown first). */
+  mcpAutoApproveAt: number | null;
+  /** While set, prompt/actions blocked and UI shows post-allow spinner until ack. */
+  mcpExecutingUntil: number | null;
+  /** Tool-call text kept visible during the post-allow spinner. */
+  mcpExecutingLine: string | null;
 }

@@ -22,7 +22,12 @@ import type { GameState } from '../types';
 import { LAUNCH_LOC } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
-import { mcpAllowAction, mcpApprovalPending as mcpPending, mcpDenyAction } from './mcpApproval';
+import {
+  mcpAllowAction,
+  mcpApprovalPending as mcpPending,
+  mcpBlocksPlay,
+  mcpDenyAction,
+} from './mcpApproval';
 import { calcBugPenalty, calcRates, calcTokenConfig, genCost } from './rates';
 import {
   buyGenAction,
@@ -260,13 +265,13 @@ function boolGate(ok: boolean): Gate {
   return { kind: 'bool', ok };
 }
 
-/** Block player actions while an MCP tool call awaits Allow/Deny. */
-function mcpIdleGate(state: GameState): Gate {
-  return boolGate(!mcpPending(state));
+/** Block player actions while an MCP card or post-allow spinner is active. */
+function mcpIdleGate(state: GameState, t: number): Gate {
+  return boolGate(!mcpBlocksPlay(state, t));
 }
 
-function withMcpIdle(state: GameState, gates: Gate[]): Gate[] {
-  return [mcpIdleGate(state), ...gates];
+function withMcpIdle(state: GameState, gates: Gate[], t: number): Gate[] {
+  return [mcpIdleGate(state, t), ...gates];
 }
 
 function tokenGate(state: GameState, cost: number | undefined): Gate {
@@ -355,7 +360,7 @@ function prompt(c: Ctx): Move {
       visible: true,
       apply: promptAction,
     },
-    withMcpIdle(c.state, [cooldownGate(c.state, 'prompt', a.cooldownMs, c.t)]),
+    withMcpIdle(c.state, [cooldownGate(c.state, 'prompt', a.cooldownMs, c.t)], c.t),
   );
 }
 
@@ -387,11 +392,15 @@ function mcpDeny(c: Ctx): Move {
 
 function pasteError(c: Ctx): Move {
   const a = action('paste_error');
-  const gates: Gate[] = withMcpIdle(c.state, [
-    boolGate(c.state.bugs > 0),
-    cooldownGate(c.state, 'paste_error', a.cooldownMs, c.t),
-    tokenGate(c.state, a.tokenCost),
-  ]);
+  const gates: Gate[] = withMcpIdle(
+    c.state,
+    [
+      boolGate(c.state.bugs > 0),
+      cooldownGate(c.state, 'paste_error', a.cooldownMs, c.t),
+      tokenGate(c.state, a.tokenCost),
+    ],
+    c.t,
+  );
   return buildMove(
     {
       id: 'paste_error',
@@ -415,7 +424,7 @@ function writeTest(c: Ctx): Move {
       visible: c.ui.showWriteTests,
       apply: writeTestAction,
     },
-    withMcpIdle(c.state, [locGate(c.state, cost), tokenGate(c.state, a.tokenCost)]),
+    withMcpIdle(c.state, [locGate(c.state, cost), tokenGate(c.state, a.tokenCost)], c.t),
   );
 }
 
@@ -429,7 +438,7 @@ function kickAgent(c: Ctx): Move {
       visible: c.ui.showKickAgent,
       apply: kickAgentAction,
     },
-    withMcpIdle(c.state, [tokenGate(c.state, a.tokenCost), buffGate(c.state, c.t, a.buffMs ?? 1)]),
+    withMcpIdle(c.state, [tokenGate(c.state, a.tokenCost), buffGate(c.state, c.t, a.buffMs ?? 1)], c.t),
   );
 }
 
@@ -445,11 +454,11 @@ function runTests(c: Ctx): Move {
       visible: c.ui.showRunTests,
       apply: runTestsAction,
     },
-    withMcpIdle(c.state, [
-      boolGate(hasTests),
-      locGate(c.state, cost),
-      tokenGate(c.state, a.tokenCost),
-    ]),
+    withMcpIdle(
+      c.state,
+      [boolGate(hasTests), locGate(c.state, cost), tokenGate(c.state, a.tokenCost)],
+      c.t,
+    ),
   );
 }
 
@@ -463,16 +472,17 @@ function clearContext(c: Ctx): Move {
       visible: c.ui.showClearContext,
       apply: clearContextAction,
     },
-    withMcpIdle(c.state, [cooldownGate(c.state, 'clear_context', a.cooldownMs, c.t)]),
+    withMcpIdle(c.state, [cooldownGate(c.state, 'clear_context', a.cooldownMs, c.t)], c.t),
   );
 }
 
 function launch(c: Ctx): Move {
   // `showLaunchBtn` already requires `totalLoc >= LAUNCH_LOC` in `derive.ts`.
-  const gates: Gate[] = withMcpIdle(c.state, [
-    boolGate(!c.state.launched),
-    boolGate(c.ui.showLaunchBtn),
-  ]);
+  const gates: Gate[] = withMcpIdle(
+    c.state,
+    [boolGate(!c.state.launched), boolGate(c.ui.showLaunchBtn)],
+    c.t,
+  );
   return buildMove(
     {
       id: 'launch',
@@ -487,12 +497,16 @@ function launch(c: Ctx): Move {
 
 function bugBounty(c: Ctx): Move {
   const a = action('bug_bounty');
-  const gates: Gate[] = withMcpIdle(c.state, [
-    boolGate(c.ui.showBugBounty),
-    boolGate(c.state.bugs > 0),
-    cooldownGate(c.state, 'bug_bounty', a.cooldownMs, c.t),
-    tokenGate(c.state, a.tokenCost),
-  ]);
+  const gates: Gate[] = withMcpIdle(
+    c.state,
+    [
+      boolGate(c.ui.showBugBounty),
+      boolGate(c.state.bugs > 0),
+      cooldownGate(c.state, 'bug_bounty', a.cooldownMs, c.t),
+      tokenGate(c.state, a.tokenCost),
+    ],
+    c.t,
+  );
   return buildMove(
     {
       id: 'bug_bounty',
@@ -518,7 +532,7 @@ function newFreeAccount(c: Ctx): Move {
       visible,
       apply: newFreeAccountAction,
     },
-    withMcpIdle(c.state, [cooldownGate(c.state, 'free_account', a.cooldownMs, c.t)]),
+    withMcpIdle(c.state, [cooldownGate(c.state, 'free_account', a.cooldownMs, c.t)], c.t),
     { requireVisible: true, hideWaitWhenNotVisible: true },
   );
 }
@@ -538,7 +552,7 @@ function buyGenMoves(c: Ctx): Move[] {
         visible,
         apply: (state: GameState) => buyGenAction(state, g.id),
       },
-      withMcpIdle(c.state, [totalLocGate(c.state, visibleAt), locGate(c.state, cost)]),
+      withMcpIdle(c.state, [totalLocGate(c.state, visibleAt), locGate(c.state, cost)], c.t),
       { requireVisible: true },
     );
   });
@@ -552,8 +566,8 @@ function buyUpgradeMoves(c: Ctx): Move[] {
       !c.state.upgrades.includes(u.id);
     const owned = c.state.upgrades.includes(u.id);
     const gates: Gate[] = owned
-      ? withMcpIdle(c.state, [boolGate(false)])
-      : withMcpIdle(c.state, [boolGate(visible), locGate(c.state, u.cost)]);
+      ? withMcpIdle(c.state, [boolGate(false)], c.t)
+      : withMcpIdle(c.state, [boolGate(visible), locGate(c.state, u.cost)], c.t);
     return buildMove(
       {
         id: `buy_upgrade:${u.id}`,

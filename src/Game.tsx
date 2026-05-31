@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameState } from './types';
-import { SAVE_INTERVAL_MS, TICK_MS } from './game/constants';
+import { SAVE_INTERVAL_MS, STREAMING, TICK_MS } from './game/constants';
+import { mcpExecuting } from './game/mcpApproval';
 import { MILESTONES, UI } from './game/data';
 import { deriveGame } from './game/derive';
 import { getPhase } from './game/phases';
@@ -54,6 +55,14 @@ export function Game() {
 
   const { displayLog, showThinking, isAnimating, spinTick, reset: resetStream } =
     useStreamingLog(state.log, state.logId);
+
+  const [mcpSpinTick, setMcpSpinTick] = useState(0);
+  const mcpRunning = mcpExecuting(state);
+  useEffect(() => {
+    if (!mcpRunning) return;
+    const id = setInterval(() => setMcpSpinTick((t) => t + 1), STREAMING.spinnerMs);
+    return () => clearInterval(id);
+  }, [mcpRunning, state.mcpExecutingUntil]);
 
   // Game tick.
   useEffect(() => {
@@ -240,10 +249,14 @@ export function Game() {
           <ConversationLog
             displayLog={displayLog}
             queuedUserEntries={queuedUserEntries}
-            showThinking={showThinking}
-            spinTick={spinTick}
             isMobile={isMobile}
             mcpApprovalMessage={state.mcpApprovalPending}
+            mcpAutoPending={
+              state.mcpApprovalPending != null && state.mcpAutoApproveAt != null
+            }
+            mcpExecutingMessage={mcpRunning ? state.mcpExecutingLine : null}
+            showThinking={showThinking || mcpRunning}
+            spinTick={mcpRunning ? mcpSpinTick : spinTick}
             onMcpAllow={handlers.mcpAllow}
             onMcpDeny={handlers.mcpDeny}
           />

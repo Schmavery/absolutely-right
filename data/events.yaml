@@ -160,6 +160,12 @@
   type: event
   requiresLaunch: true
   text: "I filed a PR. I reviewed it: LGTM! I then reverted it. I have re-filed it. This is an efficient workflow."
+- minLoc: 1400000
+  type: event
+  requiresLaunch: true
+  requires:
+    - code_review_review
+  text: The mandatory code review review found that the mandatory code review was not mandatory enough. I've scheduled a review of that finding.
 - minLoc: 1500000
   type: bad
   bugDelta: 35

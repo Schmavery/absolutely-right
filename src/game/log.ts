@@ -40,3 +40,25 @@ export function appendLog(
 
   return next;
 }
+
+/** Append a line that appears in the log immediately (no token streaming). */
+export function appendLogInstant(
+  prev: GameState,
+  text: string,
+  type: LogEntryType,
+): GameState {
+  const lines = text.split('\n').filter((l) => l.trim().length > 0);
+  let next = prev;
+  for (const line of lines) {
+    const isUser = line.trimStart().startsWith('>');
+    const clean = isUser ? line.replace(/^\s*>\s*/, '') : line;
+    const entryType: LogEntryType = isUser ? 'user' : type;
+    const entry: LogEntry = { id: next.logId + 1, text: clean, type: entryType, streamMs: 0, instant: true };
+    next = {
+      ...next,
+      logId: next.logId + 1,
+      log: [...next.log, entry].slice(-MAX_LOG),
+    };
+  }
+  return next;
+}

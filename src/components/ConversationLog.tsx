@@ -13,8 +13,12 @@ interface Props {
   showThinking: boolean;
   spinTick: number;
   isMobile: boolean;
-  /** MCP tool-call awaiting Allow/Deny — in-scroll card, not streamed in the log. */
+  /** MCP tool-call card (pending Allow/Deny). */
   mcpApprovalMessage: string | null;
+  /** Always-allow: card visible, buttons hidden until auto-fire. */
+  mcpAutoPending: boolean;
+  /** Post-allow execute spinner (tool text in `mcpExecutingMessage`). */
+  mcpExecutingMessage: string | null;
   onMcpAllow: () => void;
   onMcpDeny: () => void;
 }
@@ -36,13 +40,20 @@ export function ConversationLog({
   spinTick,
   isMobile,
   mcpApprovalMessage,
+  mcpAutoPending,
+  mcpExecutingMessage,
   onMcpAllow,
   onMcpDeny,
 }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [displayLog.length, displayLog[displayLog.length - 1]?.id, mcpApprovalMessage]);
+  }, [
+    displayLog.length,
+    displayLog[displayLog.length - 1]?.id,
+    mcpApprovalMessage,
+    mcpExecutingMessage,
+  ]);
 
   const spinnerChar = SPIN_FRAMES[spinTick % SPIN_FRAMES.length];
   const spinnerVerb =
@@ -79,30 +90,38 @@ export function ConversationLog({
             {spinnerChar} {spinnerVerb}...
           </div>
         )}
-        {mcpApprovalMessage && (
+        {(mcpApprovalMessage || mcpExecutingMessage) && (
           <div className="mb-[11px] border border-card-border bg-card-bg px-[10px] pt-2 pb-2">
             <div className="text-dimmer text-[10px] tracking-[0.12em] uppercase mb-[7px]">
               tool call
             </div>
             <div className="text-[12px] leading-[1.55] mb-3 pl-[10px] border-l-2 border-l-log-event-border text-log-event whitespace-pre-wrap">
-              {mcpApprovalMessage}
+              {mcpExecutingMessage ?? mcpApprovalMessage}
             </div>
-            <div className="flex justify-end items-center gap-2">
-              <Button
-                className="mb-0 mr-0"
-                onClick={onMcpDeny}
-                title="deny MCP tool call"
-              >
-                deny
-              </Button>
-              <Button
-                className="mb-0 mr-0"
-                onClick={onMcpAllow}
-                title="allow MCP tool call"
-              >
-                allow
-              </Button>
-            </div>
+            {mcpExecutingMessage ? (
+              <div className="text-[11px] text-dimmer border-l-2 border-l-log-info-border pl-[10px]">
+                {spinnerChar} {spinnerVerb}...
+              </div>
+            ) : mcpAutoPending ? (
+              <div className="text-[11px] text-dimmer text-right">always-allow policy</div>
+            ) : (
+              <div className="flex justify-end items-center gap-2">
+                <Button
+                  className="mb-0 mr-0"
+                  onClick={onMcpDeny}
+                  title="deny MCP tool call"
+                >
+                  deny
+                </Button>
+                <Button
+                  className="mb-0 mr-0"
+                  onClick={onMcpAllow}
+                  title="allow MCP tool call"
+                >
+                  allow
+                </Button>
+              </div>
+            )}
           </div>
         )}
         <div ref={endRef} />

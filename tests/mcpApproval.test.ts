@@ -1,12 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { buyUpgradeAction, promptAction } from '../src/game/actions';
 import { computeFlags, hasFlag } from '../src/game/flags';
+import { MCP } from '../src/game/constants';
 import {
+  advanceMcpTiming,
   maybeMcpApprovalAfterPrompt,
+  mcpAllowAction,
   mcpApprovalPending,
   mcpApprovalsSuppressed,
   mcpAutoApproves,
+  mcpBlocksPlay,
   mcpDenyAction,
+  mcpExecuting,
   mcpToolsEnabled,
 } from '../src/game/mcpApproval';
 import { setRandom } from '../src/game/runtime';
@@ -20,10 +25,23 @@ describe('MCP approvals', () => {
     expect(mcpApprovalsSuppressed(flags)).toBe(true);
   });
 
-  it('always_allow auto-approves without pending', () => {
+  it('always_allow is not yolo — still rolls approval beats', () => {
     const flags = computeFlags(['mcp_tools', 'always_allow']);
     expect(mcpAutoApproves(flags)).toBe(true);
     expect(mcpApprovalsSuppressed(flags)).toBe(false);
+  });
+
+  it('always_allow queues card + auto-approve schedule (no immediate log)', () => {
+    setRandom(() => 0);
+    const prev = {
+      ...defaultState(),
+      upgrades: ['mcp_tools', 'always_allow'],
+      launched: true,
+    };
+    const next = maybeMcpApprovalAfterPrompt(prev, prev);
+    expect(mcpApprovalPending(next)).toBe(true);
+    expect(next.mcpAutoApproveAt).not.toBeNull();
+    expect(next.log.length).toBe(prev.log.length);
   });
 
   it('pending approval does not append the request to the log', () => {
@@ -71,6 +89,38 @@ describe('MCP approvals', () => {
       mcpApprovalPending: 'CallMcpTool\nserver: test',
     };
     expect(rechargeProgress(getMove(mcpBlocked, 'prompt', t)!)).toBeUndefined();
+  });
+
+  it('blocks prompt while MCP execute spinner runs', () => {
+    const at = 50_000;
+    const state = {
+      ...defaultState(),
+      launched: true,
+      upgrades: ['mcp_tools'],
+      mcpExecutingUntil: at + MCP.executeSpinnerMs,
+      mcpExecutingLine: 'Shell\ncommand: rm -rf /',
+    };
+    expect(mcpExecuting(state, at)).toBe(true);
+    expect(mcpBlocksPlay(state, at)).toBe(true);
+    expect(getMove(state, 'prompt', at)!.legal).toBe(false);
+    expect(getMove(state, 'mcp_allow', at)!.legal).toBe(false);
+  });
+
+  it('manual allow uses execute spinner then instant ack in log', () => {
+    const at = 1_000_000;
+    vi.spyOn(Date, 'now').mockReturnValue(at);
+    const prev = {
+      ...defaultState(),
+      mcpApprovalPending: 'CallMcpTool\nserver: test',
+    };
+    let next = mcpAllowAction(prev);
+    expect(mcpApprovalPending(next)).toBe(false);
+    expect(next.mcpExecutingUntil).toBe(at + MCP.executeSpinnerMs);
+    next = advanceMcpTiming(next, at + MCP.executeSpinnerMs);
+    expect(mcpExecuting(next, at + MCP.executeSpinnerMs)).toBe(false);
+    const ack = next.log[next.log.length - 1];
+    expect(ack?.instant).toBe(true);
+    expect(ack?.text.length).toBeGreaterThan(0);
   });
 
   it('blocks all player actions except allow/deny while approval pending', () => {

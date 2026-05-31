@@ -119,6 +119,13 @@ mechanics (those have `milestones.yaml` / `actions.yaml`).
 Milestones are keyed by their `loc` threshold for the same reason — the
 unlock condition is the identity.
 
+### Upgrade pricing
+
+On each narrative chain in `data/PHASES.md`, later upgrades should have a higher
+shop `cost` than earlier ones on the same chain (build checks `NARRATIVE_SPINE`
+and branch spines in `vite/validate-data.ts`). `unlockAt` is separate — it
+controls when the row appears, not how punishing the purchase is.
+
 ### Feature flags
 
 Upgrades can grant **feature flags** while owned:
@@ -126,7 +133,8 @@ Upgrades can grant **feature flags** while owned:
 ```yaml
 flags:
   - nines_tracking
-unlockMinUptimeNines: 4          # shop unlock gate (optional)
+unlockMinUptimeNines: 4          # shop unlock when uptime nines ≥ this (optional)
+unlockMaxUptimeNines: 1          # shop unlock when uptime nines ≤ this — crisis gate (optional)
 thresholdOverrides:               # merge into UI/progression thresholds (optional)
   showBugBountyBugs: 30
 ```
