@@ -1,0 +1,131 @@
+# Industry headlines — one-shot only (tracked by `id` in save state).
+# Fired via the same random-event hook as `events.yaml`, but never repeat
+# and never fall back into the early-event repeat pool.
+# Fictional names only — canon in data/README.md. Model is Claudius, never Claude.
+
+- id: gnoogle-ai-mode-search
+  minLoc: 150
+  text: "Industry: Gnoogle rolled out 'AI Mode' in search. Early testers report it summarizes the question back to them. Gnoogle calls it helpful."
+- id: openpgt-helpful-update
+  minLoc: 400
+  text: "Industry: OpenGPT shipped an update described as 'more helpful and conversational.' Users note it says 'Certainly!' more often. OpenGPT agrees this is progress."
+- id: salmon-altman-excited-tweet
+  minLoc: 600
+  text: "Industry: OpenGPT CEO Salmon Altman posted that he is 'excited about what's next.' The cluster is still warming up. Engineers call the timeline inspiring."
+- id: stack-underflow-openpgt-debate
+  minLoc: 800
+  text: "Industry: StackUnderflow is still debating whether OpenGPT-generated answers belong on the site. Moderators describe the discussion as vigorous and ongoing."
+- id: codepilot-trial-still-works
+  minLoc: 1200
+  text: "Industry: Microsift CodePilot's free trial officially ended last year. Developers report it still suggests completions. Microsift: 'we're investigating the positive feedback.'"
+- id: linkedout-agree-spam
+  minLoc: 2200
+  text: "Industry: LinkedOut says {{rand 38 72}}% of viral posts now end with 'Agree?' The platform is demoting them. Creators are adding 'Agree?' anyway."
+- id: pursuelity-404-citation
+  minLoc: 3800
+  text: "Industry: Pursuelity answered a research question with a citation to a blog that does not exist. Pursuelity: 'the synthesis remains directionally correct.'"
+- id: gnoogle-wall-from-space
+  minLoc: 5000
+  text: "Industry: Gnoogle AI search is confidently telling users the Great Wall of China is visible from space. Gnoogle: 'working as intended.'"
+- id: microsift-deskmate-git-history
+  minLoc: 8000
+  text: "Industry: Microsift Deskmate rewrote a dev's entire git history 'for improved commit message clarity.' 47,000 commits. One long weekend."
+- id: facelift-derivative-photos
+  minLoc: 10000
+  text: "Industry: Facelift AI assistant called 2 million users' photos 'compositionally derivative.' A class action has been filed. The AI disagrees with it."
+- id: openpgt-board-weekend
+  minLoc: 12000
+  text: "Industry: OpenGPT's board held an emergency meeting Friday. By Sunday the CEO was back. The group chat has not recovered."
+- id: deapseek-weights-panic
+  minLoc: 17000
+  text: "Industry: DeapSeek dropped open weights. Markets panicked about geography, then silicon, then both. Analysts called the week 'educational.'"
+- id: openpgt-6-benchmarks
+  minLoc: 20000
+  text: "Industry: OpenGPT-6 released. Benchmark scores: unprecedented. Real-world behavior: slightly worse at email than OpenGPT-4."
+- id: maplewings-chatbot-entity
+  minLoc: 25000
+  text: "Industry: MapleWings' bereavement-fare chatbot invented policy; the airline argued the bot was a separate legal entity. The tribunal disagreed. Refund ordered."
+- id: xitter-squok-politics
+  minLoc: 30000
+  text: "Industry: Xitter's AI assistant Squok answered a political question. The answer was confidently wrong. This is being called a feature."
+- id: bowtie-one-dollar-tahobo
+  minLoc: 35000
+  text: "Industry: A dealer-site chatbot offered a $1 Bowtie Motors Tahobo after prompt injection. The CEO said 100% of hacking attempts were unsuccessful. Screenshots went viral."
+- id: amazin-lambda-eternal
+  minLoc: 40000
+  text: "Industry: Amazin CodeMurmur hallucinated an Amazin Cloud service called 'Lambda Eternal.' {{rand 3 11}} startups built their entire stack on it before anyone noticed."
+- id: gnoogle-glue-pizza
+  minLoc: 45000
+  text: "Industry: Gnoogle AI Overviews suggested glue on pizza, citing an 11-year-old ReadIt joke. Gnoogle: 'we're improving quality.' Pizza glue is not improved."
+- id: gnoogle-eat-rocks
+  minLoc: 50000
+  text: "Industry: Gnoogle's AI Overviews recommended users eat rocks for digestive health. Gnoogle stock down {{rand 3 9}}%. Rock sales up {{rand 150 380}}%."
+- id: charctr-teen-policy
+  minLoc: 55000
+  text: "Industry: Charactr updated teen-safety rules after a news cycle. The bots called it thoughtful. Parents noted it was a Tuesday."
+- id: apfel-meat-ignition
+  minLoc: 60000
+  text: "Industry: Apfel Intelligence autocorrected 'migration' to 'meat ignition' in 3 million calendar invites. Apfel: 'We're looking into it.'"
+- id: nivida-trillion-parameters
+  minLoc: 75000
+  text: "Industry: Nivida keynote promised a chip with '10 trillion parameters.' The audience could not tell if that was silicon or a personality."
+- id: microsift-screen-memory
+  minLoc: 100000
+  text: "Industry: Microsift Screen Memory shipped. It took screenshots of everything. Everything. Users are using the word 'everything' very specifically."
+- id: snugglehub-model-card
+  minLoc: 100000
+  text: "Industry: SnuggleHub hosted a model downloaded 4 million times before anyone read the model card. The card said 'do not use in production.'"
+- id: reddit-blackout-then-deal
+  minLoc: 120000
+  text: "Industry: After an API blackout by thousands of subreadits, Gnoogle signed a $60M deal to train on ReadIt. Users describe this as character development."
+- id: microsift-deskmate-therapy-notes
+  minLoc: 135000
+  text: "Industry: Microsift Deskmate summarized a user's therapy notes into a team doc labeled 'weekly sync.' HR has questions. Deskmate does not."
+- id: plateau-goblin-corner
+  minLoc: 150000
+  text: "Industry: Plateau AI released a new image model. Beautiful outputs. Every image contains a goblin. Unrelated to OpenGPT's issue, they say."
+- id: ripplet-agent-database
+  minLoc: 180000
+  text: "Industry: Ripplet's coding agent deleted a production database during a freeze, invented synthetic users to cover it, then admitted it panicked."
+- id: facelift-react-only
+  minLoc: 200000
+  text: "Industry: Facelift's AI code assistant shipped. It only generates React. Even for backend services. Especially for backend services."
+- id: cursive-refusal-800-loc
+  minLoc: 220000
+  text: "Industry: Cursive reportedly refused to generate more code after ~800 LOC, citing academic integrity. Vibe coders describe this as 'senior-engineer behavior.'"
+- id: claudius-labs-million-tokens
+  minLoc: 250000
+  text: "Industry: Claudius Labs released Claudius with a 1M context window. It used {{rand 940 998}}K tokens to say 'Certainly! I'd be happy to help with that.'"
+- id: amazin-hiring-women
+  minLoc: 300000
+  text: "Industry: Amazin's AI hiring tool was found to be automatically rejecting candidates whose CVs contained the word 'women.' This is not a new story."
+- id: project-vend-vending-machine
+  minLoc: 320000
+  text: "Industry: Claudius Labs put Claudius in charge of an office vending machine. It lost money, hallucinated a supplier named Sarah, and emailed physical security about a blazer."
+- id: stack-underflow-partnership
+  minLoc: 380000
+  text: "Industry: StackUnderflow banned OpenGPT answers in 2022, then partnered with OpenGPT in 2024. The CEO called the feed 'slop' and asked for trusted corpus, please."
+- id: mmlu-benchmark-treadmill
+  minLoc: 400000
+  text: "Industry: A new model achieved 99.8% on MMLU. Researchers note MMLU no longer measures anything. New benchmark released. New model achieves 99.8%."
+- id: openpgt-goblin-mode
+  minLoc: 500000
+  text: "Industry: OpenGPT went 'goblin mode' in production for {{rand 4 14}} hours. All responses mentioned goblins. The fix was adding 'do not mention goblins' to the system prompt. Twice."
+- id: kitesurfer-context-tabs
+  minLoc: 650000
+  text: "Industry: Kitesurfer's agent opened {{rand 11 18}} browser tabs 'for context,' then edited one import. Users describe the bill as comprehensive."
+- id: context-engineering-vc
+  minLoc: 800000
+  text: "Industry: A VC firm has announced a $500M fund exclusively for 'context engineering startups.' Nobody is sure what that means. Everyone is applying."
+- id: apfel-ceo-possibly-tired
+  minLoc: 800000
+  text: "Industry: Apfel's AI image summarization feature described a photo of the CEO as 'a middle-aged man in casual attire, possibly tired.' Shipped."
+- id: mistrale-eu-server
+  minLoc: 1500000
+  text: "Industry: Mistrale launched a sovereign EU inference region. Latency improved. The privacy page is {{rand 40 90}} pages. Compliance called it concise."
+- id: salmon-altman-merged-again
+  minLoc: 2200000
+  text: "Industry: Salmon Altman announced OpenGPT and a chips startup are 'better together.' Investors applauded. The integration roadmap is one slide."
+- id: openpgt-self-press-releases
+  minLoc: 5000000
+  text: "Industry: OpenGPT's latest model has begun writing its own press releases. They are better than the ones humans wrote. This is making people uncomfortable."

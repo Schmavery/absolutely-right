@@ -15,7 +15,13 @@ import { AGENT_BUFF, LOC_PER_CLICK_POWER } from './constants';
 import { appendLog } from './log';
 import { maybeFireEvent } from './events';
 import { computeFlags, effectiveThresholds, hasFlag } from './flags';
-import { calcClickBonus, calcClickPower, calcTokenConfig, genCost } from './rates';
+import {
+  calcClickBonus,
+  calcClickPower,
+  calcPromptEventProbability,
+  calcTokenConfig,
+  genCost,
+} from './rates';
 import { pick, render } from '../lib/template';
 import { now, random } from './runtime';
 
@@ -65,10 +71,14 @@ export function promptAction(prev: GameState): GameState {
     totalClicks: prev.totalClicks + 1,
     started: true,
   };
-  if (!prev.started && a.firstPromptMsg) {
-    next = appendLog(next, render(a.firstPromptMsg), 'info');
+  const scripted = a.earlyPromptMsgs ?? [];
+  if (prev.totalClicks < scripted.length) {
+    next = appendLog(next, render(scripted[prev.totalClicks]), 'info');
+  } else if (a.eventProbability) {
+    const past = prev.totalClicks - scripted.length;
+    const prob = calcPromptEventProbability(a.eventProbability, past);
+    next = maybeFireEvent(next, prob, appendLog);
   }
-  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
 

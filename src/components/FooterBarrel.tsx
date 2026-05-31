@@ -328,7 +328,7 @@ export function FooterBarrel() {
       <button
         type="button"
         onClick={() => setStaticIndex((i) => (i + 1) % TOOLS.length)}
-        className="py-3 pb-5 w-full bg-transparent border-0 cursor-default text-footer text-[11px] italic flex justify-center items-center gap-[0.35em]"
+        className="py-3 pb-5 w-full bg-transparent border-0 text-footer text-[11px] italic flex justify-center items-center gap-[0.35em]"
         style={{ font: 'inherit' }}
       >
         <span>{PREFIX}</span>

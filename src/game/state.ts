@@ -23,6 +23,7 @@ export function defaultState(): GameState {
     started: false,
     launched: false,
     usedEventIds: [],
+    usedNewsIds: [],
     tokens: 120,
     money: 0,
     agentBuffExpires: 0,

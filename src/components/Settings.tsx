@@ -60,7 +60,7 @@ function ToolbarButton({ onClick, label, children }: ToolbarButtonProps) {
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="border border-border text-dimmer hover:text-fg w-[26px] h-[26px] inline-flex items-center justify-center cursor-pointer bg-transparent"
+      className="border border-border text-dimmer hover:text-fg w-[26px] h-[26px] inline-flex items-center justify-center bg-transparent"
     >
       {children}
     </button>
@@ -85,7 +85,7 @@ function SettingsModal({ theme, onPickTheme, onClose }: SettingsModalProps) {
         type="button"
         aria-label="close settings"
         onClick={onClose}
-        className="absolute inset-0 bg-bg/70 cursor-default border-0 p-0"
+        className="absolute inset-0 bg-bg/70 border-0 p-0"
       />
       <div className="relative bg-card-bg border border-card-border w-[min(92vw,420px)] max-h-[80vh] overflow-y-auto">
         <div className="flex items-baseline justify-between border-b border-border px-[14px] py-[10px]">
@@ -94,7 +94,7 @@ function SettingsModal({ theme, onPickTheme, onClose }: SettingsModalProps) {
             type="button"
             onClick={onClose}
             aria-label="close"
-            className="text-dimmer hover:text-fg text-[14px] leading-none cursor-pointer bg-transparent border-0"
+            className="text-dimmer hover:text-fg text-[14px] leading-none bg-transparent border-0"
           >
             ×
           </button>
@@ -114,7 +114,7 @@ function SettingsModal({ theme, onPickTheme, onClose }: SettingsModalProps) {
                   onClick={() => onPickTheme(t.id)}
                   aria-pressed={active}
                   className={[
-                    'text-left px-[10px] py-[6px] cursor-pointer bg-transparent border-0 font-mono text-[12px] flex items-baseline gap-[10px]',
+                    'text-left px-[10px] py-[6px] bg-transparent border-0 font-mono text-[12px] flex items-baseline gap-[10px]',
                     active ? 'text-fg' : 'text-dimmer hover:text-fg',
                   ].join(' ')}
                 >

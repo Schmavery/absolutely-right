@@ -114,7 +114,16 @@ export interface EventDef {
   locDelta?: number;
   bugDelta?: number;
   freeAccountsDelta?: number;
-  type: 'info' | 'bad' | 'event' | 'news';
+  type: 'info' | 'bad' | 'event';
+  minLoc: number;
+  requiresLaunch?: boolean;
+  requires?: string[];
+}
+
+/** Industry headlines in `data/news.yaml` — never repeat; keyed by `id`. */
+export interface NewsDef {
+  id: string;
+  text: string;
   minLoc: number;
   requiresLaunch?: boolean;
   requires?: string[];
@@ -145,8 +154,8 @@ export interface ActionDef {
   // Random message pools (Handlebars-templated)
   messages?: string[];
 
-  // prompt
-  firstPromptMsg?: string;
+  // prompt — scripted log beats before `eventProbability` / random events
+  earlyPromptMsgs?: string[];
 
   // kick_agent
   buffMs?: number;
@@ -222,6 +231,8 @@ export interface GameState {
   started: boolean;
   launched: boolean;
   usedEventIds: string[];
+  /** Stable ids from `data/news.yaml`; each headline fires at most once per save. */
+  usedNewsIds: string[];
   tokens: number;
   money: number;
   agentBuffExpires: number;

@@ -9,7 +9,7 @@ const SPIN_VERBS = UI.spinVerbs;
 interface Props {
   displayLog: LogEntry[];
   queuedUserEntries: LogEntry[];
-  isStreaming: boolean;
+  showThinking: boolean;
   spinTick: number;
   isMobile: boolean;
 }
@@ -27,7 +27,7 @@ const TYPE_CLASSES: Record<LogEntry['type'], string> = {
 export function ConversationLog({
   displayLog,
   queuedUserEntries,
-  isStreaming,
+  showThinking,
   spinTick,
   isMobile,
 }: Props) {
@@ -66,7 +66,7 @@ export function ConversationLog({
             {entry.text}
           </div>
         ))}
-        {isStreaming && (
+        {showThinking && (
           <div className="px-[10px] py-[7px] text-[11px] text-dimmer border-l-2 border-l-log-info-border mb-[11px]">
             {spinnerChar} {spinnerVerb}...
           </div>

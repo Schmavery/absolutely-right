@@ -55,6 +55,7 @@ function expectPassiveEquivalent(a: GameState, b: GameState): void {
   expect(a.unlockedUpgrades).toEqual(b.unlockedUpgrades);
   expect(a.milestonesSeen).toEqual(b.milestonesSeen);
   expect(a.usedEventIds).toEqual(b.usedEventIds);
+  expect(a.usedNewsIds).toEqual(b.usedNewsIds);
   expect(a.launched).toBe(b.launched);
   expect(a.started).toBe(b.started);
   expect(a.tests).toBe(b.tests);

@@ -26,8 +26,8 @@
   costMult: 1.14
   unlockAt: 20000
 - id: claude
-  name: Anthropix
-  desc: 200K context. will genuinely try. may over-explain.
+  name: Claudius
+  desc: 200K context from Claudius Labs. will genuinely try. may over-explain.
   locPerSec: 250
   bugsPerSec: 0.8
   fixPerSec: 0.3
@@ -62,7 +62,7 @@
   costMult: 1.17
   unlockAt: 10000000
 - id: orchestrator
-  name: Meta-Orchestrator
+  name: Facelift Orchestrator
   desc: agents orchestrating agents orchestrating agents
   locPerSec: 150000
   bugsPerSec: 100

@@ -73,7 +73,7 @@ const upgradeSchema = z
 const eventSchema = z
   .object({
     text: z.string().min(1),
-    type: z.enum(['info', 'bad', 'event', 'news']),
+    type: z.enum(['info', 'bad', 'event']),
     minLoc: z.number().nonnegative(),
     requiresLaunch: z.boolean().optional(),
     requires: z.array(z.string().min(1)).optional(),
@@ -83,6 +83,14 @@ const eventSchema = z
     freeAccountsDelta: z.number().optional(),
   })
   .passthrough();
+
+const newsSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1),
+  minLoc: z.number().nonnegative(),
+  requiresLaunch: z.boolean().optional(),
+  requires: z.array(z.string().min(1)).optional(),
+});
 
 const milestoneSchema = z.object({
   loc: z.number().nonnegative(),
@@ -105,6 +113,7 @@ const DATA_FILES = [
   'generators.yaml',
   'upgrades.yaml',
   'events.yaml',
+  'news.yaml',
   'milestones.yaml',
   'actions.yaml',
   'ui.yaml',
@@ -165,6 +174,18 @@ export function validateGameDataDir(dataDir: string): void {
       if (!upgradeIds.has(req)) {
         throw new Error(
           `[data/events.yaml] event requires unknown upgrade id "${req}"`,
+        );
+      }
+    }
+  }
+
+  const news = z.array(newsSchema).parse(raw['news.yaml']);
+  assertUniqueIds('news.yaml', news);
+  for (const n of news) {
+    for (const req of n.requires ?? []) {
+      if (!upgradeIds.has(req)) {
+        throw new Error(
+          `[data/news.yaml] headline requires unknown upgrade id "${req}"`,
         );
       }
     }

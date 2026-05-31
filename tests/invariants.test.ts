@@ -119,6 +119,7 @@ describe('invariants: monotonicity', () => {
         expect(s.upgrades.length).toBeGreaterThanOrEqual(prev.upgrades.length);
         expect(s.unlockedUpgrades.length).toBeGreaterThanOrEqual(prev.unlockedUpgrades.length);
         expect(s.usedEventIds.length).toBeGreaterThanOrEqual(prev.usedEventIds.length);
+        expect(s.usedNewsIds.length).toBeGreaterThanOrEqual(prev.usedNewsIds.length);
         expect(s.milestonesSeen.length).toBeGreaterThanOrEqual(prev.milestonesSeen.length);
         // chatBusyUntil only ever extends (max-merge in `appendLog`).
         expect(s.chatBusyUntil ?? 0).toBeGreaterThanOrEqual(prev.chatBusyUntil ?? 0);

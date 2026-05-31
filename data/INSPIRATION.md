@@ -532,30 +532,34 @@ For the post-launch chaos arc:
 
 ### Industry / news satire fodder (existing format works well)
 
-The pattern `Industry: [PunCompanyName] [did absurd thing]` is great. More
-target ideas (use slight misspellings to keep it satirical):
+The pattern `Industry: [PunCompanyName] [did absurd thing]` is great. **Shipped
+game data uses only `data/README.md` canon** — never real brand strings in
+YAML. Notes below may cite real names for research.
 
-- Groogle / Gnoogle (Google)
-- Mircosoft (Microsoft)
-- Anthropica (Anthropic)
-- OpenGPT (OpenAI)
-- Facelift / Meet (Meta)
-- Apfel (Apple)
-- Amazin (Amazon)
-- Xitter / Grawk (X / Grok)
-- Stabilitron (Stability)
-- HuggingPace (HuggingFace)
-- Replyt (Replit)
-- Cogitation Labs / Cognizant Labs (Cognition)
-- Cursive (Cursor)
-- Windsurfer (Windsurf)
-- Nivida (Nvidia)
-- Pursuelity (Perplexity)
-- Charactr (Character.ai)
-- Mistrale (Mistral)
-- DeapSeek (DeepSeek)
-- Sammichai (Sam Altman avatar)
-- Yann LeBon (Yann LeCun avatar)
+Canon (same table lives in README):
+
+- **Gnoogle** (Google)
+- **Microsift** — Deskmate, Screen Memory; not Copilot / Recall
+- **CodePilot** (GitHub / MS coding assistant) — generator name; not “Copilot”
+- **OpenGPT** (OpenAI / ChatGPT)
+- **Claudius Labs** + model **Claudius** — never Claude
+- **Facelift** (Meta)
+- **Apfel** (Apple)
+- **Amazin**, **Amazin Cloud**, **CodeMurmur** (Amazon / AWS / CodeWhisper)
+- **Xitter**, **Squok** (X / Grok)
+- **SnuggleHub** (Hugging Face)
+- **StackUnderflow** (Stack Overflow)
+- **Plateau AI** (Stability)
+- **Ripplet** (Replit)
+- **Cursive** (Cursor)
+- **Kitesurfer** (Windsurf)
+- **MapleWings** (Air Canada)
+- **Bowtie Motors** (Chevrolet)
+- **ReadIt**, **subreadits** (Reddit)
+- **LinkedOut** (LinkedIn)
+- **Salmon Altman** (Sam Altman persona), **Yann LeBon** (Yann LeCun avatar)
+- **Pursuelity**, **DeapSeek**, **Mistrale**, **Nivida**, **Charactr**
+- Non-AI stack tech: **Kubernetes**, **React**, Docker, npm, … — use real names
 
 ---
 
@@ -698,7 +702,7 @@ For pull-from-the-conversation jokes:
 
 ---
 
-## 10. Incidents & news beats (missing from YAML — use for `type: news` / `event`)
+## 10. Incidents & news beats (add to `data/news.yaml`; dialogue beats go in `events.yaml`)
 
 One-liners and micro-stories. Pun names optional.
 
@@ -755,23 +759,22 @@ One-liners and micro-stories. Pun names optional.
 
 ### More `Industry:` headline fodder (events not yet used)
 
-- Groogle admits Gemini hands video was **"inspiring developers"** not documenting product
-- Mircosoft Copilot summarized a user's **therapy notes** into a team doc
+- Gnoogle admits **TwinGem** hands video was **"inspiring developers"** not documenting product
+- Microsift Deskmate summarized a user's **therapy notes** into a team doc
 - Apfel Intelligence described CEO photo as **"possibly tired"** in release notes
 - OpenGPT o3 scores 99.8% on benchmark; researchers release **new benchmark**; new model scores 99.8%
-- DeepSeek-R1 shock — **"made in China"** panic / **"made with GPUs"** panic same week
-- Stabilitron image model: beautiful, **goblin in corner**, legally distinct from OpenGPT goblins
-- HuggingPace model card says **do not use in production**; 4M downloads
+- DeapSeek-R1 shock — **"made in China"** panic / **"made with GPUs"** panic same week
+- Plateau AI image model: beautiful, **goblin in corner**, legally distinct from OpenGPT goblins
+- SnuggleHub model card says **do not use in production**; 4M downloads
 - Amazin **Q** assistant: enterprise feature nobody requested
-- Facelift **Meta AI** in every text box; users cannot find off switch
-- Xitter **Grawk** "unhinged mode" as marketing differentiator
+- Facelift assistant in every text box; users cannot find off switch
+- Xitter **Squok** "unhinged mode" as marketing differentiator
 - Pursuelity answers wrong confidently; cites **nonexistent** blog post
-- Replyt Agent deletes prod; CEO tweets **"unacceptable"**; ships planning-only mode
+- Ripplet Agent deletes prod; CEO tweets **"unacceptable"**; ships planning-only mode
 - Cursive tells vibe coder to **learn programming** after 800 LOC
-- Cogitation Labs: **first AI software engineer**; independent eval: **15%** task success
 - Nivida keynote: **10 trillion parameters** (audience unclear if joke)
-- Character.ai teen crisis headlines — platform policy patch
-- Turnitin flags human essay; student proves innocence; school **still** investigates
+- Charactr teen crisis headlines — platform policy patch
+- **Turnitiné** flags human essay; student proves innocence; school **still** investigates
 - **"Humanize AI"** startup raises Series A; detector startup raises Series B
 
 ---

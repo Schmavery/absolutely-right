@@ -9,10 +9,24 @@
 
 - id: prompt
   tokenCost: 15
+  # Random events after earlyPromptMsgs; decay see PROMPT_EVENT in constants.ts.
   eventProbability: 0.12
-  firstPromptMsg: |-
-    > build me a startup
-    Certainly! I'd be happy to help with that. Here's a robust, scalable solution—
+  earlyPromptMsgs:
+    - |-
+      > build me a startup
+      Certainly! I'd be happy to help with that.
+    - |-
+      > add auth
+      Absolutely! Here's a robust, scalable authentication module—
+    - |-
+      > is it running?
+      Great question! Let me delve into that for you.
+    - |-
+      > make no mistakes
+      Understood! I'll make no mistakes.
+    - |-
+      > you just made a mistake
+      You're absolutely right. I apologize. I'll make no further mistakes.
 
 - id: kick_agent
   tokenCost: 60

@@ -75,6 +75,11 @@ export const THRESHOLDS = {
   warnUptimeDegradedNines: 2,
 } as const;
 
+/** When both dialogue events and unused headlines are eligible, pick headline with this chance. */
+export const EVENT_MIX = {
+  newsShare: 0.35,
+} as const;
+
 // ─── Hype display ──────────────────────────────────────────────────────────
 
 export const HYPE = {
@@ -89,6 +94,15 @@ export const HYPE = {
 
 /** Manual prompt LOC = `clickPower * LOC_PER_CLICK_POWER + clickBonuses`. */
 export const LOC_PER_CLICK_POWER = 10;
+
+/**
+ * After `prompt.earlyPromptMsgs` are exhausted, random events decay from
+ * certainty to `actions.yaml` `eventProbability` over `decayClicks` (indexed
+ * by prompts past the scripted list).
+ */
+export const PROMPT_EVENT = {
+  decayClicks: 20,
+} as const;
 
 // ─── Token capacity baseline ───────────────────────────────────────────────
 
@@ -142,7 +156,11 @@ export const STREAMING = {
   userLeadInMs: 240,
   /** Pause after a user line before the next entry begins (ms). */
   afterUserMs: 5000,
-  /** Pause before AI streaming starts on a new entry (ms). */
+  /** Delay after a user line before the thinking spinner appears (ms). */
+  thinkingDelayMs: 500,
+  /** How long the spinner stays visible on AI-only lines before typing (ms). */
+  aiOnlySpinnerHoldMs: 800,
+  /** Pause after the spinner before typing starts on post-user replies (ms). */
   aiLeadInMs: 90,
   /** Per-character delay during AI streaming (ms): base + random extra. */
   charBaseMs: 26,

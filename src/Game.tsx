@@ -45,10 +45,8 @@ export function Game() {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  const { displayLog, isStreaming, spinTick, reset: resetStream } = useStreamingLog(
-    state.log,
-    state.logId,
-  );
+  const { displayLog, showThinking, isAnimating, spinTick, reset: resetStream } =
+    useStreamingLog(state.log, state.logId);
 
   // Game tick.
   useEffect(() => {
@@ -101,26 +99,25 @@ export function Game() {
   const showLog = state.log.length >= 1;
   const { showGenSection, showUpgSection } = derived.ui;
 
-  // The queue panel only shows the *very next* pending entry, and only if
-  // it's a user line. Multi-turn events (e.g. `> X / AI / > Y / AI`) drop
-  // several user entries into the log at once, but the back-and-forth is
-  // inherently sequential — follow-up `>` lines should appear inline as
-  // the conversation unfolds, not stack up in the queue as if the player
-  // typed them ahead.
-  //
-  // An entry is "displayed" only once its streamed text matches the source
-  // text, so an AI line that's mid-stream still blocks the queue (rather
-  // than letting the next user line pop in behind it).
+  // Queue panel: next user line only when a prior entry is still streaming
+  // (multi-turn `> user / AI / > user`). Idle log and user lead-in never
+  // use the queue — avoids a one-frame flash when state.log leads displayLog.
   const queuedUserEntries = useMemo(() => {
+    if (!isAnimating) return [];
     const srcById = new Map(state.log.map((e) => [e.id, e]));
-    const completedIds = new Set<number>();
-    for (const d of displayLog) {
-      const src = srcById.get(d.id);
-      if (src && d.text === src.text) completedIds.add(d.id);
-    }
-    const next = state.log.find((e) => !completedIds.has(e.id));
-    return next?.type === 'user' ? [next] : [];
-  }, [displayLog, state.log]);
+    const isComplete = (id: number) => {
+      const src = srcById.get(id);
+      const d = displayLog.find((e) => e.id === id);
+      return !!src && !!d && d.text === src.text;
+    };
+    const nextIdx = state.log.findIndex((e) => !isComplete(e.id));
+    if (nextIdx < 0) return [];
+    const next = state.log[nextIdx];
+    if (next.type !== 'user') return [];
+    // Only queue a user line when something before it is still streaming.
+    const blocked = state.log.slice(0, nextIdx).some((e) => !isComplete(e.id));
+    return blocked ? [next] : [];
+  }, [displayLog, state.log, isAnimating]);
 
   const promptLabel =
     state.totalClicks === 0
@@ -173,7 +170,7 @@ export function Game() {
               over it. The streaming animation itself is the progress
               indicator, so no extra bar is needed. */}
           {(() => {
-            const chatBusy = isChatBusy(state, Date.now());
+            const chatBusy = isChatBusy(state, Date.now()) || isAnimating;
             return (
               <Button
                 variant="primary"
@@ -235,7 +232,7 @@ export function Game() {
           <ConversationLog
             displayLog={displayLog}
             queuedUserEntries={queuedUserEntries}
-            isStreaming={isStreaming}
+            showThinking={showThinking}
             spinTick={spinTick}
             isMobile={isMobile}
           />

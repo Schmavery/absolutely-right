@@ -29,7 +29,7 @@ export function ResetConfirmModal({ onConfirm, onClose }: ResetConfirmModalProps
         type="button"
         aria-label="cancel"
         onClick={onClose}
-        className="absolute inset-0 bg-bg/70 cursor-default border-0 p-0"
+        className="absolute inset-0 bg-bg/70 border-0 p-0"
       />
       <div className="relative bg-card-bg border border-card-border w-[min(92vw,420px)]">
         <div className="flex items-baseline justify-between border-b border-border px-[14px] py-[10px]">
@@ -43,7 +43,7 @@ export function ResetConfirmModal({ onConfirm, onClose }: ResetConfirmModalProps
             type="button"
             onClick={onClose}
             aria-label="close"
-            className="text-dimmer hover:text-fg text-[14px] leading-none cursor-pointer bg-transparent border-0"
+            className="text-dimmer hover:text-fg text-[14px] leading-none bg-transparent border-0"
           >
             ×
           </button>

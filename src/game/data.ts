@@ -7,15 +7,17 @@
 import GENS_DATA from '@data/generators.yaml';
 import UPGRADES_DATA from '@data/upgrades.yaml';
 import EVENTS_DATA from '@data/events.yaml';
+import NEWS_DATA from '@data/news.yaml';
 import MILESTONES_DATA from '@data/milestones.yaml';
 import ACTIONS_DATA from '@data/actions.yaml';
 import UI_DATA from '@data/ui.yaml';
 
-import type { ActionDef, EventDef, GenDef, UpgDef } from '../types';
+import type { ActionDef, EventDef, GenDef, NewsDef, UpgDef } from '../types';
 
 export const GENS = GENS_DATA as GenDef[];
 export const UPGRADES = UPGRADES_DATA as UpgDef[];
 export const EVENTS = EVENTS_DATA as EventDef[];
+export const NEWS = NEWS_DATA as NewsDef[];
 export const MILESTONES = MILESTONES_DATA as { loc: number; text: string }[];
 
 interface UiData {

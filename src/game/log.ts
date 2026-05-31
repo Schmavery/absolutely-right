@@ -13,9 +13,9 @@ import { now } from './runtime';
  *     non-whitespace tokens produced by `text.split(/(\s+)/)` (whitespace
  *     tokens have a 0ms inter-token delay in the renderer).
  *
- * Uses the *expected* jitter (charJitterMs / 2) instead of sampling so the
- * gameplay gate is deterministic. The visible animation can still jitter
- * for variety; the chat-busy timestamp uses the prediction.
+ * Uses worst-case per-token delay (base + full jitter) so `chatBusyUntil`
+ * does not clear before the UI finishes. The prompt button also waits on
+ * `useStreamingLog`'s `isAnimating`, which tracks the real display queue.
  */
 export function streamingDurationMs(text: string, fallbackType: LogEntryType): number {
   // No-op for the synthetic fallback type that never streams.
@@ -23,18 +23,24 @@ export function streamingDurationMs(text: string, fallbackType: LogEntryType): n
 
   const lines = text.split('\n').filter((l) => l.trim().length > 0);
   let ms = 0;
+  let afterUser = false;
   for (const line of lines) {
     const isUser = line.trimStart().startsWith('>');
     if (isUser) {
       ms += STREAMING.userLeadInMs + STREAMING.afterUserMs;
+      afterUser = true;
       continue;
     }
+    if (!afterUser) {
+      ms += STREAMING.aiOnlySpinnerHoldMs;
+    }
+    afterUser = false;
     const tokens = line.split(/(\s+)/);
     let nonSpaceTokens = 0;
     for (const tok of tokens) if (tok.length > 0 && tok.trim() !== '') nonSpaceTokens++;
     ms +=
       STREAMING.aiLeadInMs +
-      nonSpaceTokens * (STREAMING.charBaseMs + STREAMING.charJitterMs / 2) +
+      nonSpaceTokens * (STREAMING.charBaseMs + STREAMING.charJitterMs) +
       STREAMING.afterAiMs;
   }
   return ms;

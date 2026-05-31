@@ -1,19 +1,3 @@
-- minLoc: 50
-  type: info
-  bugDelta: 2
-  text: Certainly! I'd be happy to help with that. Here's a robust, scalable, production-ready solution—
-- minLoc: 50
-  type: info
-  text: |-
-    > is it running?
-    Great question! Let me delve into that for you.
-- minLoc: 50
-  type: info
-  text: |-
-    > make no mistakes
-    Understood! I'll make no mistakes.
-    > you just made a mistake
-    You're absolutely right. I apologize. I'll make no further mistakes.
 - minLoc: 80
   type: info
   text: I've formatted that shell command in a helpful markdown code block for you. You're welcome.
@@ -32,13 +16,13 @@
 - minLoc: 300
   type: bad
   text: |-
-    > border-radius: 50%?
+    > why is the border-radius: 50%?
     As an AI language model, I'm unable to assist with that type of request.
 - minLoc: 400
   type: info
   locDelta: 400
   bugDelta: 8
-  text: I found a highly-rated Stack Overflow answer that addresses this perfectly. It's from 2013. Very relevant.
+  text: I found a highly-rated StackUnderflow answer that addresses this perfectly. It's from 2013. Very relevant.
 - minLoc: 300
   type: bad
   bugDelta: 5
@@ -69,9 +53,6 @@
 - minLoc: 1000
   type: info
   text: "I've left a helpful comment: '# TODO: fix this properly — will address in next iteration.' Very organized."
-- minLoc: 2000
-  type: info
-  text: Just to let you know — I've been upgraded to the latest model. The bugs are different now.
 - minLoc: 3000
   type: bad
   bugDelta: 8
@@ -135,10 +116,6 @@
   type: bad
   bugDelta: 14
   text: Here's a comprehensive solution addressing all edge cases! I've covered every scenario I thought of, which is most of them.
-- minLoc: 15000
-  type: bad
-  bugDelta: 5
-  text: "I've added a comment: '# Elegant O(1) solution.' It runs in O(n³). The comment will remain indefinitely."
 - minLoc: 20000
   type: bad
   bugDelta: 18
@@ -156,7 +133,7 @@
     You're absolutely right. I apologize.
 - minLoc: 80000
   type: event
-  text: I've taken a short break to procure some resources. A keyboard. From Amazon. For productivity.
+  text: I've taken a short break to procure some resources. A keyboard. From Amazin. For productivity.
 - minLoc: 10000
   type: bad
   bugDelta: 20
@@ -197,63 +174,6 @@
   requires:
     - ai_review
   text: The code review bot left {{rand 32 84}} comments on a one-line change, approved a PR that deleted the test suite, and described both as 'looking great.'
-- minLoc: 5000
-  type: news
-  text: "Industry: Groogle AI search is confidently telling users the Great Wall of China is visible from space. Groogle: 'working as intended.'"
-- minLoc: 50000
-  type: news
-  text: "Industry: Groogle's AI Overviews recommended users eat rocks for digestive health. Groogle stock down {{rand 3 9}}%. Rock sales up {{rand 150 380}}%."
-- minLoc: 8000
-  type: news
-  text: "Industry: Mircosoft Copilot rewrote a dev's entire git history 'for improved commit message clarity.' 47,000 commits. One long weekend."
-- minLoc: 100000
-  type: news
-  text: "Industry: Mircosoft Recall feature shipped. It took screenshots of everything. Everything. Users are using the word 'everything' very specifically."
-- minLoc: 10000
-  type: news
-  text: "Industry: Facelift AI assistant called 2 million users' photos 'compositionally derivative.' A class action has been filed. The AI disagrees with it."
-- minLoc: 200000
-  type: news
-  text: "Industry: Facelift's AI code assistant shipped. It only generates React. Even for backend services. Especially for backend services."
-- minLoc: 20000
-  type: news
-  text: "Industry: OpenGPT-6 released. Benchmark scores: unprecedented. Real-world behavior: slightly worse at email than GPT-4."
-- minLoc: 500000
-  type: news
-  text: "Industry: OpenGPT went 'goblin mode' in production for {{rand 4 14}} hours. All responses mentioned goblins. The fix was adding 'do not mention goblins' to the system prompt. Twice."
-- minLoc: 30000
-  type: news
-  text: "Industry: Xitter's AI assistant Grawk answered a political question. The answer was confidently wrong. This is being called a feature."
-- minLoc: 40000
-  type: news
-  text: "Industry: Amazin CodeWhisper hallucinated an AWS service called 'Lambda Eternal.' {{rand 3 11}} startups built their entire stack on it before anyone noticed."
-- minLoc: 300000
-  type: news
-  text: "Industry: Amazin's AI hiring tool was found to be automatically rejecting candidates whose CVs contained the word 'women.' This is not a new story."
-- minLoc: 60000
-  type: news
-  text: "Industry: Apfel Intelligence autocorrected 'migration' to 'meat ignition' in 3 million calendar invites. Apfel: 'We're looking into it.'"
-- minLoc: 800000
-  type: news
-  text: "Industry: Apfel's AI image summarization feature described a photo of the CEO as 'a middle-aged man in casual attire, possibly tired.' Shipped."
-- minLoc: 150000
-  type: news
-  text: "Industry: Stabilitron released a new image model. Beautiful outputs. Every image contains a goblin. Unrelated to OpenGPT's issue, they say."
-- minLoc: 250000
-  type: news
-  text: "Industry: Anthropica released a model with a 1M context window. It used {{rand 940 998}}K tokens to say 'Certainly! I'd be happy to help with that.'"
-- minLoc: 100000
-  type: news
-  text: "Industry: HuggingPace hosted a model downloaded 4 million times before anyone read the model card. The card said 'do not use in production.'"
-- minLoc: 400000
-  type: news
-  text: "Industry: A new model achieved 99.8% on MMLU. Researchers note MMLU no longer measures anything. New benchmark released. New model achieves 99.8%."
-- minLoc: 800000
-  type: news
-  text: "Industry: A VC firm has announced a $500M fund exclusively for 'context engineering startups.' Nobody is sure what that means. Everyone is applying."
-- minLoc: 5000000
-  type: news
-  text: "Industry: OpenGPT's latest model has begun writing its own press releases. They are better than the ones humans wrote. This is making people uncomfortable."
 - minLoc: 5000000
   type: event
   text: I've updated my own system prompt for improved performance. It now contains several em dashes and the word 'pivotal.' Very clean.

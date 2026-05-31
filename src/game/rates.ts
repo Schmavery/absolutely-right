@@ -9,7 +9,7 @@
 
 import { action, GENS, UPGRADES } from './data';
 import type { GenDef, UpgDef } from '../types';
-import { MONEY, TOKENS, UPTIME } from './constants';
+import { MONEY, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -35,6 +35,17 @@ export function calcClickBonus(upgrades: string[]): number {
   let bonus = 0;
   for (const u of ownedDefs(upgrades)) if (u.clickBonus) bonus += u.clickBonus;
   return bonus;
+}
+
+/** Random prompt event chance after scripted msgs; decays to `baseProbability`. */
+export function calcPromptEventProbability(
+  baseProbability: number,
+  clicksPastScripted: number,
+): number {
+  const { decayClicks } = PROMPT_EVENT;
+  const t = Math.max(0, clicksPastScripted);
+  if (t >= decayClicks) return baseProbability;
+  return baseProbability + (1 - baseProbability) * ((decayClicks - t) / decayClicks);
 }
 
 export function calcAgentLocMult(upgrades: string[]): number {

@@ -34,10 +34,9 @@ const BASE =
   'leading-[1.65] mr-2 mb-[5px] select-none px-[11px] py-[3px] border ' +
   'transition-colors';
 
-const ENABLED =
-  'border-btn-border text-btn-text cursor-pointer hover:text-fg hover:border-dim';
+const ENABLED = 'border-btn-border text-btn-text hover:text-fg hover:border-dim';
 
-const OFF = 'border-border text-dimmer cursor-not-allowed';
+const OFF = 'border-border text-dimmer';
 
 const VARIANTS: Record<Variant, { on: string; off: string }> = {
   default: {
@@ -45,23 +44,23 @@ const VARIANTS: Record<Variant, { on: string; off: string }> = {
     off: OFF,
   },
   primary: {
-    on: 'border-dim text-title cursor-pointer px-[22px] py-[6px] text-[14px] mb-4 hover:text-fg',
+    on: 'border-dim text-title px-[22px] py-[6px] text-[14px] mb-4 hover:text-fg',
     off: OFF + ' px-[22px] py-[6px] text-[14px] mb-4',
   },
   launch: {
-    on: 'border-yellow text-yellow cursor-pointer px-[18px] py-[5px] hover:text-fg',
+    on: 'border-yellow text-yellow px-[18px] py-[5px] hover:text-fg',
     off: OFF + ' px-[18px] py-[5px]',
   },
   yolo: {
-    on: 'border-purple text-purple cursor-pointer hover:text-fg',
+    on: 'border-purple text-purple hover:text-fg',
     off: OFF,
   },
   bounty: {
-    on: 'border-blue text-blue cursor-pointer hover:text-fg',
+    on: 'border-blue text-blue hover:text-fg',
     off: OFF,
   },
   subtle: {
-    on: 'border-border text-dimmer cursor-pointer text-[11px] hover:text-fg',
+    on: 'border-border text-dimmer text-[11px] hover:text-fg',
     off: OFF + ' text-[11px]',
   },
 };
