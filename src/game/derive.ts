@@ -13,8 +13,6 @@ import {
   type EffectiveThresholds,
   type GameFlag,
 } from './flags';
-import { inEarlyPromptScript } from './prompt';
-
 export interface DerivedUi {
   showTokens: boolean;
   showWriteTests: boolean;
@@ -48,7 +46,7 @@ export function deriveGame(state: GameState): DerivedGame {
   const flag = (f: GameFlag) => hasFlag(flags, f);
 
   const ui: DerivedUi = {
-    showTokens: !inEarlyPromptScript(state),
+    showTokens: (state.totalTokensSpent ?? 0) > 0,
     showPasteError: (state.lifetimeBugs ?? 0) >= thresholds.showPasteErrorBugs,
     showKickAgent: state.totalClicks >= thresholds.showKickAgentClicks,
     showWriteTests:

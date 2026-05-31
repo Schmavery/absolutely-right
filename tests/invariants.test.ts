@@ -11,8 +11,8 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { Sim } from './sim/Sim';
-import { naiveGreedy, lazy, spammer, randomBot } from './sim/bots';
+import { Sim } from '../src/sim/Sim';
+import { greedyPlayer, lazy, spammer, randomBot } from '../src/sim/bots';
 import { calcTokenConfig } from '../src/game/rates';
 import {
   legalFromGates,
@@ -29,7 +29,7 @@ const VIRTUAL_LONG = 5 * 60_000;   // 5 virtual minutes — for reach tests
 
 const POLICIES = [
   ['lazy', lazy],
-  ['naiveGreedy', naiveGreedy],
+  ['greedy', greedyPlayer],
   ['spammer', spammer],
   ['random', randomBot(0xdeadbeef)],
 ] as const;
@@ -107,9 +107,9 @@ describe('invariants: monotonicity', () => {
   for (const [name, bot] of POLICIES) {
     it(`${name}: cumulative counters never decrease across any tick`, () => {
       const sim = new Sim({ seed: 1, recordTrace: true }).run(bot, VIRTUAL_MIN);
-      let prev = sim.trace[0].state;
+      let prev = sim.trace[0].state!;
       for (const entry of sim.trace.slice(1)) {
-        const s = entry.state;
+        const s = entry.state!;
         expect(s.totalLoc).toBeGreaterThanOrEqual(prev.totalLoc - 1e-9);
         expect(s.totalClicks).toBeGreaterThanOrEqual(prev.totalClicks);
         expect(s.totalTokensSpent ?? 0).toBeGreaterThanOrEqual(prev.totalTokensSpent ?? 0);
@@ -155,7 +155,7 @@ describe('invariants: determinism', () => {
   // a fresh internal state for each of the two runs we compare.
   const factories = [
     ['lazy', () => lazy],
-    ['naiveGreedy', () => naiveGreedy],
+    ['greedy', () => greedyPlayer],
     ['spammer', () => spammer],
     ['random', () => randomBot(0xdeadbeef)],
   ] as const;
@@ -187,11 +187,11 @@ describe('invariants: canonical gates', () => {
   const SNAPSHOT_STRIDE = 40;
 
   it('legal and waitMs are derived from gates (with visibility overlay where applicable)', () => {
-    const sim = new Sim({ seed: 4242, recordTrace: true }).run(naiveGreedy, VIRTUAL_MIN);
+    const sim = new Sim({ seed: 4242, recordTrace: true }).run(greedyPlayer, VIRTUAL_MIN);
     for (const { state, t } of sim.trace.filter(
       (_, i) => i % SNAPSHOT_STRIDE === 0 || i === sim.trace.length - 1,
     )) {
-      for (const m of moveTable(state, t).all) {
+      for (const m of moveTable(state!, t).all) {
         const gateLegal = legalFromGates(m.gates);
         const gateWait = waitMsFromGates(m.gates);
         const visibilityOverlay =
@@ -211,11 +211,11 @@ describe('invariants: canonical gates', () => {
   });
 
   it('legal visible moves always report waitMs === 0', () => {
-    const sim = new Sim({ seed: 4242, recordTrace: true }).run(naiveGreedy, VIRTUAL_MIN);
+    const sim = new Sim({ seed: 4242, recordTrace: true }).run(greedyPlayer, VIRTUAL_MIN);
     for (const { state, t } of sim.trace.filter(
       (_, i) => i % SNAPSHOT_STRIDE === 0 || i === sim.trace.length - 1,
     )) {
-      for (const m of moveTable(state, t).all) {
+      for (const m of moveTable(state!, t).all) {
         if (m.visible && m.legal) {
           expect(m.waitMs, `${m.id} @ t=${t}`).toBe(0);
         }
@@ -224,11 +224,11 @@ describe('invariants: canonical gates', () => {
   });
 
   it('any unsatisfied bool gate forces waitMs === null', () => {
-    const sim = new Sim({ seed: 4242, recordTrace: true }).run(naiveGreedy, VIRTUAL_MIN);
+    const sim = new Sim({ seed: 4242, recordTrace: true }).run(greedyPlayer, VIRTUAL_MIN);
     for (const { state, t } of sim.trace.filter(
       (_, i) => i % SNAPSHOT_STRIDE === 0 || i === sim.trace.length - 1,
     )) {
-      for (const m of moveTable(state, t).all) {
+      for (const m of moveTable(state!, t).all) {
         if (hasBlockingBool(m.gates)) {
           expect(m.waitMs, `${m.id} @ t=${t}`).toBe(null);
         }
@@ -245,8 +245,8 @@ describe('invariants: canonical gates', () => {
 // `legal: false` move never does.
 
 describe('invariants: legality contract', () => {
-  it('every move ever offered to the naive bot, when applied, changes state', () => {
-    const sim = new Sim({ seed: 99, recordTrace: true }).run(naiveGreedy, VIRTUAL_LONG);
+  it('every move ever offered to the greedy bot, when applied, changes state', () => {
+    const sim = new Sim({ seed: 99, recordTrace: true }).run(greedyPlayer, VIRTUAL_LONG);
     const moveTicks = sim.trace.filter((t) => t.move);
     expect(moveTicks.length).toBeGreaterThan(0);
     // We assert this transitively: if the bot only picks from `legal`

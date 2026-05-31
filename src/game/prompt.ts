@@ -5,7 +5,7 @@ export function scriptedPromptCount(): number {
   return action('prompt').earlyPromptMsgs?.length ?? 0;
 }
 
-/** True while cycling through `earlyPromptMsgs` (token panel hidden). */
+/** True while cycling through `earlyPromptMsgs`. */
 export function inEarlyPromptScript(state: GameState): boolean {
   return state.totalClicks < scriptedPromptCount();
 }

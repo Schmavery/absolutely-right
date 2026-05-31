@@ -1,4 +1,5 @@
 import { GENS, UI, UPGRADES, action } from '../game/data';
+import { DebugSection, DebugShell } from './DebugShell';
 import { LAUNCH_LOC, THRESHOLDS } from '../game/constants';
 import { deriveGame } from '../game/derive';
 import { PHASE_RULES, getPhase } from '../game/phases';
@@ -96,108 +97,96 @@ export function PhasesDebug() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-bg text-fg font-mono text-[13px] leading-relaxed p-6 max-w-[1100px] mx-auto">
-      <h1 className="text-title text-[18px] mb-1 tracking-wide">&gt; phase map (debug)</h1>
-      <p className="text-dimmer mb-6">
+    <DebugShell active="phases">
+      <p className="debug-prose mb-6 text-[12px]">
         Built from shipped YAML + constants. Target story:{' '}
-        <code className="text-fg-dim">data/PHASES.md</code>. Remove{' '}
-        <code className="text-fg-dim">?debug=phases</code> to play.
+        <code className="debug-code">data/PHASES.md</code>.
       </p>
 
-      <section className="mb-8">
-        <h2 className="text-dimmer text-[11px] uppercase tracking-widest mb-3">Target chapters</h2>
-        <div className="border border-card-border rounded overflow-hidden">
-          <table className="w-full text-left border-collapse">
+      <DebugSection title="Target chapters">
+        <div className="debug-table-wrap">
+          <table className="debug-table">
             <thead>
-              <tr className="bg-card-bg text-dimmer text-[11px]">
-                <th className="p-2 font-normal">Chapter</th>
-                <th className="p-2 font-normal">Bug strategy</th>
-                <th className="p-2 font-normal">Status</th>
+              <tr>
+                <th>Chapter</th>
+                <th>Bug strategy</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {TARGET_CHAPTERS.map((c) => (
-                <tr key={c.id} className="border-t border-card-border">
-                  <td className="p-2">{c.title}</td>
-                  <td className="p-2 text-dimmer">{c.bugStrategy}</td>
-                  <td className="p-2 text-dimmer">{c.status}</td>
+                <tr key={c.id}>
+                  <td className="text-yellow">{c.title}</td>
+                  <td className="text-dim">{c.bugStrategy}</td>
+                  <td className="text-purple">{c.status}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
+      </DebugSection>
 
-      <section className="mb-8">
-        <h2 className="text-dimmer text-[11px] uppercase tracking-widest mb-3">
-          Flavor phases (ui.yaml)
-        </h2>
+      <DebugSection title="Flavor phases (ui.yaml)">
         <ul className="space-y-2">
           {flavorRows.map((r) => (
             <li key={r.i}>
-              <span className="text-dimmer">[{r.i}] when: {r.rule}</span>
+              <span className="text-dim">[{r.i}] when: <span className="text-blue">{r.rule}</span></span>
               <br />
-              {r.label}
+              <span className="debug-value">{r.label}</span>
               {r.activeOnFreshSave && (
-                <span className="text-green-dim text-[12px]"> · current on new game</span>
+                <span className="debug-flavor-active text-[12px]"> · current on new game</span>
               )}
             </li>
           ))}
         </ul>
-        <p className="text-dimmer mt-2 text-[12px]">
+        <p className="debug-prose mt-2 text-[12px]">
           Launch at {fmtLoc(LAUNCH_LOC)} LOC · upgrade shop ~{' '}
           {fmtLoc(THRESHOLDS.showUpgradesLoc)} · generators ~{' '}
           {fmtLoc(THRESHOLDS.showGeneratorsLoc)}
         </p>
-      </section>
+      </DebugSection>
 
-      <section className="mb-8">
-        <h2 className="text-dimmer text-[11px] uppercase tracking-widest mb-3">
-          Generators (unlockAt)
-        </h2>
-        <div className="border border-card-border rounded overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[520px]">
+      <DebugSection title="Generators (unlockAt)">
+        <div className="debug-table-wrap min-w-[520px]">
+          <table className="debug-table">
             <thead>
-              <tr className="bg-card-bg text-dimmer text-[11px]">
-                <th className="p-2">LOC</th>
-                <th className="p-2">id</th>
-                <th className="p-2">name</th>
-                <th className="p-2">bugs/s</th>
+              <tr>
+                <th>LOC</th>
+                <th>id</th>
+                <th>name</th>
+                <th>bugs/s</th>
               </tr>
             </thead>
             <tbody>
               {gens.map((g) => (
-                <tr key={g.id} className="border-t border-card-border">
-                  <td className="p-2 text-dimmer whitespace-nowrap">{fmtLoc(g.unlockAt)}</td>
-                  <td className="p-2">{g.id}</td>
-                  <td className="p-2">{g.name}</td>
-                  <td className="p-2 text-dimmer">{g.bugsPerSec}</td>
+                <tr key={g.id}>
+                  <td className="cell-loc whitespace-nowrap">{fmtLoc(g.unlockAt)}</td>
+                  <td className="cell-id">{g.id}</td>
+                  <td>{g.name}</td>
+                  <td className="text-log-bad">{g.bugsPerSec}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
+      </DebugSection>
 
-      <section className="mb-8">
-        <h2 className="text-dimmer text-[11px] uppercase tracking-widest mb-3">
-          Upgrades (unlockAt)
-        </h2>
-        <div className="border border-card-border rounded overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[640px]">
+      <DebugSection title="Upgrades (unlockAt)">
+        <div className="debug-table-wrap min-w-[640px]">
+          <table className="debug-table">
             <thead>
-              <tr className="bg-card-bg text-dimmer text-[11px]">
-                <th className="p-2">LOC</th>
-                <th className="p-2">id</th>
-                <th className="p-2">notes</th>
+              <tr>
+                <th>LOC</th>
+                <th>id</th>
+                <th>notes</th>
               </tr>
             </thead>
             <tbody>
               {upgrades.map((u) => (
-                <tr key={u.id} className="border-t border-card-border">
-                  <td className="p-2 text-dimmer whitespace-nowrap">{fmtLoc(u.unlockAt)}</td>
-                  <td className="p-2">{u.id}</td>
-                  <td className="p-2 text-dimmer text-[12px]">
+                <tr key={u.id}>
+                  <td className="cell-loc whitespace-nowrap">{fmtLoc(u.unlockAt)}</td>
+                  <td className="cell-id">{u.id}</td>
+                  <td className="text-dim text-[12px]">
                     {upgradeNotes(u).join(' · ') || '—'}
                   </td>
                 </tr>
@@ -205,17 +194,16 @@ export function PhasesDebug() {
             </tbody>
           </table>
         </div>
-      </section>
+      </DebugSection>
 
-      <section className="mb-8">
-        <h2 className="text-dimmer text-[11px] uppercase tracking-widest mb-3">Actions</h2>
-        <div className="border border-card-border rounded overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[520px]">
+      <DebugSection title="Actions">
+        <div className="debug-table-wrap min-w-[520px]">
+          <table className="debug-table">
             <thead>
-              <tr className="bg-card-bg text-dimmer text-[11px]">
-                <th className="p-2">id</th>
-                <th className="p-2">tokens</th>
-                <th className="p-2">visibility</th>
+              <tr>
+                <th>id</th>
+                <th>tokens</th>
+                <th>visibility</th>
               </tr>
             </thead>
             <tbody>
@@ -223,21 +211,22 @@ export function PhasesDebug() {
                 const a = action(id);
                 const gate = ACTION_GATES[id] ?? '—';
                 return (
-                  <tr key={id} className="border-t border-card-border">
-                    <td className="p-2">{id}</td>
-                    <td className="p-2 text-dimmer">{a.tokenCost ?? '—'}</td>
-                    <td className="p-2 text-dimmer text-[12px]">{gate}</td>
+                  <tr key={id}>
+                    <td className="cell-id">{id}</td>
+                    <td className="text-blue">{a.tokenCost ?? '—'}</td>
+                    <td className="text-dim text-[12px]">{gate}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="text-dimmer mt-2 text-[12px]">
-          Derived UI at fresh save: money={String(baseUi.showMoney)}, uptime=
-          {String(baseUi.showUptime)}, nines={String(baseUi.ninesTracking)}
+        <p className="debug-prose mt-2 text-[12px]">
+          Derived UI at fresh save: money=<span className="text-green">{String(baseUi.showMoney)}</span>, uptime=
+          <span className="text-green">{String(baseUi.showUptime)}</span>, nines=
+          <span className="text-green">{String(baseUi.ninesTracking)}</span>
         </p>
-      </section>
-    </div>
+      </DebugSection>
+    </DebugShell>
   );
 }

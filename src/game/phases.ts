@@ -11,7 +11,7 @@ import { computeFlags, hasFlag } from './flags';
 
 export const PHASE_COUNT = UI.phases.length;
 
-/** Human-readable gates for debug UI (`?debug=phases`). Keep in sync with `getPhase`. */
+/** Human-readable gates for debug UI (`/debug/phases`). Keep in sync with `getPhase`. */
 export const PHASE_RULES: readonly { index: number; rule: string }[] = [
   { index: 0, rule: 'not launched' },
   { index: 1, rule: 'launched' },

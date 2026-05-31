@@ -19,7 +19,8 @@ export const SAVE_INTERVAL_MS = 10000;
 
 export const SAVE_KEY = 'extra_thinking_v1';
 export const THEME_STORAGE_KEY = 'extra_thinking_theme';
-export const DEFAULT_THEME = 'terminal-dark';
+/** Fallback when `prefers-color-scheme` is unavailable (tests, SSR). */
+export const DEFAULT_THEME = 'terminal-light';
 
 /** Min ms between any two random events firing across actions. */
 export const EVENT_COOLDOWN_MS = 5000;

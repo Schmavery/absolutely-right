@@ -68,7 +68,7 @@ src/
     Generators.tsx
     Upgrades.tsx
     ConversationLog.tsx
-    Settings.tsx              # top-right toolbar: dark/light toggle + gear modal
+    Settings.tsx              # top-right toolbar: auto/light/dark cycle + gear modal
 
   styles/
     index.css                 # imports Tailwind + theme tokens
@@ -87,15 +87,17 @@ variables, so all components restyle automatically when the theme changes.
 
 Built-in themes:
 
-- `terminal-dark` (default), `terminal-light` — the original look
+- `terminal-light`, `terminal-dark` — the original look; default follows OS via `prefers-color-scheme` until the user picks a theme
 - `solarized-dark`, `solarized-light` — Ethan Schoonover's palette
 - `gruvbox-dark` — Pavel Pertsev's palette
 - `nord` — Arctic Ice Studio's palette
 
 Each theme declares a `kind` (`'dark' | 'light'`) and may declare a
-`sibling` id pointing at its opposite-kind counterpart. The sun/moon
-toolbar button uses these to swap between dark and light variants;
-themes without a sibling fall back to `terminal-dark` / `terminal-light`.
+`sibling` id pointing at its opposite-kind counterpart. The toolbar
+auto/light/dark button cycles **system** (follow `prefers-color-scheme`) →
+**light** → **dark** → system; when pinning light/dark it uses the current
+palette's sibling when possible, otherwise `terminal-light` / `terminal-dark`.
+The settings modal also lists **system · auto** at the top.
 
 Add another by copying one of the `[data-theme="…"]` blocks in `themes.css`
 and adding the new id to `THEMES` in `src/lib/theme.ts`.

@@ -100,9 +100,12 @@ Implementation lives in game code + events/actions YAML; this doc only pins the 
 
 ## Debug: visualize flow from data
 
-In dev, open the app with `?debug=phases` to see a timeline built from
-`generators.yaml`, `upgrades.yaml`, `actions.yaml`, `constants.ts`, and
-`ui.yaml`, plus the target chapters above for comparison.
+In dev, open `/debug` for an index, or jump directly:
+
+- `/debug` — home / links to all views
+- `/debug/phases` — unlock tables + target chapters from YAML/constants
+- `/debug/trace` — bot sim timeline (deduped actions, upgrade heatmap)
+- `/debug/graph` — upgrade `requires:` DAG from `upgrades.yaml`
 
 ---
 

@@ -12,7 +12,7 @@
  * drift apart.
  *
  * Both React (via `ActionBar`, `Generators`, `Upgrades`) and the simulator
- * harness (`tests/sim/`) read from here. The reducers in `actions.ts`
+ * harness (`src/sim/`) read from here. The reducers in `actions.ts`
  * still no-op on illegal calls, so this module is a *predicate* layer, not
  * a guard — but routing UI and bots through it ensures they never disagree
  * about whether something is available.

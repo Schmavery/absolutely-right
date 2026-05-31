@@ -26,8 +26,8 @@ there for combine semantics (multiplicative, additive, last-wins, max-wins).
 probability, formula constants, message pools) so retuning a single action
 doesn't require touching code.
 
-**Phase design:** see `PHASES.md`. In dev, `http://localhost:5173/?debug=phases`
-renders a timeline from this folder + `src/game/constants.ts`.
+**Phase design:** see `PHASES.md`. In dev: `/debug` (index), `/debug/phases`,
+`/debug/trace`, `/debug/graph`.
 
 Cross-cutting balance numbers (THRESHOLDS,
 HYPE display, MONEY, UPTIME, STREAMING, save/theme keys) live in

@@ -39,8 +39,8 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GameState } from '../src/types';
-import { Sim } from './sim/Sim';
-import { lazy } from './sim/bots';
+import { Sim } from '../src/sim/Sim';
+import { lazy } from '../src/sim/bots';
 
 afterEach(() => Sim.teardown());
 

@@ -10,6 +10,10 @@ export default defineConfig({
   // https://<user>.github.io/<repo>/. Defaults to '/' for local dev.
   base: process.env.BASE_PATH || '/',
   plugins: [yamlPlugin(), react(), tailwindcss()],
+  worker: {
+    format: 'es',
+    plugins: () => [yamlPlugin()],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

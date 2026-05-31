@@ -2,7 +2,9 @@
  * Theme tokens.
  *
  * Each theme is a `[data-theme="…"]` block defining the same token names.
- * The default (no attribute) is `terminal-dark`. Tokens are exposed to
+ * With no saved preference, JS sets `data-theme` from `prefers-color-scheme`
+ * (`terminal-light` / `terminal-dark`). Until then, `:root:not([data-theme])`
+ * uses the same media query. Tokens are exposed to
  * Tailwind v4 via the `@theme inline` block at the bottom, which makes
  * utilities like `bg-bg`, `text-fg`, `border-card-border`, `text-log-bad`,
  * etc. resolve to the live CSS variable values.
@@ -23,7 +25,43 @@
  *   --log-{type}{,-border}       conversation-log entry color (left rule + text)
  */
 
-:root,
+[data-theme='terminal-light'] {
+  --bg: #f7f6f3;
+  --fg: #1c1c1c;
+  --dim: #555555;
+  --dimmer: #777777;
+  --title: #111111;
+  --footer: #999999;
+  --border: #ddddd8;
+  --card-bg: #ececea;
+  --card-border: #d0d0cc;
+  --btn-border: #bbbbb5;
+  --btn-text: #333333;
+
+  --green: #1a7a3a;
+  --green-dim: #2a8a4a;
+  --red: #cc2233;
+  --red-dim: #aa1a28;
+  --yellow: #8a6000;
+  --blue: #2244aa;
+  --purple: #6633aa;
+
+  --log-info: #444444;
+  --log-info-border: #bbbbbb;
+  --log-bad: #cc2222;
+  --log-bad-border: #cc6666;
+  --log-event: #6633aa;
+  --log-event-border: #9966dd;
+  --log-news: #2244aa;
+  --log-news-border: #6688dd;
+  --log-milestone: #1a7a3a;
+  --log-milestone-border: #4aaa6a;
+  --log-system: #8a6000;
+  --log-system-border: #ccaa00;
+  --log-user: #777777;
+  --log-user-border: #cccccc;
+}
+
 [data-theme='terminal-dark'] {
   --bg: #111111;
   --fg: #dddddd;
@@ -61,41 +99,83 @@
   --log-user-border: #484848;
 }
 
-[data-theme='terminal-light'] {
-  --bg: #f7f6f3;
-  --fg: #1c1c1c;
-  --dim: #555555;
-  --dimmer: #777777;
-  --title: #111111;
-  --footer: #999999;
-  --border: #ddddd8;
-  --card-bg: #ececea;
-  --card-border: #d0d0cc;
-  --btn-border: #bbbbb5;
-  --btn-text: #333333;
+/* System default (no saved theme, before initTheme) */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f7f6f3;
+    --fg: #1c1c1c;
+    --dim: #555555;
+    --dimmer: #777777;
+    --title: #111111;
+    --footer: #999999;
+    --border: #ddddd8;
+    --card-bg: #ececea;
+    --card-border: #d0d0cc;
+    --btn-border: #bbbbb5;
+    --btn-text: #333333;
 
-  --green: #1a7a3a;
-  --green-dim: #2a8a4a;
-  --red: #cc2233;
-  --red-dim: #aa1a28;
-  --yellow: #8a6000;
-  --blue: #2244aa;
-  --purple: #6633aa;
+    --green: #1a7a3a;
+    --green-dim: #2a8a4a;
+    --red: #cc2233;
+    --red-dim: #aa1a28;
+    --yellow: #8a6000;
+    --blue: #2244aa;
+    --purple: #6633aa;
 
-  --log-info: #444444;
-  --log-info-border: #bbbbbb;
-  --log-bad: #cc2222;
-  --log-bad-border: #cc6666;
-  --log-event: #6633aa;
-  --log-event-border: #9966dd;
-  --log-news: #2244aa;
-  --log-news-border: #6688dd;
-  --log-milestone: #1a7a3a;
-  --log-milestone-border: #4aaa6a;
-  --log-system: #8a6000;
-  --log-system-border: #ccaa00;
-  --log-user: #777777;
-  --log-user-border: #cccccc;
+    --log-info: #444444;
+    --log-info-border: #bbbbbb;
+    --log-bad: #cc2222;
+    --log-bad-border: #cc6666;
+    --log-event: #6633aa;
+    --log-event-border: #9966dd;
+    --log-news: #2244aa;
+    --log-news-border: #6688dd;
+    --log-milestone: #1a7a3a;
+    --log-milestone-border: #4aaa6a;
+    --log-system: #8a6000;
+    --log-system-border: #ccaa00;
+    --log-user: #777777;
+    --log-user-border: #cccccc;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #111111;
+    --fg: #dddddd;
+    --dim: #aaaaaa;
+    --dimmer: #888888;
+    --title: #eeeeee;
+    --footer: #555555;
+    --border: #272727;
+    --card-bg: #161616;
+    --card-border: #222222;
+    --btn-border: #3d3d3d;
+    --btn-text: #cccccc;
+
+    --green: #7dff9a;
+    --green-dim: #5dc878;
+    --red: #ff7070;
+    --red-dim: #c05050;
+    --yellow: #ffd966;
+    --blue: #99aaff;
+    --purple: #cc99ff;
+
+    --log-info: #bbbbbb;
+    --log-info-border: #484848;
+    --log-bad: #ffaaaa;
+    --log-bad-border: #8b3030;
+    --log-event: #cc99ff;
+    --log-event-border: #553080;
+    --log-news: #99aaff;
+    --log-news-border: #2a4490;
+    --log-milestone: #88ee99;
+    --log-milestone-border: #2a7a48;
+    --log-system: #ffd966;
+    --log-system-border: #806600;
+    --log-user: #888888;
+    --log-user-border: #484848;
+  }
 }
 
 /* Solarized — Ethan Schoonover (https://ethanschoonover.com/solarized/) */

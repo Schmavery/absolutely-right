@@ -21,8 +21,8 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { Sim, type Bot } from './sim/Sim';
-import { naiveGreedy, patientGreedy } from './sim/bots';
+import { Sim, type Bot } from '../src/sim/Sim';
+import { greedyPlayer } from '../src/sim/bots';
 import { moveTable } from '../src/game/availability';
 
 afterEach(() => Sim.teardown());
@@ -37,10 +37,7 @@ const EARLY_GAME_MS = 5 * 60_000;
 const HUGE_WAIT_MS = 5 * 60_000;       // anything cheaper than 5 virtual min is fine
 
 /** Bot factories — fresh internal state per run for stateful policies. */
-const BOTS: ReadonlyArray<readonly [string, () => Bot]> = [
-  ['naiveGreedy', () => naiveGreedy],
-  ['patientGreedy', () => patientGreedy({ patienceMs: 5000 })],
-];
+const BOTS: ReadonlyArray<readonly [string, () => Bot]> = [['greedy', () => greedyPlayer]];
 
 // ─── 1. termination ────────────────────────────────────────────────────────
 
@@ -87,7 +84,7 @@ describe('pacing: outlier waits', () => {
   for (const seed of SEEDS) {
     it(`seed=${seed}: early-game player always has a sub-${HUGE_WAIT_MS / 60_000}min forecastable next step`, () => {
       const sim = new Sim({ seed, recordTrace: true });
-      sim.runEventDriven(naiveGreedy, EARLY_GAME_MS);
+      sim.runEventDriven(greedyPlayer, EARLY_GAME_MS);
 
       let worst = { t: 0, value: 0, moveId: '' as string | null };
       for (const { state, t } of sim.trace) {
@@ -95,7 +92,7 @@ describe('pacing: outlier waits', () => {
         // visible moves, with legal moves treated as 0.
         let best: number | null = null;
         let bestId: string | null = null;
-        for (const m of moveTable(state, t).all) {
+        for (const m of moveTable(state!, t).all) {
           if (!m.visible) continue;
           const w = m.legal ? 0 : m.waitMs;
           if (w === null) continue;

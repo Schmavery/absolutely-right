@@ -7,7 +7,7 @@
  *                   message-pool selection, and `{{rand}}` in templates.
  *
  * In normal play these are just thin wrappers around `Date.now` and
- * `Math.random`. The simulator in `tests/sim/` swaps them out via
+ * `Math.random`. The simulator in `src/sim/` swaps them out via
  * `setClock` / `setRandom` so a deterministic seeded RNG and a virtual
  * clock can drive the same reducers React drives — no separate model.
  */
