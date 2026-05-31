@@ -1,15 +1,10 @@
 import type { GameState } from '../types';
 import { action } from '../game/data';
-import { deriveGame } from '../game/derive';
 import { calcTokenConfig } from '../game/rates';
 import { runTestsCost, runTestsFixFraction, writeTestCost } from '../game/actions';
+import { getMove, type Move } from '../game/availability';
 import { fmt } from '../lib/format';
 import { Button } from './Button';
-
-/** Min ratio across one or more (have/need) requirements, clamped to [0, 1]. */
-function resourceProgress(...ratios: number[]): number {
-  return Math.max(0, Math.min(1, ...ratios));
-}
 
 interface Props {
   state: GameState;
@@ -21,6 +16,14 @@ interface Props {
   onLaunch: () => void;
   onYoloMerge: () => void;
   onRunBugBounty: () => void;
+}
+
+/**
+ * Combine afford + cooldown progress into a single bar value. The UI shows
+ * whichever gate is closer to clearing.
+ */
+function comboProgress(m: Move): number {
+  return Math.min(m.affordProgress, m.cooldownProgress);
 }
 
 export function ActionBar({
@@ -35,9 +38,8 @@ export function ActionBar({
   onRunBugBounty,
 }: Props) {
   const now = Date.now();
-  const { ui } = deriveGame(state);
   const { maxTokens } = calcTokenConfig(state.upgrades, state.freeAccounts);
-  const agentBuffRemaining = Math.max(0, state.agentBuffExpires - Date.now());
+  const agentBuffRemaining = Math.max(0, state.agentBuffExpires - now);
 
   const A = {
     pasteError: action('paste_error'),
@@ -49,67 +51,58 @@ export function ActionBar({
     bugBounty: action('bug_bounty'),
   };
 
+  // All button predicates come from `availability.ts` so a bot driving the
+  // game model sees the same legality the human player does.
+  const m = {
+    pasteError: getMove(state, 'paste_error', now)!,
+    writeTest: getMove(state, 'write_test', now)!,
+    kickAgent: getMove(state, 'kick_agent', now)!,
+    runTests: getMove(state, 'run_tests', now)!,
+    clearContext: getMove(state, 'clear_context', now)!,
+    launch: getMove(state, 'launch', now)!,
+    yoloMerge: getMove(state, 'yolo_merge', now)!,
+    bugBounty: getMove(state, 'bug_bounty', now)!,
+  };
+
   const wTestCost = writeTestCost(state.tests ?? 0);
   const tCost = runTestsCost(state.totalLoc);
-  const canWriteTest = state.loc >= wTestCost && state.tokens >= A.writeTest.tokenCost!;
-  const canRunTests = state.loc >= tCost && state.tokens >= A.runTests.tokenCost!;
 
   return (
     <div className="mt-[10px] mb-1 flex flex-col items-start gap-1">
-      {ui.showPasteError && (() => {
-        // paste_error's 4s cooldown is just rate-limiting (vs. the deliberate
-        // 20–30s "system busy" cooldowns on yolo/bounty/clear_context), so
-        // show a single combined dim bar that fills as either gate clears.
-        const cdElapsed = now - (state.actionCooldowns['paste_error'] ?? 0);
-        const onCD = cdElapsed < A.pasteError.cooldownMs!;
-        const cantAfford = state.tokens < A.pasteError.tokenCost!;
-        const off = onCD || cantAfford;
-        const progress = resourceProgress(
-          cdElapsed / A.pasteError.cooldownMs!,
-          state.tokens / A.pasteError.tokenCost!,
-        );
-        return (
-          <Button
-            off={off}
-            onClick={off ? undefined : onPasteError}
-            title="paste the error back in"
-            progress={progress}
-          >
-            paste the error [{A.pasteError.tokenCost}t]
-          </Button>
-        );
-      })()}
-
-      {ui.showWriteTests && (
+      {m.pasteError.visible && (
+        // paste_error's 4s cooldown is just rate-limiting; show one combined
+        // bar that fills as either gate (cooldown or token affordability)
+        // clears.
         <Button
-          off={!canWriteTest}
-          onClick={canWriteTest ? onWriteTest : undefined}
+          off={!m.pasteError.legal}
+          onClick={m.pasteError.legal ? onPasteError : undefined}
+          title="paste the error back in"
+          progress={comboProgress(m.pasteError)}
+        >
+          paste the error [{A.pasteError.tokenCost}t]
+        </Button>
+      )}
+
+      {m.writeTest.visible && (
+        <Button
+          off={!m.writeTest.legal}
+          onClick={m.writeTest.legal ? onWriteTest : undefined}
           title="adds a test, reduces bug generation rate"
-          progress={resourceProgress(
-            state.loc / wTestCost,
-            state.tokens / A.writeTest.tokenCost!,
-          )}
+          progress={comboProgress(m.writeTest)}
         >
           write a test [−{fmt(wTestCost)} loc · {A.writeTest.tokenCost}t]
         </Button>
       )}
 
-      {ui.showKickAgent && (() => {
-        const cantAfford = state.tokens < A.kickAgent.tokenCost!;
+      {m.kickAgent.visible && (() => {
         const buffActive = agentBuffRemaining > 0;
-        const off = cantAfford || buffActive;
-        // While the buff is active, fill bar over the buff duration (button is
-        // "off" but for a time-based reason, so use the cooldown color).
-        const progress = buffActive
-          ? 1 - agentBuffRemaining / A.kickAgent.buffMs!
-          : resourceProgress(state.tokens / A.kickAgent.tokenCost!);
         return (
           <div className="flex items-baseline gap-2">
             <Button
-              off={off}
-              onClick={off ? undefined : onKickAgent}
+              off={!m.kickAgent.legal}
+              onClick={m.kickAgent.legal ? onKickAgent : undefined}
               title="kick off an agent"
-              progress={progress}
+              progress={buffActive ? m.kickAgent.cooldownProgress : m.kickAgent.affordProgress}
               progressClassName={buffActive ? 'bg-green/10' : undefined}
             >
               kick off an agent [{A.kickAgent.tokenCost}t]
@@ -123,62 +116,50 @@ export function ActionBar({
         );
       })()}
 
-      {ui.showRunTests && (() => {
+      {m.runTests.visible && (() => {
         const fixPct = Math.round(runTestsFixFraction(state.tests ?? 0) * 100);
         return (
           <Button
-            off={!canRunTests}
-            onClick={canRunTests ? onRunTests : undefined}
+            off={!m.runTests.legal}
+            onClick={m.runTests.legal ? onRunTests : undefined}
             title={`costs ${fmt(tCost)} loc, fixes ~${fixPct}% of bugs (${state.tests ?? 0} ${(state.tests ?? 0) === 1 ? 'test' : 'tests'})`}
-            progress={resourceProgress(
-              state.loc / tCost,
-              state.tokens / A.runTests.tokenCost!,
-            )}
+            progress={comboProgress(m.runTests)}
           >
             run tests [−{fmt(tCost)} loc · {A.runTests.tokenCost}t]
           </Button>
         );
       })()}
 
-      {ui.showClearContext && (() => {
-        const cdElapsed = now - (state.actionCooldowns['clear_context'] ?? 0);
-        const onCD = cdElapsed < A.clearContext.cooldownMs!;
-        const progress = onCD ? cdElapsed / A.clearContext.cooldownMs! : 1;
+      {m.clearContext.visible && (() => {
         const tokensToRefill = maxTokens - Math.floor(state.tokens);
         return (
           <Button
-            off={onCD}
-            onClick={onCD ? undefined : onClearContext}
+            off={!m.clearContext.legal}
+            onClick={m.clearContext.legal ? onClearContext : undefined}
             title="starts a new conversation — refills tokens to max"
-            progress={progress}
+            progress={m.clearContext.cooldownProgress}
             progressClassName="bg-green/10"
           >
-            clear the context{!onCD ? ` [+${tokensToRefill}t]` : ''}
+            clear the context{m.clearContext.legal ? ` [+${tokensToRefill}t]` : ''}
           </Button>
         );
       })()}
 
-      {ui.showLaunchBtn && (
+      {m.launch.visible && (
         <Button variant="launch" onClick={onLaunch}>
           ship to production
         </Button>
       )}
 
-      {ui.showYoloMerge && (() => {
-        const cdElapsed = now - (state.actionCooldowns['yolo_merge'] ?? 0);
-        const onCD = cdElapsed < A.yoloMerge.cooldownMs!;
-        const cantAfford = state.tokens < A.yoloMerge.tokenCost!;
-        const off = onCD || cantAfford;
-        const progress = onCD
-          ? cdElapsed / A.yoloMerge.cooldownMs!
-          : resourceProgress(state.tokens / A.yoloMerge.tokenCost!);
+      {m.yoloMerge.visible && (() => {
+        const onCD = m.yoloMerge.cooldownProgress < 1;
         return (
           <Button
-            variant={off ? 'default' : 'yolo'}
-            off={off}
-            onClick={off ? undefined : onYoloMerge}
+            variant={m.yoloMerge.legal ? 'yolo' : 'default'}
+            off={!m.yoloMerge.legal}
+            onClick={m.yoloMerge.legal ? onYoloMerge : undefined}
             title="merge without review. what could go wrong."
-            progress={progress}
+            progress={onCD ? m.yoloMerge.cooldownProgress : m.yoloMerge.affordProgress}
             progressClassName={onCD ? 'bg-purple/10' : undefined}
           >
             yolo merge [{A.yoloMerge.tokenCost}t]
@@ -186,21 +167,15 @@ export function ActionBar({
         );
       })()}
 
-      {ui.showBugBounty && (() => {
-        const cdElapsed = now - (state.actionCooldowns['bug_bounty'] ?? 0);
-        const onCD = cdElapsed < A.bugBounty.cooldownMs!;
-        const cantAfford = state.tokens < A.bugBounty.tokenCost!;
-        const off = onCD || cantAfford;
-        const progress = onCD
-          ? cdElapsed / A.bugBounty.cooldownMs!
-          : resourceProgress(state.tokens / A.bugBounty.tokenCost!);
+      {m.bugBounty.visible && (() => {
+        const onCD = m.bugBounty.cooldownProgress < 1;
         return (
           <Button
-            variant={off ? 'default' : 'bounty'}
-            off={off}
-            onClick={off ? undefined : onRunBugBounty}
+            variant={m.bugBounty.legal ? 'bounty' : 'default'}
+            off={!m.bugBounty.legal}
+            onClick={m.bugBounty.legal ? onRunBugBounty : undefined}
             title="convert bugs into nines"
-            progress={progress}
+            progress={onCD ? m.bugBounty.cooldownProgress : m.bugBounty.affordProgress}
             progressClassName={onCD ? 'bg-blue/10' : undefined}
           >
             run bug bounty [{A.bugBounty.tokenCost}t]

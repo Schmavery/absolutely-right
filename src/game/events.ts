@@ -2,6 +2,7 @@ import type { EventDef, GameState, LogEntry, LogEntryType } from '../types';
 import { EVENTS } from './data';
 import { EVENT_COOLDOWN_MS, THRESHOLDS } from './constants';
 import { render } from '../lib/template';
+import { now, random } from './runtime';
 
 export type AddLogFn = (prev: GameState, text: string, type: LogEntryType) => GameState;
 
@@ -33,9 +34,9 @@ function eventKey(e: EventDef): string {
  * @param prob  probability the action triggers an event at all (0–1)
  */
 export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn): GameState {
-  const now = Date.now();
-  if (now - prev.lastEventTime < EVENT_COOLDOWN_MS) return prev;
-  if (Math.random() > prob) return prev;
+  const t = now();
+  if (t - prev.lastEventTime < EVENT_COOLDOWN_MS) return prev;
+  if (random() > prob) return prev;
 
   const eligible = EVENTS.filter((e) => {
     if (prev.usedEventIds.includes(eventKey(e))) return false;
@@ -58,7 +59,7 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
   const pool = eligible.length > 0 ? eligible : repeatable;
   if (pool.length === 0) return prev;
 
-  const ev = pool[Math.floor(Math.random() * pool.length)];
+  const ev = pool[Math.floor(random() * pool.length)];
   let next = prev;
   if (ev.locDelta) next = { ...next, loc: Math.max(0, next.loc + ev.locDelta) };
   if (ev.locMult) next = { ...next, loc: next.loc * ev.locMult };
@@ -72,7 +73,7 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
   const logType: LogEntry['type'] =
     ev.type === 'news' ? 'news' : ev.type === 'bad' ? 'bad' : ev.type === 'event' ? 'event' : 'info';
   next = addLog(next, render(ev.text), logType);
-  next = { ...next, lastEventTime: now };
+  next = { ...next, lastEventTime: t };
   if (eligible.length > 0) next = { ...next, usedEventIds: [...next.usedEventIds, eventKey(ev)] };
   return next;
 }

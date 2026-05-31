@@ -7,6 +7,7 @@ import { calcClickBonus, calcClickPower, getPhase } from './game/rates';
 import { clearSave, defaultState, initState, saveState } from './game/state';
 import { tickReducer } from './game/tick';
 import { appendLog } from './game/log';
+import { isChatBusy } from './game/availability';
 import {
   buyGenAction,
   buyUpgradeAction,
@@ -165,9 +166,22 @@ export function Game() {
             </>
           )}
 
-          <Button variant="primary" onClick={handlers.prompt}>
-            {promptLabel}
-          </Button>
+          {/* Chat-busy gate: while the AI is mid-stream from a recent prompt
+              or event, "keep going" is disabled so the player can't talk
+              over it. The streaming animation itself is the progress
+              indicator, so no extra bar is needed. */}
+          {(() => {
+            const chatBusy = isChatBusy(state, Date.now());
+            return (
+              <Button
+                variant="primary"
+                off={chatBusy}
+                onClick={chatBusy ? undefined : handlers.prompt}
+              >
+                {promptLabel}
+              </Button>
+            );
+          })()}
           {state.totalClicks > 0 && (
             <span className="text-dimmer text-[11px]">
               +

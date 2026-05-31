@@ -17,6 +17,7 @@ import { maybeFireEvent } from './events';
 import { computeFlags, effectiveThresholds, hasFlag } from './flags';
 import { calcClickBonus, calcClickPower, calcTokenConfig, genCost } from './rates';
 import { pick, render } from '../lib/template';
+import { now, random } from './runtime';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -29,13 +30,13 @@ function spendTokens(prev: GameState, n: number): GameState {
 }
 
 function isOnCooldown(prev: GameState, key: string, ms: number): boolean {
-  return Date.now() - (prev.actionCooldowns[key] ?? 0) < ms;
+  return now() - (prev.actionCooldowns[key] ?? 0) < ms;
 }
 
 function startCooldown(prev: GameState, key: string): GameState {
   return {
     ...prev,
-    actionCooldowns: { ...prev.actionCooldowns, [key]: Date.now() },
+    actionCooldowns: { ...prev.actionCooldowns, [key]: now() },
   };
 }
 
@@ -49,11 +50,13 @@ function canAfford(prev: GameState, a: ActionDef): boolean {
 export function promptAction(prev: GameState): GameState {
   const a = action('prompt');
   if (!canAfford(prev, a)) return prev;
+  // Player can't talk over the AI mid-stream.
+  if (now() < (prev.chatBusyUntil ?? 0)) return prev;
   const thresholds = effectiveThresholds(prev.upgrades);
   const power = calcClickPower(prev.upgrades);
   const locGain = power * LOC_PER_CLICK_POWER + calcClickBonus(prev.upgrades);
   const bugFromPrompt =
-    prev.totalLoc >= thresholds.bugSpawnLoc && Math.random() < thresholds.promptBugChance ? 1 : 0;
+    prev.totalLoc >= thresholds.bugSpawnLoc && random() < thresholds.promptBugChance ? 1 : 0;
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locGain,
@@ -74,10 +77,10 @@ export function promptAction(prev: GameState): GameState {
 export function kickAgentAction(prev: GameState): GameState {
   const a = action('kick_agent');
   if (!canAfford(prev, a)) return prev;
-  if (Date.now() < (prev.agentBuffExpires ?? 0)) return prev;
+  if (now() < (prev.agentBuffExpires ?? 0)) return prev;
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
-    agentBuffExpires: Date.now() + a.buffMs!,
+    agentBuffExpires: now() + a.buffMs!,
   };
   if (a.messages) next = appendLog(next, render(pick(a.messages)), 'info');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
@@ -92,12 +95,12 @@ export function pasteErrorAction(prev: GameState): GameState {
   if (!canAfford(prev, a)) return prev;
   if (isOnCooldown(prev, 'paste_error', a.cooldownMs!)) return prev;
 
-  const fixed = Math.random() < a.fixChance!;
+  const fixed = random() < a.fixChance!;
   const bugDelta = fixed ? -1 : 0;
-  const locDelta = a.baseLocGain! + Math.floor(Math.random() * a.extraLocRange!);
+  const locDelta = a.baseLocGain! + Math.floor(random() * a.extraLocRange!);
   const pool = fixed
     ? a.goodMessages!
-    : Math.random() < 0.5
+    : random() < 0.5
       ? a.badMessages!
       : a.neutralMessages!;
   const msg = render(pick(pool));
@@ -110,8 +113,8 @@ export function pasteErrorAction(prev: GameState): GameState {
   };
   next = startCooldown(next, 'paste_error');
 
-  const lines = 2 + Math.floor(Math.random() * 15);
-  const ref = 1 + Math.floor(Math.random() * 8);
+  const lines = 2 + Math.floor(random() * 15);
+  const ref = 1 + Math.floor(random() * 8);
   const suffixed = msg.replace(/^(>[^\n]*)/, `$1 [Pasted text #${ref} · ${lines} lines]`);
   next = appendLog(next, suffixed, 'info');
   return next;
@@ -136,9 +139,9 @@ export function yoloMergeAction(prev: GameState): GameState {
   if (!canAfford(prev, a)) return prev;
   if (isOnCooldown(prev, 'yolo_merge', a.cooldownMs!)) return prev;
   const locGain =
-    a.baseLoc! + Math.floor(prev.bugs * a.locPerBug! + Math.random() * a.extraLocRange!);
+    a.baseLoc! + Math.floor(prev.bugs * a.locPerBug! + random() * a.extraLocRange!);
   const bugGain =
-    Math.floor(prev.bugs * a.bugMultiplier!) + a.baseBugs! + Math.floor(Math.random() * a.extraBugRange!);
+    Math.floor(prev.bugs * a.bugMultiplier!) + a.baseBugs! + Math.floor(random() * a.extraBugRange!);
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locGain,
@@ -166,10 +169,10 @@ export function runTestsAction(prev: GameState): GameState {
     loc: prev.loc - cost,
     bugs: Math.max(0, prev.bugs - fixed),
   };
-  const now = Date.now();
-  if (a.messages && now - prev.lastTestLogTime > (a.logCooldownMs ?? 0)) {
+  const t = now();
+  if (a.messages && t - prev.lastTestLogTime > (a.logCooldownMs ?? 0)) {
     next = appendLog(next, render(pick(a.messages), { n: fixed }), 'info');
-    next = { ...next, lastTestLogTime: now };
+    next = { ...next, lastTestLogTime: t };
   }
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;

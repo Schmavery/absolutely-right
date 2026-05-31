@@ -128,6 +128,16 @@ export const AGENT_BUFF = {
 /** Phase boundaries (totalLoc → phase index 0..4). */
 export const PHASE_THRESHOLDS = [5000, 500_000, 50_000_000, 5_000_000_000] as const;
 
+// ─── Simulator / pacing ────────────────────────────────────────────────────
+
+/**
+ * Virtual time (ms) charged to a successful action by the simulator. Mimics
+ * the human read-decide-press loop so bot-driven traces are paced like a
+ * real session rather than at full tick speed. Real React doesn't consult
+ * this — players move at whatever speed they move at.
+ */
+export const ACTION_DURATION_MS = 1500;
+
 // ─── Streaming / typing animation ──────────────────────────────────────────
 
 export const STREAMING = {

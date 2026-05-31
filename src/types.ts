@@ -227,4 +227,12 @@ export interface GameState {
   agentBuffExpires: number;
   unlockedUpgrades: string[];
   nines: number;
+  /**
+   * Virtual ms timestamp at which the conversation log will finish
+   * streaming the most recently appended entries. The prompt action is
+   * gated on `now() >= chatBusyUntil` so the player can't talk over the
+   * AI mid-stream. Always non-decreasing — `appendLog` extends it via
+   * `Math.max`.
+   */
+  chatBusyUntil: number;
 }

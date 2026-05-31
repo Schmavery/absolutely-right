@@ -1,4 +1,5 @@
 import Handlebars from 'handlebars';
+import { random } from '../game/runtime';
 
 /**
  * Game-dialogue templating, backed by Handlebars.
@@ -25,7 +26,7 @@ handlebars.registerHelper('plural', (n: unknown, singular: string, plural: strin
 handlebars.registerHelper('rand', (min: unknown, max: unknown): number => {
   const lo = Math.ceil(Number(min));
   const hi = Math.floor(Number(max));
-  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+  return Math.floor(random() * (hi - lo + 1)) + lo;
 });
 
 const cache = new Map<string, HandlebarsTemplateDelegate>();
@@ -44,5 +45,5 @@ export function render(source: string, vars: Record<string, unknown> = {}): stri
 }
 
 export function pick<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(random() * arr.length)];
 }

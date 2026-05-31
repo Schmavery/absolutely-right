@@ -16,20 +16,36 @@ import {
 import { LOC_PER_CLICK_POWER, HYPE } from './constants';
 import { appendLog } from './log';
 import { render } from '../lib/template';
+import { now } from './runtime';
 
 /**
- * Advance the game state by one tick. Pure: takes prev, returns next. The
- * React `setState` wrapper just calls this and the streaming-log effect
- * picks up any new log entries by id.
+ * Advance the game state by `dtMs` of virtual time (default `TICK_MS`).
+ *
+ * Pure: takes prev, returns next. The React `setState` wrapper passes a
+ * single state arg, so the default kicks in and behavior matches the
+ * historical 100ms tick. The simulator harness passes an explicit `dtMs`
+ * so an event-driven loop can take big jumps to the next interesting
+ * boundary instead of stepping at full tick rate.
+ *
+ * Big-dt safety:
+ *   - All passive deltas are linear in `dt` (loc, bugs, tokens, money,
+ *     nines), so a single big tick equals N small ticks for those.
+ *   - The unlock loop and milestone loop are threshold-based and run
+ *     once per call regardless of `dt`, so any thresholds crossed during
+ *     `dt` fire on this call. (Same as today when rates are high.)
+ *   - Buff/cooldown semantics are sampled at end-of-tick `now()`. Crossing
+ *     a buff-expiry boundary mid-`dt` slightly mis-attributes the dt to
+ *     "post-expiry"; the event-driven sim mitigates by inserting buff
+ *     expiry into its next-event boundary list.
  */
-export function tickReducer(prev: GameState): GameState {
-  const dt = TICK_MS / 1000;
+export function tickReducer(prev: GameState, dtMs: number = TICK_MS): GameState {
+  const dt = dtMs / 1000;
   const flags = computeFlags(prev.upgrades);
   const thresholds = effectiveThresholds(prev.upgrades);
   const { locRate, bugRate, fixRate } = calcRates(prev.genCounts, prev.upgrades, prev.tests);
   const { maxTokens, tokenRegen } = calcTokenConfig(prev.upgrades, prev.freeAccounts);
   const bugPenalty = calcBugPenalty(prev.bugs);
-  const agentBuffActive = Date.now() < (prev.agentBuffExpires ?? 0);
+  const agentBuffActive = now() < (prev.agentBuffExpires ?? 0);
 
   // Agent contributes its own base LOC rate, scaled by any agent upgrades.
   const agentMult = calcAgentLocMult(prev.upgrades);

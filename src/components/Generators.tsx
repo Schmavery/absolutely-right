@@ -2,7 +2,7 @@ import type { GameState } from '../types';
 import { action, GENS } from '../game/data';
 import { genCost } from '../game/rates';
 import { fmt, fmtRate } from '../lib/format';
-import { deriveGame } from '../game/derive';
+import { getMove } from '../game/availability';
 import { Button } from './Button';
 
 interface Props {
@@ -12,38 +12,27 @@ interface Props {
 }
 
 export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
-  const { thresholds } = deriveGame(state);
-  const newAccount = action('new_free_account');
-  const visibleGens = GENS.filter(
-    (g) => state.totalLoc >= g.unlockAt * thresholds.generatorVisibleFraction,
-  );
-  const showNewFreeAccount =
-    (state.totalTokensSpent ?? 0) >= thresholds.showNewFreeAccountTokens ||
-    state.freeAccounts > 1;
-  const freeAccountCDElapsed = Date.now() - (state.actionCooldowns['free_account'] ?? 0);
-  const freeAccountOnCD = freeAccountCDElapsed < (newAccount.cooldownMs ?? 0);
-  const freeAccountProgress = Math.min(
-    1,
-    freeAccountCDElapsed / (newAccount.cooldownMs ?? 1),
-  );
+  const now = Date.now();
+  const newAccount = getMove(state, 'new_free_account', now)!;
+  const newAccountData = action('new_free_account');
 
   return (
     <div>
       <SectionHeader>generators</SectionHeader>
 
-      {showNewFreeAccount && (
+      {newAccount.visible && (
         <Row>
           <Name>
             Free Account
             {state.freeAccounts > 1 && <span className="text-blue"> [{state.freeAccounts}]</span>}
           </Name>
           <Button
-            off={freeAccountOnCD}
-            onClick={freeAccountOnCD ? undefined : onNewFreeAccount}
-            title={`+${newAccount.maxTokensPerExtra} max tokens, +${newAccount.tokenRegenPerExtra}/s regen · ${state.freeAccounts} account${
+            off={!newAccount.legal}
+            onClick={newAccount.legal ? onNewFreeAccount : undefined}
+            title={`+${newAccountData.maxTokensPerExtra} max tokens, +${newAccountData.tokenRegenPerExtra}/s regen · ${state.freeAccounts} account${
               state.freeAccounts !== 1 ? 's' : ''
             } active`}
-            progress={freeAccountOnCD ? freeAccountProgress : 1}
+            progress={newAccount.cooldownProgress}
             progressClassName="bg-green/10"
           >
             create
@@ -52,10 +41,11 @@ export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
         </Row>
       )}
 
-      {visibleGens.map((g) => {
+      {GENS.map((g) => {
+        const move = getMove(state, `buy_gen:${g.id}`, now)!;
+        if (!move.visible) return null;
         const owned = state.genCounts[g.id] ?? 0;
         const cost = genCost(g, owned);
-        const canAfford = state.loc >= cost;
         return (
           <Row key={g.id}>
             <Name>
@@ -63,15 +53,15 @@ export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
               {owned > 0 && <span className="text-green"> [{owned}]</span>}
             </Name>
             <Button
-              off={!canAfford}
+              off={!move.legal}
               onClick={() => onBuyGen(g.id)}
               title={g.desc}
-              progress={Math.max(0, Math.min(1, state.loc / cost))}
+              progress={move.affordProgress}
             >
               buy
             </Button>
             <div className="text-[12px]">
-              <span className={canAfford ? 'text-dim' : 'text-dimmer'}>{fmt(cost)} loc</span>
+              <span className={move.legal ? 'text-dim' : 'text-dimmer'}>{fmt(cost)} loc</span>
               {owned > 0 ? (
                 <span className="text-green-dim ml-[10px]">{fmtRate(g.locPerSec * owned)}</span>
               ) : (

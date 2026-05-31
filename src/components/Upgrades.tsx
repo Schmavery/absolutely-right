@@ -1,6 +1,7 @@
 import type { GameState } from '../types';
 import { UPGRADES } from '../game/data';
 import { fmt } from '../lib/format';
+import { getMove } from '../game/availability';
 import { Button } from './Button';
 
 interface Props {
@@ -9,39 +10,38 @@ interface Props {
 }
 
 export function Upgrades({ state, onBuyUpgrade }: Props) {
-  const visibleUpgs = UPGRADES.filter(
-    (u) => !state.upgrades.includes(u.id) && state.unlockedUpgrades.includes(u.id),
-  );
-  if (visibleUpgs.length === 0) return null;
+  const now = Date.now();
+  const visible = UPGRADES.map((u) => ({
+    u,
+    move: getMove(state, `buy_upgrade:${u.id}`, now)!,
+  })).filter(({ move }) => move.visible);
+  if (visible.length === 0) return null;
 
   return (
     <div>
       <div className="text-dim text-[11px] tracking-[0.12em] uppercase mb-[10px] mt-6 pb-[5px] border-b border-border">
         upgrades
       </div>
-      {visibleUpgs.map((u) => {
-        const canAfford = state.loc >= u.cost;
-        return (
-          <div
-            key={u.id}
-            className="grid grid-cols-[180px_56px_1fr] gap-[6px] items-baseline mb-[7px]"
+      {visible.map(({ u, move }) => (
+        <div
+          key={u.id}
+          className="grid grid-cols-[180px_56px_1fr] gap-[6px] items-baseline mb-[7px]"
+        >
+          <div className="text-fg">{u.name}</div>
+          <Button
+            off={!move.legal}
+            onClick={() => onBuyUpgrade(u.id)}
+            title={u.desc}
+            progress={move.affordProgress}
           >
-            <div className="text-fg">{u.name}</div>
-            <Button
-              off={!canAfford}
-              onClick={() => onBuyUpgrade(u.id)}
-              title={u.desc}
-              progress={Math.max(0, Math.min(1, state.loc / u.cost))}
-            >
-              buy
-            </Button>
-            <div className="text-[12px]">
-              <span className={canAfford ? 'text-dim' : 'text-dimmer'}>{fmt(u.cost)} loc</span>
-              <span className="text-dimmer ml-[10px]">{u.desc}</span>
-            </div>
+            buy
+          </Button>
+          <div className="text-[12px]">
+            <span className={move.legal ? 'text-dim' : 'text-dimmer'}>{fmt(u.cost)} loc</span>
+            <span className="text-dimmer ml-[10px]">{u.desc}</span>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
