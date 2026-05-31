@@ -69,12 +69,12 @@ ESLint, TypeScript, Docker, npm, …) in jokes about stack choices.
 | Real-ish target | In-game |
 | --------------- | ------- |
 | Google | **Gnoogle** |
-| Microsoft | **Microsift** — products e.g. **Deskmate**, **Screen Memory** |
+| Microsoft | **MicroSith** — products e.g. **Deskmate**, **Screen Memory** |
 | GitHub / MS coding assistant | **CodePilot** (generator `copilot`; not “Copilot”) |
 | OpenAI / ChatGPT | **OpenGPT** |
 | Anthropic / Claude | **Claudius Labs** / model **Claudius** (never Claude) |
 | Meta / Facebook | **Facelift** |
-| Apple | **Apfel** |
+| Apple | **Lemon** (wrong fruit; “a lemon” = defective product — for the name only; do not spell that out in headlines) |
 | Amazon / AWS / CodeWhisper | **Amazin** / **Amazin Cloud** / **CodeMurmur** |
 | X / Grok | **Xitter** / **Squok** |
 | Hugging Face | **SnuggleHub** |
@@ -91,7 +91,7 @@ ESLint, TypeScript, Docker, npm, …) in jokes about stack choices.
 | Perplexity | **Pursuelity** |
 | DeepSeek | **SteepSeek** |
 | Mistral | **Mistrale** |
-| Nvidia | **Nivida** |
+| Nvidia | **Envideo** |
 | Character.ai | **Charactr** |
 
 Generator **display names** (ids stay stable for saves): CodePilot, FreeChat,

@@ -539,12 +539,12 @@ YAML. Notes below may cite real names for research.
 Canon (same table lives in README):
 
 - **Gnoogle** (Google)
-- **Microsift** — Deskmate, Screen Memory; not Copilot / Recall
+- **MicroSith** — Deskmate, Screen Memory; not Copilot / Recall
 - **CodePilot** (GitHub / MS coding assistant) — generator name; not “Copilot”
 - **OpenGPT** (OpenAI / ChatGPT)
 - **Claudius Labs** + model **Claudius** — never Claude
 - **Facelift** (Meta)
-- **Apfel** (Apple)
+- **Lemon** (Apple — wrong fruit; “a lemon” = defective product; keep that in the name, not headline copy)
 - **Amazin**, **Amazin Cloud**, **CodeMurmur** (Amazon / AWS / CodeWhisper)
 - **Xitter**, **Squok** (X / Grok)
 - **SnuggleHub** (Hugging Face)
@@ -558,7 +558,7 @@ Canon (same table lives in README):
 - **ReadIt**, **subreadits** (Reddit)
 - **SloppedIn** (LinkedIn)
 - **Salmon Altman** (Sam Altman persona), **Yann LeBon** (Yann LeCun avatar)
-- **Pursuelity**, **SteepSeek**, **Mistrale**, **Nivida**, **Charactr**
+- **Pursuelity**, **SteepSeek**, **Mistrale**, **Envideo**, **Charactr**
 - Non-AI stack tech: **Kubernetes**, **React**, Docker, npm, … — use real names
 
 ---
@@ -760,8 +760,8 @@ One-liners and micro-stories. Pun names optional.
 ### More `Industry:` headline fodder (events not yet used)
 
 - Gnoogle admits **TwinGem** hands video was **"inspiring developers"** not documenting product
-- Microsift Deskmate summarized a user's **therapy notes** into a team doc
-- Apfel Intelligence described CEO photo as **"possibly tired"** in release notes
+- MicroSith Deskmate summarized a user's **therapy notes** into a team doc
+- Lemon Intelligence described CEO photo as **"possibly tired"** in release notes
 - OpenGPT o3 scores 99.8% on benchmark; researchers release **new benchmark**; new model scores 99.8%
 - SteepSeek-R1 shock — **"made in China"** panic / **"made with GPUs"** panic same week
 - Plateau AI image model: beautiful, **goblin in corner**, legally distinct from OpenGPT goblins
@@ -772,7 +772,7 @@ One-liners and micro-stories. Pun names optional.
 - Pursuelity answers wrong confidently; cites **nonexistent** blog post
 - Ripplet Agent deletes prod; CEO tweets **"unacceptable"**; ships planning-only mode
 - Cursive tells vibe coder to **learn programming** after 800 LOC
-- Nivida keynote: **10 trillion parameters** (audience unclear if joke)
+- Envideo keynote: **10 trillion parameters** (audience unclear if joke)
 - Charactr teen crisis headlines — platform policy patch
 - **Turnitiné** flags human essay; student proves innocence; school **still** investigates
 - **"Humanize AI"** startup raises Series A; detector startup raises Series B
