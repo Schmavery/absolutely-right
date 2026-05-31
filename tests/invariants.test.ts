@@ -61,7 +61,7 @@ describe('invariants: numeric sanity', () => {
         const sim = new Sim({ seed }).run(bot, VIRTUAL_MIN);
         const s = sim.state;
         for (const k of [
-          'loc', 'bugs', 'hype', 'tests', 'freeAccounts',
+          'loc', 'bugs', 'lifetimeBugs', 'hype', 'tests', 'freeAccounts',
           'totalLoc', 'totalClicks', 'totalTokensSpent', 'minTokensSeen',
           'tokens', 'money', 'agentBuffExpires', 'nines', 'chatBusyUntil',
           'lastEventTime', 'lastTestLogTime', 'logId',

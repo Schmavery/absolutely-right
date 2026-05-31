@@ -66,16 +66,17 @@ export function ResourcePanel({ state }: Props) {
 
   return (
     <div className="mt-[18px]">
-      {/* tokens */}
-      <Row label="tokens">
-        <span className={state.tokens < TOKENS.lowWarnThreshold ? 'text-red' : 'text-fg'}>
-          {Math.floor(state.tokens)}
-        </span>
-        <span className="text-dimmer text-[12px]">/ {maxTokens}</span>
-        {state.tokens < maxTokens && (
-          <span className="text-dimmer text-[12px]">(+{tokenRegen}/s)</span>
-        )}
-      </Row>
+      {ui.showTokens && (
+        <Row label="tokens">
+          <span className={state.tokens < TOKENS.lowWarnThreshold ? 'text-red' : 'text-fg'}>
+            {Math.floor(state.tokens)}
+          </span>
+          <span className="text-dimmer text-[12px]">/ {maxTokens}</span>
+          {state.tokens < maxTokens && (
+            <span className="text-dimmer text-[12px]">(+{tokenRegen}/s)</span>
+          )}
+        </Row>
+      )}
 
       {/* loc */}
       <Row label="loc">

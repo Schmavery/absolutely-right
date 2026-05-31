@@ -100,7 +100,6 @@ export interface UpgDef {
       | 'showClearContextMinTokens'
       | 'showYoloMergeLoc'
       | 'showBugBountyBugs'
-      | 'showBugsClicks'
       | 'showStatsLoc'
       | 'showNewFreeAccountTokens',
       number
@@ -213,6 +212,8 @@ export interface LogEntry {
 export interface GameState {
   loc: number;
   bugs: number;
+  /** Cumulative bugs ever gained; sticky `showBugs` once `lifetimeBugs > 1`. */
+  lifetimeBugs: number;
   hype: number;
   tests: number;
   freeAccounts: number;

@@ -1,4 +1,5 @@
 import type { GameState } from '../types';
+import { withBugs } from './state';
 import { AGENT_BUFF, TICK_MS } from './constants';
 import { MILESTONES, UPGRADES } from './data';
 import { computeFlags, effectiveThresholds, hasFlag } from './flags';
@@ -64,10 +65,11 @@ export function tickReducer(prev: GameState, dtMs: number = TICK_MS): GameState 
   const ninesRate = ninesTracking ? calcNinesRate(prev.upgrades, prev.bugs) : 0;
   const autoBugDrain = calcAutoBugDrainRate(prev.upgrades) * prev.bugs * dt;
 
+  const newBugs = prev.bugs + (effectiveBugRate - fixRate) * dt - autoBugDrain;
   let next: GameState = {
     ...prev,
     loc: prev.loc + effectiveLoc,
-    bugs: Math.max(0, prev.bugs + (effectiveBugRate - fixRate) * dt - autoBugDrain),
+    ...withBugs(prev, newBugs),
     totalLoc: prev.totalLoc + effectiveLoc,
     tokens: Math.min(maxTokens, prev.tokens + tokenRegen * dt),
     minTokensSeen: Math.min(prev.minTokensSeen ?? 9999, prev.tokens),

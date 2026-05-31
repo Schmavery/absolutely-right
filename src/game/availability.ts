@@ -22,6 +22,7 @@ import type { GameState } from '../types';
 import { LAUNCH_LOC } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
+import { inEarlyPromptScript } from './prompt';
 import { calcBugPenalty, calcRates, calcTokenConfig, genCost } from './rates';
 import {
   buyGenAction,
@@ -337,6 +338,9 @@ interface Ctx {
 
 function prompt(c: Ctx): Move {
   const a = action('prompt');
+  const gates = inEarlyPromptScript(c.state)
+    ? [chatGate(c.state, c.t)]
+    : [tokenGate(c.state, a.tokenCost), chatGate(c.state, c.t)];
   return buildMove(
     {
       id: 'prompt',
@@ -345,7 +349,7 @@ function prompt(c: Ctx): Move {
       visible: true,
       apply: promptAction,
     },
-    [tokenGate(c.state, a.tokenCost), chatGate(c.state, c.t)],
+    gates,
   );
 }
 

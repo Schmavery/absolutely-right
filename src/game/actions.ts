@@ -10,6 +10,7 @@
  */
 
 import type { ActionDef, GameState } from '../types';
+import { withBugs } from './state';
 import { action, GENS, UPGRADES } from './data';
 import { AGENT_BUFF, LOC_PER_CLICK_POWER } from './constants';
 import { appendLog } from './log';
@@ -23,6 +24,7 @@ import {
   genCost,
 } from './rates';
 import { pick, render } from '../lib/template';
+import { inEarlyPromptScript } from './prompt';
 import { now, random } from './runtime';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -55,7 +57,8 @@ function canAfford(prev: GameState, a: ActionDef): boolean {
 
 export function promptAction(prev: GameState): GameState {
   const a = action('prompt');
-  if (!canAfford(prev, a)) return prev;
+  const freeScript = inEarlyPromptScript(prev);
+  if (!freeScript && !canAfford(prev, a)) return prev;
   // Player can't talk over the AI mid-stream.
   if (now() < (prev.chatBusyUntil ?? 0)) return prev;
   const thresholds = effectiveThresholds(prev.upgrades);
@@ -64,9 +67,9 @@ export function promptAction(prev: GameState): GameState {
   const bugFromPrompt =
     prev.totalLoc >= thresholds.bugSpawnLoc && random() < thresholds.promptBugChance ? 1 : 0;
   let next: GameState = {
-    ...spendTokens(prev, a.tokenCost!),
+    ...(freeScript ? prev : spendTokens(prev, a.tokenCost!)),
     loc: prev.loc + locGain,
-    bugs: prev.bugs + bugFromPrompt,
+    ...withBugs(prev, prev.bugs + bugFromPrompt),
     totalLoc: prev.totalLoc + locGain,
     totalClicks: prev.totalClicks + 1,
     started: true,
@@ -119,7 +122,7 @@ export function pasteErrorAction(prev: GameState): GameState {
     ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locDelta,
     totalLoc: prev.totalLoc + locDelta,
-    bugs: Math.max(0, prev.bugs + bugDelta),
+    ...withBugs(prev, prev.bugs + bugDelta),
   };
   next = startCooldown(next, 'paste_error');
 
@@ -156,7 +159,7 @@ export function yoloMergeAction(prev: GameState): GameState {
     ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locGain,
     totalLoc: prev.totalLoc + locGain,
-    bugs: prev.bugs + bugGain,
+    ...withBugs(prev, prev.bugs + bugGain),
     hype: prev.hype + (a.hypeReward ?? 0),
   };
   next = startCooldown(next, 'yolo_merge');
@@ -177,7 +180,7 @@ export function runTestsAction(prev: GameState): GameState {
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc - cost,
-    bugs: Math.max(0, prev.bugs - fixed),
+    ...withBugs(prev, prev.bugs - fixed),
   };
   const t = now();
   if (a.messages && t - prev.lastTestLogTime > (a.logCooldownMs ?? 0)) {
@@ -219,7 +222,7 @@ export function bugBountyAction(prev: GameState): GameState {
     : prev.nines || 0;
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
-    bugs: Math.max(0, prev.bugs - converted),
+    ...withBugs(prev, prev.bugs - converted),
     nines: ninesBase + ninesGain,
   };
   next = startCooldown(next, 'bug_bounty');

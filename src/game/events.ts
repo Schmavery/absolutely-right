@@ -1,4 +1,5 @@
 import type { EventDef, GameState, LogEntry, LogEntryType, NewsDef } from '../types';
+import { withBugs } from './state';
 import { EVENTS, NEWS } from './data';
 import { EVENT_COOLDOWN_MS, EVENT_MIX, THRESHOLDS } from './constants';
 import { render } from '../lib/template';
@@ -79,7 +80,7 @@ function applyEventEffects(prev: GameState, ev: EventDef): GameState {
   if (ev.locDelta) next = { ...next, loc: Math.max(0, next.loc + ev.locDelta) };
   if (ev.locMult) next = { ...next, loc: next.loc * ev.locMult };
   if (ev.bugDelta && next.totalLoc >= THRESHOLDS.bugSpawnLoc) {
-    next = { ...next, bugs: Math.max(0, next.bugs + ev.bugDelta) };
+    next = { ...next, ...withBugs(next, next.bugs + ev.bugDelta) };
   }
   if (ev.freeAccountsDelta) {
     next = { ...next, freeAccounts: Math.max(1, (next.freeAccounts ?? 1) + ev.freeAccountsDelta) };

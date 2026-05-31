@@ -556,9 +556,9 @@ Canon (same table lives in README):
 - **MapleWings** (Air Canada)
 - **Bowtie Motors** (Chevrolet)
 - **ReadIt**, **subreadits** (Reddit)
-- **LinkedOut** (LinkedIn)
+- **SloppedIn** (LinkedIn)
 - **Salmon Altman** (Sam Altman persona), **Yann LeBon** (Yann LeCun avatar)
-- **Pursuelity**, **DeapSeek**, **Mistrale**, **Nivida**, **Charactr**
+- **Pursuelity**, **SteepSeek**, **Mistrale**, **Nivida**, **Charactr**
 - Non-AI stack tech: **Kubernetes**, **React**, Docker, npm, … — use real names
 
 ---
@@ -763,7 +763,7 @@ One-liners and micro-stories. Pun names optional.
 - Microsift Deskmate summarized a user's **therapy notes** into a team doc
 - Apfel Intelligence described CEO photo as **"possibly tired"** in release notes
 - OpenGPT o3 scores 99.8% on benchmark; researchers release **new benchmark**; new model scores 99.8%
-- DeapSeek-R1 shock — **"made in China"** panic / **"made with GPUs"** panic same week
+- SteepSeek-R1 shock — **"made in China"** panic / **"made with GPUs"** panic same week
 - Plateau AI image model: beautiful, **goblin in corner**, legally distinct from OpenGPT goblins
 - SnuggleHub model card says **do not use in production**; 4M downloads
 - Amazin **Q** assistant: enterprise feature nobody requested

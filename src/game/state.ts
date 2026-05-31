@@ -1,10 +1,21 @@
 import type { GameState } from '../types';
 import { SAVE_KEY } from './constants';
 
+/** Apply a bug count and accrue positive deltas into `lifetimeBugs`. */
+export function withBugs(prev: GameState, bugs: number): Pick<GameState, 'bugs' | 'lifetimeBugs'> {
+  const b = Math.max(0, bugs);
+  const gained = Math.max(0, b - prev.bugs);
+  return {
+    bugs: b,
+    lifetimeBugs: (prev.lifetimeBugs ?? 0) + gained,
+  };
+}
+
 export function defaultState(): GameState {
   return {
     loc: 0,
     bugs: 0,
+    lifetimeBugs: 0,
     totalLoc: 0,
     totalClicks: 0,
     genCounts: {},

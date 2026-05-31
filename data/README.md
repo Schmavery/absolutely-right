@@ -84,12 +84,12 @@ ESLint, TypeScript, Docker, npm, …) in jokes about stack choices.
 | Cursor | **Cursive** |
 | Windsurf | **Kitesurfer** |
 | Reddit | **ReadIt** (communities: **subreadits**) |
-| LinkedIn | **LinkedOut** |
+| LinkedIn | **SloppedIn** |
 | Air Canada | **MapleWings** |
 | Chevrolet | **Bowtie Motors** (e.g. Tahobo) |
 | Sam Altman (persona) | **Salmon Altman** |
 | Perplexity | **Pursuelity** |
-| DeepSeek | **DeapSeek** |
+| DeepSeek | **SteepSeek** |
 | Mistral | **Mistrale** |
 | Nvidia | **Nivida** |
 | Character.ai | **Charactr** |

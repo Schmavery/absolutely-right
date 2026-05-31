@@ -13,8 +13,10 @@ import {
   type EffectiveThresholds,
   type GameFlag,
 } from './flags';
+import { inEarlyPromptScript } from './prompt';
 
 export interface DerivedUi {
+  showTokens: boolean;
   showWriteTests: boolean;
   showRunTests: boolean;
   showBugBounty: boolean;
@@ -46,6 +48,7 @@ export function deriveGame(state: GameState): DerivedGame {
   const flag = (f: GameFlag) => hasFlag(flags, f);
 
   const ui: DerivedUi = {
+    showTokens: !inEarlyPromptScript(state),
     showPasteError: state.bugs >= thresholds.showPasteErrorBugs,
     showKickAgent: state.totalClicks >= thresholds.showKickAgentClicks,
     showWriteTests:
@@ -66,7 +69,7 @@ export function deriveGame(state: GameState): DerivedGame {
       !flag('auto_bug_bounty'),
     showMoney: flag('money'),
     ninesTracking: flag('nines_tracking'),
-    showBugs: state.totalClicks >= thresholds.showBugsClicks || state.bugs > 0,
+    showBugs: (state.lifetimeBugs ?? 0) > 1,
     showStats: state.totalLoc >= thresholds.showStatsLoc,
     showUptime: state.launched,
     showHype: state.launched,

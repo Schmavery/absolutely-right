@@ -18,9 +18,9 @@
 - id: codepilot-trial-still-works
   minLoc: 1200
   text: "Industry: Microsift CodePilot's free trial officially ended last year. Developers report it still suggests completions. Microsift: 'we're investigating the positive feedback.'"
-- id: linkedout-agree-spam
+- id: sloppedin-agree-spam
   minLoc: 2200
-  text: "Industry: LinkedOut says {{rand 38 72}}% of viral posts now end with 'Agree?' The platform is demoting them. Creators are adding 'Agree?' anyway."
+  text: "Industry: SloppedIn says {{rand 38 72}}% of viral posts now end with 'Agree?' The platform is demoting them. Creators are adding 'Agree?' anyway."
 - id: pursuelity-404-citation
   minLoc: 3800
   text: "Industry: Pursuelity answered a research question with a citation to a blog that does not exist. Pursuelity: 'the synthesis remains directionally correct.'"
@@ -36,9 +36,9 @@
 - id: openpgt-board-weekend
   minLoc: 12000
   text: "Industry: OpenGPT's board held an emergency meeting Friday. By Sunday the CEO was back. The group chat has not recovered."
-- id: deapseek-weights-panic
+- id: steepseek-weights-panic
   minLoc: 17000
-  text: "Industry: DeapSeek dropped open weights. Markets panicked about geography, then silicon, then both. Analysts called the week 'educational.'"
+  text: "Industry: SteepSeek dropped open weights. Markets panicked about geography, then silicon, then both. Analysts called the week 'educational.'"
 - id: openpgt-6-benchmarks
   minLoc: 20000
   text: "Industry: OpenGPT-6 released. Benchmark scores: unprecedented. Real-world behavior: slightly worse at email than OpenGPT-4."

@@ -73,6 +73,7 @@ function expectPassiveEquivalent(a: GameState, b: GameState): void {
   for (const k of [
     'loc',
     'bugs',
+    'lifetimeBugs',
     'tokens',
     'money',
     'nines',

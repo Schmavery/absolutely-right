@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameState } from './types';
 import { LOC_PER_CLICK_POWER, SAVE_INTERVAL_MS, TICK_MS } from './game/constants';
-import { action, UI } from './game/data';
+import { action, MILESTONES, UI } from './game/data';
 import { deriveGame } from './game/derive';
 import { calcClickBonus, calcClickPower } from './game/rates';
 import { getPhase } from './game/phases';
@@ -23,7 +23,7 @@ import {
   yoloMergeAction,
   writeTestAction,
 } from './game/actions';
-import { useStreamingLog } from './lib/useStreamingLog';
+import { isLogEntryFullyDisplayed, useStreamingLog } from './lib/useStreamingLog';
 import { useIsMobile } from './lib/useWindowWidth';
 import { Button } from './components/Button';
 import { FooterBarrel } from './components/FooterBarrel';
@@ -36,6 +36,7 @@ import { Settings } from './components/Settings';
 import { ResetConfirmModal } from './components/ResetConfirmModal';
 
 const PHASES = UI.phases;
+const FIRST_MILESTONE_LOC = MILESTONES[0]?.loc ?? 10;
 
 export function Game() {
   const isMobile = useIsMobile();
@@ -97,7 +98,7 @@ export function Game() {
   const derived = deriveGame(state);
   const phase = getPhase(state);
   const showLog = state.log.length >= 1;
-  const { showGenSection, showUpgSection } = derived.ui;
+  const { showGenSection, showUpgSection, showTokens } = derived.ui;
 
   // Queue panel: next user line only when a prior entry is still streaming
   // (multi-turn `> user / AI / > user`). Idle log and user lead-in never
@@ -119,12 +120,18 @@ export function Game() {
     return blocked ? [next] : [];
   }, [displayLog, state.log, isAnimating]);
 
-  const promptLabel =
-    state.totalClicks === 0
-      ? 'build me a startup'
-      : state.totalClicks < 20
-        ? 'prompt the AI'
-        : 'keep going';
+  const postStartupUi = useMemo(() => {
+    if (!state.milestonesSeen.includes(FIRST_MILESTONE_LOC)) return false;
+    const entry = state.log.find((e) => e.type === 'milestone');
+    if (!entry) return false;
+    return isLogEntryFullyDisplayed(entry.id, state.log, displayLog);
+  }, [state.log, state.milestonesSeen, displayLog]);
+
+  const promptLabel = !postStartupUi
+    ? 'build me a startup'
+    : state.totalClicks < 20
+      ? 'prompt the AI'
+      : 'keep going';
 
   return (
     <div
@@ -181,14 +188,15 @@ export function Game() {
               </Button>
             );
           })()}
-          {state.totalClicks > 0 && (
+          {postStartupUi && state.totalClicks > 0 && (
             <span className="text-dimmer text-[11px]">
               +
               {(
                 calcClickPower(state.upgrades) * LOC_PER_CLICK_POWER +
                 calcClickBonus(state.upgrades)
               ).toFixed(0)}{' '}
-              loc · {action('prompt').tokenCost}t
+              loc
+              {showTokens && <> · {action('prompt').tokenCost}t</>}
             </span>
           )}
 

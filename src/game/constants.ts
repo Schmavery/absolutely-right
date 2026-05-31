@@ -30,8 +30,6 @@ export const EVENT_COOLDOWN_MS = 5000;
 // component code uses them so a quick search reveals where each one shows up.
 
 export const THRESHOLDS = {
-  /** Resource panel starts showing the bug counter. */
-  showBugsClicks: 3,
   /** Stats lines ("total loc", "prompts") become visible. */
   showStatsLoc: 1000,
 
@@ -51,7 +49,7 @@ export const THRESHOLDS = {
 
   // Action visibility ─────────────────────────────────────────────────────
   showPasteErrorBugs: 1,
-  showKickAgentClicks: 5,
+  showKickAgentClicks: 10,
   showWriteTestsBugs: 5,
   showRunTestsBugs: 2,
   showClearContextLoc: 4000,

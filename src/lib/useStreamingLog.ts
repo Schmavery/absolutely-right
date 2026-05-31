@@ -5,6 +5,17 @@ import { STREAMING } from '../game/constants';
 /** Chat reply after a `>` line — not milestones/news (those use AI-only pacing). */
 const PROMPT_REPLY_TYPES: ReadonlySet<LogEntryType> = new Set(['info', 'bad', 'event']);
 
+/** True when `displayLog` has finished streaming an entry from `stateLog`. */
+export function isLogEntryFullyDisplayed(
+  entryId: number,
+  stateLog: LogEntry[],
+  displayLog: LogEntry[],
+): boolean {
+  const src = stateLog.find((e) => e.id === entryId);
+  const d = displayLog.find((e) => e.id === entryId);
+  return !!src && !!d && d.text === src.text;
+}
+
 /**
  * Subscribes to `state.log`-style append-only log and streams new entries
  * into a `displayLog` array word-by-word, with a brief pause before each

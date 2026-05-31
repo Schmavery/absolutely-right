@@ -37,7 +37,6 @@ const thresholdOverrideKey = z.enum([
   'showClearContextMinTokens',
   'showYoloMergeLoc',
   'showBugBountyBugs',
-  'showBugsClicks',
   'showStatsLoc',
   'showNewFreeAccountTokens',
 ]);
