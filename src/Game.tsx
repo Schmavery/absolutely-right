@@ -140,7 +140,7 @@ export function Game() {
 
       {isMobile && (
         <div className="flex-shrink-0 mb-2">
-          <div className="text-title mb-[2px] tracking-[0.04em]">&gt; absolutely right</div>
+          <div className="text-title mb-[2px] tracking-[0.04em]">&gt; extra thinking</div>
           <div className="text-dimmer text-[12px]">{PHASES[phase]}</div>
         </div>
       )}
@@ -163,7 +163,7 @@ export function Game() {
         >
           {!isMobile && (
             <>
-              <div className="text-title mb-[2px] tracking-[0.04em]">&gt; absolutely right</div>
+              <div className="text-title mb-[2px] tracking-[0.04em]">&gt; extra thinking</div>
               <div className="text-dimmer text-[12px] mb-6">{PHASES[phase]}</div>
             </>
           )}

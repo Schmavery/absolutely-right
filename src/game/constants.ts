@@ -17,8 +17,8 @@ export const LAUNCH_LOC = 10000;
 /** How often the game auto-persists state to localStorage (ms). */
 export const SAVE_INTERVAL_MS = 10000;
 
-export const SAVE_KEY = 'absolutely_right_v1';
-export const THEME_STORAGE_KEY = 'absolutely_right_theme';
+export const SAVE_KEY = 'extra_thinking_v1';
+export const THEME_STORAGE_KEY = 'extra_thinking_theme';
 export const DEFAULT_THEME = 'terminal-dark';
 
 /** Min ms between any two random events firing across actions. */

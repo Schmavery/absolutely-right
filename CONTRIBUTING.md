@@ -102,6 +102,6 @@ and adding the new id to `THEMES` in `src/lib/theme.ts`.
 
 ## State persistence
 
-Game state is persisted in `localStorage` under `absolutely_right_v1`. The
-selected theme lives under `absolutely_right_theme`. There's a "rewrite
+Game state is persisted in `localStorage` under `extra_thinking_v1`. The
+selected theme lives under `extra_thinking_theme`. There's a "rewrite
 from scratch" button at the bottom of the UI that wipes the save.
