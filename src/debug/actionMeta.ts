@@ -6,7 +6,6 @@ import { UPGRADE_BY_ID, upgradeHoverTitle } from './upgradeMeta';
 const ACTION_TITLES: Record<string, string> = {
   new_free_account: 'Free Account',
   bug_bounty: 'Run bug bounty',
-  yolo_merge: 'YOLO merge',
   launch: 'Ship to production',
   prompt: 'Prompt',
   paste_error: 'Paste the error',
@@ -14,6 +13,8 @@ const ACTION_TITLES: Record<string, string> = {
   clear_context: 'Clear the context',
   write_test: 'Write a test',
   run_tests: 'Run tests',
+  mcp_allow: 'Allow MCP',
+  mcp_deny: 'Deny MCP',
 };
 
 export function actionDisplayName(moveId: string): string {

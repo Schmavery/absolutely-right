@@ -2,7 +2,7 @@ import type { GameState } from '../types';
 import { action } from '../game/data';
 import { calcTokenConfig } from '../game/rates';
 import { runTestsCost, runTestsFixFraction, writeTestCost } from '../game/actions';
-import { displayProgress, getMove } from '../game/availability';
+import { getMove, rechargeProgress } from '../game/availability';
 import { fmt } from '../lib/format';
 import { Button } from './Button';
 
@@ -14,7 +14,6 @@ interface Props {
   onRunTests: () => void;
   onClearContext: () => void;
   onLaunch: () => void;
-  onYoloMerge: () => void;
   onRunBugBounty: () => void;
 }
 
@@ -26,7 +25,6 @@ export function ActionBar({
   onRunTests,
   onClearContext,
   onLaunch,
-  onYoloMerge,
   onRunBugBounty,
 }: Props) {
   const now = Date.now();
@@ -39,7 +37,6 @@ export function ActionBar({
     runTests: action('run_tests'),
     kickAgent: action('kick_agent'),
     clearContext: action('clear_context'),
-    yoloMerge: action('yolo_merge'),
     bugBounty: action('bug_bounty'),
   };
 
@@ -52,7 +49,6 @@ export function ActionBar({
     runTests: getMove(state, 'run_tests', now)!,
     clearContext: getMove(state, 'clear_context', now)!,
     launch: getMove(state, 'launch', now)!,
-    yoloMerge: getMove(state, 'yolo_merge', now)!,
     bugBounty: getMove(state, 'bug_bounty', now)!,
   };
 
@@ -69,7 +65,7 @@ export function ActionBar({
           off={!m.pasteError.legal}
           onClick={m.pasteError.legal ? onPasteError : undefined}
           title="paste the error back in"
-          progress={displayProgress(m.pasteError)}
+          progress={rechargeProgress(m.pasteError)}
         >
           paste the error [{A.pasteError.tokenCost}t]
         </Button>
@@ -80,7 +76,7 @@ export function ActionBar({
           off={!m.writeTest.legal}
           onClick={m.writeTest.legal ? onWriteTest : undefined}
           title="adds a test, reduces bug generation rate"
-          progress={displayProgress(m.writeTest)}
+          progress={rechargeProgress(m.writeTest)}
         >
           write a test [−{fmt(wTestCost)} loc · {A.writeTest.tokenCost}t]
         </Button>
@@ -88,13 +84,20 @@ export function ActionBar({
 
       {m.kickAgent.visible && (() => {
         const buffActive = agentBuffRemaining > 0;
+        const kickProgress = rechargeProgress(m.kickAgent);
         return (
           <div className="flex items-baseline gap-2">
             <Button
               off={!m.kickAgent.legal}
               onClick={m.kickAgent.legal ? onKickAgent : undefined}
               title="kick off an agent"
-              progress={buffActive ? m.kickAgent.cooldownProgress : m.kickAgent.affordProgress}
+              progress={
+                kickProgress === undefined
+                  ? undefined
+                  : buffActive
+                    ? m.kickAgent.cooldownProgress
+                    : m.kickAgent.affordProgress
+              }
               progressClassName={buffActive ? 'bg-green/10' : undefined}
             >
               kick off an agent [{A.kickAgent.tokenCost}t]
@@ -115,7 +118,7 @@ export function ActionBar({
             off={!m.runTests.legal}
             onClick={m.runTests.legal ? onRunTests : undefined}
             title={`costs ${fmt(tCost)} loc, fixes ~${fixPct}% of bugs (${state.tests ?? 0} ${(state.tests ?? 0) === 1 ? 'test' : 'tests'})`}
-            progress={displayProgress(m.runTests)}
+            progress={rechargeProgress(m.runTests)}
           >
             run tests [−{fmt(tCost)} loc · {A.runTests.tokenCost}t]
           </Button>
@@ -129,7 +132,7 @@ export function ActionBar({
             off={!m.clearContext.legal}
             onClick={m.clearContext.legal ? onClearContext : undefined}
             title="starts a new conversation — refills tokens to max"
-            progress={m.clearContext.cooldownProgress}
+            progress={rechargeProgress(m.clearContext)}
             progressClassName="bg-green/10"
           >
             clear the context{m.clearContext.legal ? ` [+${tokensToRefill}t]` : ''}
@@ -143,31 +146,22 @@ export function ActionBar({
         </Button>
       )}
 
-      {m.yoloMerge.visible && (() => {
-        const onCD = m.yoloMerge.cooldownProgress < 1;
-        return (
-          <Button
-            variant={m.yoloMerge.legal ? 'yolo' : 'default'}
-            off={!m.yoloMerge.legal}
-            onClick={m.yoloMerge.legal ? onYoloMerge : undefined}
-            title="merge without review. what could go wrong."
-            progress={onCD ? m.yoloMerge.cooldownProgress : m.yoloMerge.affordProgress}
-            progressClassName={onCD ? 'bg-purple/10' : undefined}
-          >
-            yolo merge [{A.yoloMerge.tokenCost}t]
-          </Button>
-        );
-      })()}
-
       {m.bugBounty.visible && (() => {
         const onCD = m.bugBounty.cooldownProgress < 1;
+        const bountyProgress = rechargeProgress(m.bugBounty);
         return (
           <Button
             variant={m.bugBounty.legal ? 'bounty' : 'default'}
             off={!m.bugBounty.legal}
             onClick={m.bugBounty.legal ? onRunBugBounty : undefined}
             title="convert bugs into nines"
-            progress={onCD ? m.bugBounty.cooldownProgress : m.bugBounty.affordProgress}
+            progress={
+              bountyProgress === undefined
+                ? undefined
+                : onCD
+                  ? m.bugBounty.cooldownProgress
+                  : m.bugBounty.affordProgress
+            }
             progressClassName={onCD ? 'bg-blue/10' : undefined}
           >
             run bug bounty [{A.bugBounty.tokenCost}t]

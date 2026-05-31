@@ -1,5 +1,6 @@
 import type { GameState } from '../types';
 import { SAVE_KEY } from './constants';
+import { clearSaveStorage, writeSaveWithMeta, type SaveSource } from './saveSync';
 
 /** Apply a bug count and accrue positive deltas into `lifetimeBugs`. */
 export function withBugs(prev: GameState, bugs: number): Pick<GameState, 'bugs' | 'lifetimeBugs'> {
@@ -40,6 +41,7 @@ export function defaultState(): GameState {
     agentBuffExpires: 0,
     unlockedUpgrades: [],
     nines: 0,
+    mcpApprovalPending: null,
   };
 }
 
@@ -53,18 +55,10 @@ export function initState(): GameState {
   return defaultState();
 }
 
-export function saveState(s: GameState): void {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
-  } catch {
-    // ignored — quota / privacy mode
-  }
+export function saveState(s: GameState, source: SaveSource = 'game'): number {
+  return writeSaveWithMeta(s, source);
 }
 
 export function clearSave(): void {
-  try {
-    localStorage.removeItem(SAVE_KEY);
-  } catch {
-    // ignored
-  }
+  clearSaveStorage();
 }

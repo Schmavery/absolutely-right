@@ -22,11 +22,11 @@ for the chapter (same energy as “a new conversation”).
 | ----- | ---------------- | --------------- |
 | 0 | not launched | a new conversation |
 | 1 | launched | it's running in prod |
-| 2 | launched + (`pro_plan` / money **or** `multi_agent`) | additional capacity online |
+| 2 | launched + (`pro_plan` / money **or** `multi_agent` **or** `mcp_tools`) | additional capacity online |
 | 3 | `code_review` or `ai_review` | waiting on sign-off |
 | 4 | `revamp_status_page` (`nines_tracking`) | no active incidents |
 
-Add MCP / YOLO upgrade ids to index 2 when those ship.
+`mcp_tools` gates flavor index 2. Post-prompt MCP beats + Allow/Deny unless `always_allow` (auto) or `yolo_mode` (no beats, no UI).
 
 ---
 
@@ -53,7 +53,7 @@ Add MCP / YOLO upgrade ids to index 2 when those ship.
 - **Player role:** approver — chat may block on Allow / Deny (+ small fixed “click” cost in busy time).
 - **MCP chapter (target):** upgrade enables “tools”; events sometimes require approval.
 - **Progression:** per-call approve → **Always allow** upgrade → **YOLO mode** upgrade (auto tools *and* reckless ship — **upgrade, not a repeat button**).
-- **Shipped today:** `multi_agent`, `kick_agent`; `yolo_merge` is still an **action button** — migrate to upgrade per design.
+- **Shipped today:** `multi_agent`, `kick_agent`, `mcp_tools` / `always_allow` / `yolo_mode` shop chain (no yolo button — upgrade only).
 - **Money (here):** `pro_plan` / `team_plan` — tokens up, $/s drain, “scale” fantasy.
 
 ### 4. Min–late — reliability crisis and review theater
@@ -111,9 +111,9 @@ In dev, open `/debug` for an index, or jump directly:
 
 ## Current vs target (living checklist)
 
-- [ ] Move **CI/CD** earlier if chapter 2 should own “CI handles bugs.”
-- [ ] Add **MCP / approvals** (upgrade + events + busy gate).
-- [ ] Replace **yolo_merge** button with **YOLO** upgrade; remove or repurpose action.
-- [ ] Move **code_review** / **ai_review** later for min–late crisis arc.
+- [x] Move **CI/CD** earlier — chapter 2 (`cicd` post-launch unlock).
+- [x] **MCP / approvals** — post-prompt beats, prompt block, Allow/Deny; `yolo_mode` suppresses.
+- [x] Remove **yolo_merge** action; **yolo_mode** is upgrade-only (rates + flag).
+- [x] Move **code_review** / **ai_review** later for min–late crisis arc.
 - [x] Align **flavor** `phases:` with mechanical chapters (`phases.ts`, not LOC).
 - [ ] Revisit **launch** LOC band (today 10k) vs early-mid pacing.

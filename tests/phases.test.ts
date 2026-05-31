@@ -17,6 +17,12 @@ describe('getPhase', () => {
     ).toBe(2);
   });
 
+  it('mid after launch with mcp_tools only', () => {
+    expect(
+      getPhase({ ...defaultState(), launched: true, upgrades: ['mcp_tools'] }),
+    ).toBe(2);
+  });
+
   it('mid after launch with paid plan', () => {
     expect(
       getPhase({ ...defaultState(), launched: true, upgrades: ['pro_plan'] }),

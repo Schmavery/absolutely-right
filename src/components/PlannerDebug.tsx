@@ -1,7 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   PLAN_GOALS,
-  formatPlanStep,
   type PlanClosestSnapshot,
   type PlanClosestStream,
   type PlanGoal,
@@ -9,10 +8,55 @@ import {
   type PlanStep,
 } from '../debug/planReach';
 import { usePlanSearch } from '../debug/usePlanSearch';
-import { fmtLoc, fmtTime, virtualHoursToMs } from '../debug/traceAnalyze';
+import { buildTimelineGridFromSteps, fmtLoc, fmtTime, virtualHoursToMs } from '../debug/traceAnalyze';
+import type { MoveKind } from '../game/availability';
 import { UI } from '../game/data';
 import { debugHref } from '../debug/routes';
 import { DebugSection, DebugShell } from './DebugShell';
+import { DebugTimeline } from './TraceBotColumns';
+import { seedPillClass } from './debugUi';
+
+const PLAN_COLUMN_ID = 'plan';
+
+function planStepsForTimeline(steps: PlanStep[]) {
+  return steps.map((s) => ({
+    t: s.t,
+    moveId: s.moveId,
+    moveKind: s.moveKind as MoveKind,
+    target: s.target,
+  }));
+}
+
+function WitnessTimeline({
+  steps,
+  columnLabel,
+  seed,
+  headerNote,
+}: {
+  steps: PlanStep[];
+  columnLabel: string;
+  seed: number;
+  headerNote?: string;
+}) {
+  const grid = useMemo(
+    () => buildTimelineGridFromSteps(planStepsForTimeline(steps), PLAN_COLUMN_ID),
+    [steps],
+  );
+  return (
+    <DebugTimeline
+      columns={[
+        {
+          id: PLAN_COLUMN_ID,
+          label: columnLabel,
+          pillClass: seedPillClass(seed),
+          meta: `${steps.length.toLocaleString()} steps`,
+        },
+      ]}
+      grid={grid}
+      headerNote={headerNote ?? 'Same layout as bot trace · purple = idle gap between moves'}
+    />
+  );
+}
 
 const DEFAULT_MAX_STATES = 8000;
 const DEFAULT_MAX_HOURS = 10;
@@ -36,10 +80,12 @@ function ClosestFrontierPanel({
   closest,
   steps,
   live,
+  seed,
 }: {
   closest: PlanClosestSnapshot | PlanClosestStream;
   steps?: PlanStep[];
   live?: boolean;
+  seed?: number;
 }) {
   const stepCount = steps?.length ?? ('stepCount' in closest ? closest.stepCount : 0);
   return (
@@ -84,18 +130,13 @@ function ClosestFrontierPanel({
         )}
       </dl>
       {steps && steps.length > 0 && (
-        <>
-          <p className="text-dim text-[10px] mb-1">
-            Witness to closest ({steps.length} steps)
-          </p>
-          <ol className="list-decimal pl-5 space-y-1 text-[11px] max-h-[240px] overflow-y-auto">
-            {steps.map((step, i) => (
-              <li key={i} className="text-dim">
-                <span className="text-blue">{formatPlanStep(step)}</span>
-              </li>
-            ))}
-          </ol>
-        </>
+        <div className="mt-3">
+          <WitnessTimeline
+            steps={steps}
+            columnLabel="closest"
+            seed={seed ?? 42}
+          />
+        </div>
       )}
     </div>
   );
@@ -132,8 +173,9 @@ export function PlannerDebug() {
     <DebugShell active="planner">
       <DebugSection title="Goal planner (best effort)">
         <p className="debug-prose text-[12px] mb-4 max-w-[640px]">
-          Greedy A* in a worker — not guaranteed optimal. Pruned moves and shop branches keep the
-          graph small; if the state budget runs out, you still get a witness to the closest frontier.
+          Greedy A* in a worker — not guaranteed optimal. Post-launch goals search to launch first,
+          then continue from that witness (staged launch). Pruned moves keep the graph smaller; if
+          the state budget runs out, you still get a closest frontier witness.
           Tune prompt friction; progress streams while searching. Click Recompute — nothing runs on
           page load. Compare with{' '}
           <a href={debugHref('trace')} className="text-blue underline">
@@ -277,7 +319,7 @@ export function PlannerDebug() {
               {search.maxStates.toLocaleString()} states
             </p>
             {search.streamingClosest && (
-              <ClosestFrontierPanel closest={search.streamingClosest} live />
+              <ClosestFrontierPanel closest={search.streamingClosest} live seed={seed} />
             )}
           </div>
         )}
@@ -294,7 +336,11 @@ export function PlannerDebug() {
               <dd className="tabular-nums">{fmtTime(outcome.maxTimeMs)}</dd>
             </dl>
             {outcome.closest && (
-              <ClosestFrontierPanel closest={outcome.closest} steps={outcome.closest.steps} />
+              <ClosestFrontierPanel
+                closest={outcome.closest}
+                steps={outcome.closest.steps}
+                seed={seed}
+              />
             )}
           </div>
         )}
@@ -316,6 +362,12 @@ export function PlannerDebug() {
               <dt className="text-dim">states visited</dt>
               <dd className="debug-value">
                 {result.statesVisited.toLocaleString()} / {outcome.maxStates.toLocaleString()}
+                {outcome.stagedLaunch && outcome.launchPhaseStatesVisited != null && (
+                  <span className="text-dim">
+                    {' '}
+                    (launch {outcome.launchPhaseStatesVisited.toLocaleString()} + post)
+                  </span>
+                )}
                 {result.truncated && !result.bestEffort && (
                   <span className="text-log-bad"> · truncated</span>
                 )}
@@ -333,13 +385,16 @@ export function PlannerDebug() {
             {result.steps.length === 0 ? (
               <p className="debug-prose text-[12px]">Already satisfied at t=0.</p>
             ) : (
-              <ol className="list-decimal pl-5 space-y-1 text-[11px]">
-                {result.steps.map((step, i) => (
-                  <li key={i} className="text-dim">
-                    <span className="text-blue">{formatPlanStep(step)}</span>
-                  </li>
-                ))}
-              </ol>
+              <WitnessTimeline
+                steps={result.steps}
+                columnLabel={goalDef.label}
+                seed={seed}
+                headerNote={
+                  result.bestEffort
+                    ? `Best-effort witness · seed ${seed} · purple = idle (wait/chat) between planner steps`
+                    : `Witness path · seed ${seed} · purple = idle between steps`
+                }
+              />
             )}
           </div>
         )}

@@ -4,6 +4,7 @@ import { PhasesDebug } from './components/PhasesDebug';
 import { TraceDebug } from './components/TraceDebug';
 import { GraphDebug } from './components/GraphDebug';
 import { PlannerDebug } from './components/PlannerDebug';
+import { SaveDebug } from './components/SaveDebug';
 import { DebugHome } from './components/DebugHome';
 import { getDebugRouting } from './debug/routes';
 import './styles/index.css';
@@ -21,6 +22,8 @@ function DebugApp({ view }: { view: string | null }) {
       return <PlannerDebug />;
     case 'graph':
       return <GraphDebug />;
+    case 'save':
+      return <SaveDebug />;
     default:
       return <DebugHome />;
   }

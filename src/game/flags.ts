@@ -20,6 +20,12 @@ export const GAME_FLAGS = {
   auto_bug_bounty: 'auto_bug_bounty',
   /** Money resource visible (also set when any owned upgrade has `enablesMoney`). */
   money: 'money',
+  /** MCP tool beats can fire after prompts (see `mcp_tools` upgrade). */
+  mcp_tools: 'mcp_tools',
+  /** Auto-approve MCP calls without blocking the prompt (see `always_allow`). */
+  mcp_auto_approve: 'mcp_auto_approve',
+  /** No MCP approval beats or Allow/Deny UI (see `yolo_mode`). */
+  yolo_mode: 'yolo_mode',
 } as const;
 
 export type GameFlag = (typeof GAME_FLAGS)[keyof typeof GAME_FLAGS];

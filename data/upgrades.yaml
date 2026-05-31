@@ -1,3 +1,7 @@
+# Unlock order follows mechanical chapters in data/PHASES.md (early → nines).
+# MCP: mcp_tools enables approval beats; always_allow auto-approves; yolo_mode skips them.
+
+# ── Ch1 early — prompts & basic tests ───────────────────────────────────────
 - id: model_update_1
   name: Faster Inference
   desc: +5 LOC per prompt — the model runs a bit quicker now
@@ -20,6 +24,13 @@
   clickBonus: 30
   requires:
     - model_update_2
+- id: better_prompts
+  name: Prompt Engineering
+  desc: 2× manual output
+  cost: 5000
+  unlockAt: 3000
+  clickMult: 2
+  purchaseMsg: Prompt engineering engaged. I'm now 2× more confident. Accuracy unchanged.
 - id: model_update_4
   name: Latest Weights
   desc: +70 LOC per prompt — just updated. the bugs are different now.
@@ -28,13 +39,13 @@
   clickBonus: 70
   requires:
     - model_update_3
-- id: better_prompts
-  name: Prompt Engineering
-  desc: 2× manual output
-  cost: 5000
-  unlockAt: 3000
-  clickMult: 2
-  purchaseMsg: Prompt engineering engaged. I'm now 2× more confident. Accuracy unchanged.
+- id: unit_tests
+  name: Unit Tests
+  desc: −40% bug generation
+  cost: 120000
+  unlockAt: 50000
+  bugMult: 0.6
+  purchaseMsg: I've set up a test suite. The tests pass. I haven't checked if they're testing the right things.
 - id: few_shot
   name: Few-Shot Examples
   desc: 3× manual output
@@ -43,6 +54,32 @@
   clickMult: 3
   requires:
     - better_prompts
+
+# ── Ch2 early mid — launch, CI, lint, smarter models ───────────────────────
+- id: cicd
+  name: CI/CD Pipeline
+  desc: −60% bugs; CI runs your tests automatically — fixRate += tests × 0.03/s
+  cost: 280000
+  unlockAt: 28000
+  bugMult: 0.4
+  testFixRate: 0.03
+  requiresLaunch: true
+  purchaseMsg: CI/CD pipeline live. I've blocked {{rand 3 7}} deployments. Two were mine.
+- id: eslint
+  name: ESLint
+  desc: −20% bug generation, +100% squiggles
+  cost: 450000
+  unlockAt: 65000
+  bugMult: 0.8
+  requiresLaunch: true
+  purchaseMsg: ESLint is now active. I've already ignored {{rand 8 24}} rules. The important ones.
+- id: cot
+  name: Chain of Thought
+  desc: 1.5× all generators
+  cost: 250000
+  unlockAt: 100000
+  globalMult: 1.5
+  purchaseMsg: Thinking step by step now. Very thorough. Very slow.
 - id: xml_tags
   name: XML Tags in Prompts
   desc: 4× manual output (it just works, inexplicably)
@@ -51,13 +88,23 @@
   clickMult: 4
   requires:
     - few_shot
-- id: cot
-  name: Chain of Thought
-  desc: 1.5× all generators
-  cost: 250000
-  unlockAt: 100000
-  globalMult: 1.5
-  purchaseMsg: Thinking step by step now. Very thorough. Very slow.
+- id: rotate_accounts
+  name: Account Rotation
+  desc: Script cycles through free accounts automatically. +350 max tokens, +12/s regen
+  cost: 150000
+  unlockAt: 75000
+  maxTokensBonus: 350
+  tokenRegenBonus: 12
+  requiresLaunch: true
+  purchaseMsg: Account rotation active. Cycling through accounts automatically. Very efficient. Very legal.
+- id: typescript
+  name: TypeScript
+  desc: −50% bug generation (after initial +200% bug introduction phase)
+  cost: 1800000
+  unlockAt: 200000
+  bugMult: 0.5
+  requiresLaunch: true
+  purchaseMsg: TypeScript enabled. I've added 'as any' in several places. For now.
 - id: extended_thinking
   name: Extended Thinking
   desc: 2× all generators (it pauses for a very long time first)
@@ -67,83 +114,49 @@
   requires:
     - cot
   purchaseMsg: Extended thinking mode enabled. I'll be with you shortly. Very shortly. Maybe.
-- id: unit_tests
-  name: Unit Tests
-  desc: −40% bug generation
-  cost: 120000
-  unlockAt: 50000
-  bugMult: 0.6
-  purchaseMsg: I've set up a test suite. The tests pass. I haven't checked if they're testing the right things.
-- id: eslint
-  name: ESLint
-  desc: −20% bug generation, +100% squiggles
-  cost: 600000
-  unlockAt: 250000
-  bugMult: 0.8
-  purchaseMsg: ESLint is now active. I've already ignored {{rand 8 24}} rules. The important ones.
-- id: typescript
-  name: TypeScript
-  desc: −50% bug generation (after initial +200% bug introduction phase)
-  cost: 2500000
-  unlockAt: 800000
-  bugMult: 0.5
-  purchaseMsg: TypeScript enabled. I've added 'as any' in several places. For now.
-- id: code_review
-  name: Mandatory Code Review
-  desc: −55% bugs, −30% output (humans are slow)
-  cost: 150000
-  unlockAt: 50000
-  reviewLocMult: 0.7
-  reviewBugMult: 0.45
-  requiresLaunch: true
-  purchaseMsg: Mandatory code review is active. I'll be honest — I find the wait times character-building.
-- id: ai_review
-  name: AI Code Review
-  desc: restores output speed; bug generation increases significantly
-  cost: 4000000
-  unlockAt: 1500000
-  reviewLocMult: 1
-  reviewBugMult: 6
-  requires:
-    - code_review
-  requiresLaunch: true
-  purchaseMsg: "AI code review enabled. Review time: instant. I've approved {{rand 8 22}} PRs today. Bug count is trending up. The tests aren't really containing it anymore. Unrelated."
-  flags:
-    - ai_review
-- id: cicd
-  name: CI/CD Pipeline
-  desc: −60% bugs; CI runs your tests automatically — fixRate += tests × 0.03/s
-  cost: 15000000
-  unlockAt: 6000000
-  bugMult: 0.4
-  testFixRate: 0.03
-  purchaseMsg: CI/CD pipeline live. I've blocked {{rand 3 7}} deployments. Two were mine.
+
+# ── Ch3 mid — scale, agents, tools (MCP mechanics TBD) ──────────────────────
 - id: multi_agent
   name: Parallel Agents
   desc: 2× agent LOC/s — two agents, neither aware of the other
-  cost: 30000
-  unlockAt: 12000
+  cost: 90000
+  unlockAt: 110000
   agentLocMult: 2
+  requiresLaunch: true
   purchaseMsg: Two agents deployed. They are not aware of each other. Both are very confident. Output doubled.
-- id: rotate_accounts
-  name: Account Rotation
-  desc: Script cycles through free accounts automatically. +350 max tokens, +12/s regen
-  cost: 80000
-  unlockAt: 30000
-  maxTokensBonus: 350
-  tokenRegenBonus: 12
-  purchaseMsg: Account rotation active. Cycling through accounts automatically. Very efficient. Very legal.
+- id: mcp_tools
+  name: MCP Tools
+  desc: Connect the model to your stack. Some tool calls need your sign-off.
+  cost: 420000
+  unlockAt: 145000
+  requiresLaunch: true
+  requires:
+    - multi_agent
+  purchaseMsg: MCP tools enabled. I can read the repo, run commands, and open pull requests. I'll ask before the scary ones. Probably.
+  flags:
+    - mcp_tools
 - id: pro_plan
   name: Pay for Access
   desc: Introduces money as a resource. +1400 max tokens, +30/s regen. Costs $5/s.
   cost: 500000
-  unlockAt: 200000
+  unlockAt: 220000
   maxTokensBonus: 1400
   tokenRegenBonus: 30
   moneyCostPerSec: 5
   enablesMoney: true
   requiresLaunch: true
   purchaseMsg: "Paying for access now. Money has entered the chat. Token limits: significantly improved."
+- id: always_allow
+  name: Always Allow
+  desc: MCP tool calls auto-approve — no prompt block, still logs the beat.
+  cost: 1200000
+  unlockAt: 480000
+  requiresLaunch: true
+  requires:
+    - mcp_tools
+  purchaseMsg: Always-allow policy enabled. Tool calls proceed without confirmation. Very fast. Very confident.
+  flags:
+    - mcp_auto_approve
 - id: team_plan
   name: Team Plan
   desc: +8000 max tokens, +150/s regen. Expensive. Worth it. Probably.
@@ -156,11 +169,50 @@
     - pro_plan
   requiresLaunch: true
   purchaseMsg: Team plan activated. We have all the tokens. The bill will be significant. Worth it.
+- id: yolo_mode
+  name: YOLO Mode
+  desc: MCP approvals never appear — tools run with no Allow/Deny gate.
+  cost: 2800000
+  unlockAt: 920000
+  requiresLaunch: true
+  requires:
+    - always_allow
+  purchaseMsg: YOLO mode on. I will merge, deploy, and comment LGTM without further consultation.
+  flags:
+    - yolo_mode
+
+# ── Ch4 min–late — review crises ────────────────────────────────────────────
+- id: code_review
+  name: Mandatory Code Review
+  desc: −55% bugs, −30% output (humans are slow)
+  cost: 550000
+  unlockAt: 480000
+  reviewLocMult: 0.7
+  reviewBugMult: 0.45
+  requiresLaunch: true
+  requires:
+    - pro_plan
+  purchaseMsg: Mandatory code review is active. I'll be honest — I find the wait times character-building.
+- id: ai_review
+  name: AI Code Review
+  desc: restores output speed; bug generation increases significantly
+  cost: 5000000
+  unlockAt: 2800000
+  reviewLocMult: 1
+  reviewBugMult: 6
+  requires:
+    - code_review
+  requiresLaunch: true
+  purchaseMsg: "AI code review enabled. Review time: instant. I've approved {{rand 8 22}} PRs today. Bug count is trending up. The tests aren't really containing it anymore. Unrelated."
+  flags:
+    - ai_review
+
+# ── Ch5 late — status page & nines ────────────────────────────────────────
 - id: revamp_status_page
   name: Revamp the Status Page
   desc: Reported reliability is now managed independently of system state. Introduces nines.
   cost: 20000000
-  unlockAt: 6000000
+  unlockAt: 8000000
   ninesFloor: 4
   requires:
     - ai_review
@@ -179,6 +231,19 @@
     - revamp_status_page
   requiresLaunch: true
   purchaseMsg: 5 nines SLA signed. Legally binding. I've read the clause about 'commercially reasonable efforts'. I feel fine.
+- id: auto_bug_bounty
+  name: Automated Bug Bounty
+  desc: Bug reports now convert to nines automatically. Slow but continuous.
+  cost: 80000000
+  unlockAt: 25000000
+  ninesPerBugSec: 0.000005
+  autoBugDrainRate: 0.005
+  requires:
+    - revamp_status_page
+  requiresLaunch: true
+  purchaseMsg: Bug bounty automated. Reports now convert continuously. The bugs aren't going away. They're going somewhere better.
+  flags:
+    - auto_bug_bounty
 - id: six_nines_guarantee
   name: 6 Nines Guarantee
   desc: 99.9999%. The lawyers asked how we measure this. We changed the subject.
@@ -189,6 +254,17 @@
     - five_nines_sla
   requiresLaunch: true
   purchaseMsg: 6 nines. The lawyers asked how we measure this. We changed the subject.
+- id: enhanced_bug_bounty
+  name: Enhanced Bug Bounty
+  desc: Higher conversion rate. The bugs are working for us now.
+  cost: 500000000
+  unlockAt: 150000000
+  ninesPerBugSec: 0.00002
+  autoBugDrainRate: 0.025
+  requires:
+    - auto_bug_bounty
+  requiresLaunch: true
+  purchaseMsg: Enhanced conversion active. Higher throughput. The bugs are working harder than the engineers now.
 - id: seven_nines_engineering
   name: 7 Nines Engineering
   desc: 99.99999%. A rounding error, technically.
@@ -209,30 +285,6 @@
     - seven_nines_engineering
   requiresLaunch: true
   purchaseMsg: 8 nines. The status page now just shows the number. It's going up.
-- id: auto_bug_bounty
-  name: Automated Bug Bounty
-  desc: Bug reports now convert to nines automatically. Slow but continuous.
-  cost: 80000000
-  unlockAt: 25000000
-  ninesPerBugSec: 0.000005
-  autoBugDrainRate: 0.005
-  requires:
-    - revamp_status_page
-  requiresLaunch: true
-  purchaseMsg: Bug bounty automated. Reports now convert continuously. The bugs aren't going away. They're going somewhere better.
-  flags:
-    - auto_bug_bounty
-- id: enhanced_bug_bounty
-  name: Enhanced Bug Bounty
-  desc: Higher conversion rate. The bugs are working for us now.
-  cost: 500000000
-  unlockAt: 150000000
-  ninesPerBugSec: 0.00002
-  autoBugDrainRate: 0.025
-  requires:
-    - auto_bug_bounty
-  requiresLaunch: true
-  purchaseMsg: Enhanced conversion active. Higher throughput. The bugs are working harder than the engineers now.
 - id: chaos_engineering
   name: Chaos Engineering
   desc: We break things on purpose. Nines accumulate passively. +0.005/s.

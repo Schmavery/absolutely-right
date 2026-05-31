@@ -7,11 +7,13 @@ import {
   WEIGHTS_PROGRESS,
   type NeedWeights,
 } from '../game/moveIntent';
+import { mcpApprovalPending } from '../game/mcpApproval';
 
 export type BotStrategyId = 'progress' | 'loc' | 'hygiene';
 
 /** Legacy fixed action ranking (pre–state-based bots). */
 export const PRIORITY_PROGRESS: Record<string, number> = {
+  mcp_allow: 1100,
   launch: 1000,
   buy_upgrade: 900,
   buy_gen: 800,
@@ -40,6 +42,7 @@ export const PRIORITY_LOC: Record<string, number> = {
 };
 
 export const PRIORITY_HYGIENE: Record<string, number> = {
+  mcp_deny: 1050,
   run_tests: 1000,
   write_test: 950,
   bug_bounty: 900,
@@ -62,6 +65,12 @@ function pickPriorityMove(
   priorities: Record<string, number>,
   patienceMs: number,
 ): Move | null {
+  if (mcpApprovalPending(ctx.state)) {
+    const mcp = ctx.legal.filter((m) => m.actionId === 'mcp_allow' || m.actionId === 'mcp_deny');
+    if (mcp.length === 0) return null;
+    const rank = (m: Move) => moveRank(m, priorities);
+    return [...mcp].sort((a, b) => rank(b) - rank(a) || a.id.localeCompare(b.id))[0]!;
+  }
   const rank = (m: Move) => moveRank(m, priorities);
   const sortedLegal = [...ctx.legal].sort((a, b) => {
     const d = rank(b) - rank(a);
@@ -140,8 +149,8 @@ export function strategyBot(strategy: BotStrategyId, patienceMs = TRACE_PATIENCE
   return adaptiveBot(STRATEGY_WEIGHTS[strategy], patienceMs);
 }
 
-/** Default playtest / invariant bot (progress profile). */
-export const greedyPlayer: Bot = strategyBot('progress');
+/** Default playtest / invariant bot (progress profile, 10s patience). */
+export const greedyPlayer: Bot = strategyBot('progress', TRACE_PATIENCE_MS);
 
 export const lazy: Bot = (): null => null;
 
@@ -165,13 +174,30 @@ export function randomBot(seed: number): Bot {
   };
 }
 
-export type DebugBotId = BotStrategyId | RankBotId | 'lazy' | 'random' | 'spammer';
+export type DebugBotId =
+  | BotStrategyId
+  | RankBotId
+  | 'progress_30s'
+  | 'lazy'
+  | 'random'
+  | 'spammer';
+
+/** Default `/debug/trace` columns (bench winners for launch + phase 2). */
+export const DEFAULT_TRACE_BOTS: DebugBotId[] = [
+  'progress_30s',
+  'loc_rank',
+  'greedy_rank',
+];
 
 export const DEBUG_BOTS: Record<
   DebugBotId,
   { label: string; make: (simSeed: number) => Bot }
 > = {
-  progress: { label: 'Progress', make: () => strategyBot('progress') },
+  progress: { label: 'Progress (10s)', make: () => strategyBot('progress') },
+  progress_30s: {
+    label: 'Progress (30s)',
+    make: () => strategyBot('progress', 30_000),
+  },
   loc: { label: 'LOC', make: () => strategyBot('loc') },
   hygiene: { label: 'Hygiene', make: () => strategyBot('hygiene') },
   progress_rank: {

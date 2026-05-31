@@ -221,11 +221,12 @@ export const BASIC_ACTION_IDS = [
   'paste_error',
   'kick_agent',
   'clear_context',
+  'mcp_allow',
 ] as const;
 
 export type BasicActionId = (typeof BASIC_ACTION_IDS)[number];
 
-export const TEST_ACTION_IDS = ['write_test', 'run_tests'] as const;
+export const TEST_ACTION_IDS = ['write_test', 'run_tests', 'mcp_deny'] as const;
 
 export type TestActionId = (typeof TEST_ACTION_IDS)[number];
 
@@ -390,6 +391,102 @@ export function collapseTimelineRows(rows: SeedColumnRow[]): SeedColumnRow[] {
   return collapseRoutineActions(collapseSeedColumnRows(rows));
 }
 
+function alignTimelineEntries(
+  columnIds: string[],
+  entries: { t: number; colIdx: number; row: SeedColumnRow }[],
+): AlignedTimelineRow[] {
+  entries.sort((a, b) => a.t - b.t || a.colIdx - b.colIdx);
+
+  const aligned: AlignedTimelineRow[] = [];
+  let i = 0;
+  let prevT = 0;
+  while (i < entries.length) {
+    const t = entries[i]!.t;
+    const cells: AlignedTimelineRow['cells'] = columnIds.map(() => null);
+    while (i < entries.length && entries[i]!.t === t) {
+      const { colIdx, row } = entries[i]!;
+      const cur = cells[colIdx];
+      if (cur == null) cells[colIdx] = row;
+      else if (Array.isArray(cur)) cur.push(row);
+      else cells[colIdx] = [cur, row];
+      i += 1;
+    }
+    aligned.push({ t, gapMs: Math.max(0, t - prevT), cells });
+    prevT = t;
+  }
+  return aligned;
+}
+
+/** Planner / custom witness: collapsed rows for one or more columns. */
+export function buildTimelineRowsFromSteps(
+  steps: { t: number; moveId: string; moveKind: MoveKind; target?: string }[],
+  columnKey: string,
+): SeedColumnRow[] {
+  const events: SeedColumnRow[] = [phaseBandRow(columnKey, 0, 0)];
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i]!;
+    const t = s.t;
+    if (s.moveId === 'launch') {
+      events.push({ key: `${columnKey}-launch-${t}`, kind: 'launch', t, loc: 0 });
+      continue;
+    }
+    if (s.moveKind === 'buy_upgrade' && s.target) {
+      events.push({
+        key: `${columnKey}-up-${s.target}-${t}`,
+        kind: 'upgrade',
+        id: s.target,
+        t,
+        loc: 0,
+      });
+      continue;
+    }
+    if (s.moveKind === 'buy_gen' && s.target) {
+      events.push({
+        key: `${columnKey}-gen-${s.target}-${t}`,
+        kind: 'gen',
+        id: s.target,
+        t,
+        loc: 0,
+      });
+      continue;
+    }
+    events.push({
+      key: `${columnKey}-mv-${i}-${t}-${s.moveId}`,
+      kind: 'move',
+      moveId: s.moveId,
+      moveKind: s.moveKind,
+      target: s.target,
+      t,
+      loc: 0,
+    });
+  }
+  events.sort((a, b) => a.t - b.t || a.key.localeCompare(b.key));
+  return collapseTimelineRows(events);
+}
+
+export function buildAlignedTimelineFromRows(
+  columnIds: string[],
+  rowsByColumn: Map<string, SeedColumnRow[]>,
+): AlignedTimelineRow[] {
+  const entries: { t: number; colIdx: number; row: SeedColumnRow }[] = [];
+  for (let colIdx = 0; colIdx < columnIds.length; colIdx++) {
+    const id = columnIds[colIdx]!;
+    for (const row of rowsByColumn.get(id) ?? []) {
+      entries.push({ t: row.t, colIdx, row });
+    }
+  }
+  return alignTimelineEntries(columnIds, entries);
+}
+
+export function buildTimelineGridFromSteps(
+  steps: { t: number; moveId: string; moveKind: MoveKind; target?: string }[],
+  columnKey: string,
+): TimelineGridRow[] {
+  const rows = buildTimelineRowsFromSteps(steps, columnKey);
+  const aligned = buildAlignedTimelineFromRows([columnKey], new Map([[columnKey, rows]]));
+  return expandTimelineWithGapRows(aligned);
+}
+
 /**
  * Rows keyed by sim time so events at the same `t` line up across bot columns.
  */
@@ -408,26 +505,7 @@ export function buildAlignedTimeline(
     }
   }
 
-  entries.sort((a, b) => a.t - b.t || a.colIdx - b.colIdx);
-
-  const aligned: AlignedTimelineRow[] = [];
-  let i = 0;
-  let prevT = 0;
-  while (i < entries.length) {
-    const t = entries[i]!.t;
-    const cells: AlignedTimelineRow['cells'] = botIds.map(() => null);
-    while (i < entries.length && entries[i]!.t === t) {
-      const { colIdx, row } = entries[i]!;
-      const cur = cells[colIdx];
-      if (cur == null) cells[colIdx] = row;
-      else if (Array.isArray(cur)) cur.push(row);
-      else cells[colIdx] = [cur, row];
-      i += 1;
-    }
-    aligned.push({ t, gapMs: Math.max(0, t - prevT), cells });
-    prevT = t;
-  }
-  return aligned;
+  return alignTimelineEntries(botIds, entries);
 }
 
 export function compressActionRuns(trace: TraceEntry[]): ActionRun[] {

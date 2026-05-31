@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { extendChatBusyUntil, streamMsForNewEntries } from '../src/debug/planBusy';
-import { applyPlanPrompt, planShortestPath } from '../src/debug/planReach';
+import {
+  applyPlanPrompt,
+  goalRequiresLaunchFirst,
+  planShortestPath,
+} from '../src/debug/planReach';
 import { defaultState } from '../src/game/state';
 import { appendLog } from '../src/game/log';
 import { setClock, resetClock } from '../src/game/runtime';
@@ -20,7 +24,28 @@ describe('planBusy', () => {
   });
 });
 
+describe('goalRequiresLaunchFirst', () => {
+  it('is true for post-launch upgrade goals from fresh state', () => {
+    expect(
+      goalRequiresLaunchFirst({ kind: 'upgrade', id: 'multi_agent' }, defaultState()),
+    ).toBe(true);
+    expect(goalRequiresLaunchFirst({ kind: 'upgrade', id: 'model_update_1' }, defaultState())).toBe(
+      false,
+    );
+  });
+});
+
 describe('planShortestPath', () => {
+  it('uses staged launch for post-launch goals', { timeout: 90_000 }, () => {
+    const outcome = planShortestPath(
+      { kind: 'upgrade', id: 'multi_agent' },
+      { maxStates: 8000, maxTimeMs: 8 * 3_600_000, seed: 42, promptCostMult: 1 },
+    );
+    expect(outcome.stagedLaunch).toBe(true);
+    expect(outcome.launchPhaseStatesVisited).toBeGreaterThan(0);
+    expect(outcome.launchPhaseStatesVisited).toBeLessThan(outcome.statesVisited);
+  });
+
   it('finds kick_agent on the frontier for first-upgrade grind', { timeout: 120_000 }, () => {
     const outcome = planShortestPath(
       { kind: 'upgrade', id: 'model_update_1' },
@@ -39,6 +64,7 @@ describe('planShortestPath', () => {
       maxTimeMs: 60_000,
       seed: 42,
       acceptBestEffort: false,
+      stagedLaunch: false,
     });
     expect(outcome.result).toBeNull();
     expect(outcome.closest).not.toBeNull();
@@ -49,11 +75,12 @@ describe('planShortestPath', () => {
 
   it('returns best-effort witness when search budget is tiny', () => {
     const goal = { kind: 'upgrade' as const, id: 'revamp_status_page' };
-    const outcome = planShortestPath(goal, { maxStates: 400, maxTimeMs: 60_000, seed: 42 });
-    if (!outcome.result) {
-      expect(outcome.closest?.steps.length ?? 0).toBeGreaterThan(0);
-      expect(outcome.closest?.progress.progress ?? 0).toBeGreaterThan(0);
-    }
+    const outcome = planShortestPath(goal, {
+      maxStates: 80,
+      maxTimeMs: 10 * 3_600_000,
+      seed: 42,
+      stagedLaunch: false,
+    });
     expect(outcome.result).not.toBeNull();
     expect(outcome.result!.bestEffort).toBe(true);
     expect(outcome.result!.steps.length).toBeGreaterThan(0);

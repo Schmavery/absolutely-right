@@ -8,6 +8,7 @@ import type { Move } from './availability';
 import { LAUNCH_LOC, THRESHOLDS } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
+import { mcpApprovalPending } from './mcpApproval';
 import { calcTokenConfig, genCost } from './rates';
 import type { GameState } from '../types';
 import { now as runtimeNow } from './runtime';
@@ -65,7 +66,8 @@ const MOVE_HELPS: Record<string, Partial<Record<NeedAxis, number>>> = {
   clear_context: { tokens: 1 },
   new_free_account: { tokens: 1 },
   launch: { launch: 1 },
-  yolo_merge: { bugs: 0.7, loc: 0.4 },
+  mcp_allow: { loc: 0.55 },
+  mcp_deny: { bugs: 0.85, tests: 0.2 },
   bug_bounty: { bugs: 0.75 },
   buy_gen: { economy: 1, loc: 0.65 },
   buy_upgrade: { economy: 1, loc: 0.55 },
@@ -173,6 +175,13 @@ export function pickAdaptiveMove(
   ctx: { state: GameState; visible: Move[]; legal: Move[]; t: number },
   opts: PickAdaptiveOpts,
 ): Move | null {
+  if (mcpApprovalPending(ctx.state)) {
+    const mcp = ctx.legal.filter((m) => m.actionId === 'mcp_allow' || m.actionId === 'mcp_deny');
+    if (mcp.length === 0) return null;
+    const needs = assessNeeds(ctx.state, ctx.t);
+    const score = (m: Move) => scoreMove(m, needs, opts.weights, opts.tieBias?.(m) ?? 0);
+    return [...mcp].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id))[0]!;
+  }
   const needs = assessNeeds(ctx.state, ctx.t);
   const score = (m: Move) => scoreMove(m, needs, opts.weights, opts.tieBias?.(m) ?? 0);
 

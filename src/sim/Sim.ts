@@ -153,9 +153,15 @@ export class Sim {
     return this;
   }
 
-  runEventDriven(bot: Bot, virtualMs: number): this {
+  runEventDriven(
+    bot: Bot,
+    virtualMs: number,
+    opts?: { stopWhen?: (state: GameState) => boolean },
+  ): this {
     const stopAt = this.t + virtualMs;
+    const shouldStop = () => opts?.stopWhen?.(this.state) ?? false;
     while (this.t < stopAt) {
+      if (shouldStop()) break;
       let movePlayed: TraceEntry['move'];
       if (this.t >= this.nextActionAt) {
         const ctx: BotContext = {
@@ -172,6 +178,7 @@ export class Sim {
             movePlayed = { id: choice.id, kind: choice.kind, target: choice.target };
             this.nextActionAt = this.t + this.actionDurationMs;
             this.maybePushTrace(movePlayed);
+            if (shouldStop()) break;
             continue;
           }
         }

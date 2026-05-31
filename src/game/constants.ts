@@ -56,7 +56,6 @@ export const THRESHOLDS = {
   showRunTestsBugs: 2,
   showClearContextLoc: 4000,
   showClearContextMinTokens: 10,
-  showYoloMergeLoc: 15000,
   showBugBountyBugs: 50,
 
   // Bug-related effects ───────────────────────────────────────────────────

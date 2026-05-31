@@ -22,6 +22,7 @@ import type { GameState } from '../types';
 import { LAUNCH_LOC } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
+import { mcpAllowAction, mcpApprovalPending as mcpPending, mcpDenyAction } from './mcpApproval';
 import { calcBugPenalty, calcRates, calcTokenConfig, genCost } from './rates';
 import {
   buyGenAction,
@@ -37,7 +38,6 @@ import {
   runTestsCost,
   writeTestAction,
   writeTestCost,
-  yoloMergeAction,
 } from './actions';
 import { now as runtimeNow } from './runtime';
 
@@ -52,7 +52,8 @@ export const ACTION_IDS = [
   'run_tests',
   'clear_context',
   'launch',
-  'yolo_merge',
+  'mcp_allow',
+  'mcp_deny',
   'bug_bounty',
   'new_free_account',
 ] as const;
@@ -133,13 +134,25 @@ function cooldownProgressFromGates(gates: readonly Gate[]): number {
   return Math.min(...cd.map((g) => (g.kind === 'wait' ? (g.progress ?? 1) : 1)));
 }
 
+/** True when a bool gate blocks the move (MCP pending, no bugs, etc.). */
+export function boolBlocked(m: Move): boolean {
+  return m.gates.some((g) => g.kind === 'bool' && !g.ok);
+}
+
 /** Bar fill for UI: wait-gate mins, and 0 when a bool gate blocks the move. */
 export function displayProgress(m: Move): number {
   let p = Math.min(m.affordProgress, m.cooldownProgress);
-  for (const g of m.gates) {
-    if (g.kind === 'bool' && !g.ok) p = 0;
-  }
+  if (boolBlocked(m)) p = 0;
   return p;
+}
+
+/**
+ * Progress for action buttons: show incremental fill while recharging
+ * (cooldown / afford), omit when gated by a bool precondition.
+ */
+export function rechargeProgress(m: Move): number | undefined {
+  if (boolBlocked(m)) return undefined;
+  return displayProgress(m);
 }
 
 type BuildMoveOverlay = {
@@ -247,6 +260,15 @@ function boolGate(ok: boolean): Gate {
   return { kind: 'bool', ok };
 }
 
+/** Block player actions while an MCP tool call awaits Allow/Deny. */
+function mcpIdleGate(state: GameState): Gate {
+  return boolGate(!mcpPending(state));
+}
+
+function withMcpIdle(state: GameState, gates: Gate[]): Gate[] {
+  return [mcpIdleGate(state), ...gates];
+}
+
 function tokenGate(state: GameState, cost: number | undefined): Gate {
   const ok = tokensOk(state, cost);
   const waitMs = waitForTokensMs(state, cost);
@@ -333,17 +355,43 @@ function prompt(c: Ctx): Move {
       visible: true,
       apply: promptAction,
     },
-    [cooldownGate(c.state, 'prompt', a.cooldownMs, c.t)],
+    withMcpIdle(c.state, [cooldownGate(c.state, 'prompt', a.cooldownMs, c.t)]),
+  );
+}
+
+function mcpAllow(c: Ctx): Move {
+  return buildMove(
+    {
+      id: 'mcp_allow',
+      kind: 'action',
+      actionId: 'mcp_allow',
+      visible: c.ui.showMcpApproval,
+      apply: mcpAllowAction,
+    },
+    [boolGate(mcpPending(c.state))],
+  );
+}
+
+function mcpDeny(c: Ctx): Move {
+  return buildMove(
+    {
+      id: 'mcp_deny',
+      kind: 'action',
+      actionId: 'mcp_deny',
+      visible: c.ui.showMcpApproval,
+      apply: mcpDenyAction,
+    },
+    [boolGate(mcpPending(c.state))],
   );
 }
 
 function pasteError(c: Ctx): Move {
   const a = action('paste_error');
-  const gates: Gate[] = [
+  const gates: Gate[] = withMcpIdle(c.state, [
     boolGate(c.state.bugs > 0),
     cooldownGate(c.state, 'paste_error', a.cooldownMs, c.t),
     tokenGate(c.state, a.tokenCost),
-  ];
+  ]);
   return buildMove(
     {
       id: 'paste_error',
@@ -367,7 +415,7 @@ function writeTest(c: Ctx): Move {
       visible: c.ui.showWriteTests,
       apply: writeTestAction,
     },
-    [locGate(c.state, cost), tokenGate(c.state, a.tokenCost)],
+    withMcpIdle(c.state, [locGate(c.state, cost), tokenGate(c.state, a.tokenCost)]),
   );
 }
 
@@ -381,7 +429,7 @@ function kickAgent(c: Ctx): Move {
       visible: c.ui.showKickAgent,
       apply: kickAgentAction,
     },
-    [tokenGate(c.state, a.tokenCost), buffGate(c.state, c.t, a.buffMs ?? 1)],
+    withMcpIdle(c.state, [tokenGate(c.state, a.tokenCost), buffGate(c.state, c.t, a.buffMs ?? 1)]),
   );
 }
 
@@ -397,7 +445,11 @@ function runTests(c: Ctx): Move {
       visible: c.ui.showRunTests,
       apply: runTestsAction,
     },
-    [boolGate(hasTests), locGate(c.state, cost), tokenGate(c.state, a.tokenCost)],
+    withMcpIdle(c.state, [
+      boolGate(hasTests),
+      locGate(c.state, cost),
+      tokenGate(c.state, a.tokenCost),
+    ]),
   );
 }
 
@@ -411,13 +463,16 @@ function clearContext(c: Ctx): Move {
       visible: c.ui.showClearContext,
       apply: clearContextAction,
     },
-    [cooldownGate(c.state, 'clear_context', a.cooldownMs, c.t)],
+    withMcpIdle(c.state, [cooldownGate(c.state, 'clear_context', a.cooldownMs, c.t)]),
   );
 }
 
 function launch(c: Ctx): Move {
   // `showLaunchBtn` already requires `totalLoc >= LAUNCH_LOC` in `derive.ts`.
-  const gates: Gate[] = [boolGate(!c.state.launched), boolGate(c.ui.showLaunchBtn)];
+  const gates: Gate[] = withMcpIdle(c.state, [
+    boolGate(!c.state.launched),
+    boolGate(c.ui.showLaunchBtn),
+  ]);
   return buildMove(
     {
       id: 'launch',
@@ -430,33 +485,14 @@ function launch(c: Ctx): Move {
   );
 }
 
-function yoloMerge(c: Ctx): Move {
-  const a = action('yolo_merge');
-  const gates: Gate[] = [
-    boolGate(c.ui.showYoloMerge),
-    cooldownGate(c.state, 'yolo_merge', a.cooldownMs, c.t),
-    tokenGate(c.state, a.tokenCost),
-  ];
-  return buildMove(
-    {
-      id: 'yolo_merge',
-      kind: 'action',
-      actionId: 'yolo_merge',
-      visible: c.ui.showYoloMerge,
-      apply: yoloMergeAction,
-    },
-    gates,
-  );
-}
-
 function bugBounty(c: Ctx): Move {
   const a = action('bug_bounty');
-  const gates: Gate[] = [
+  const gates: Gate[] = withMcpIdle(c.state, [
     boolGate(c.ui.showBugBounty),
     boolGate(c.state.bugs > 0),
     cooldownGate(c.state, 'bug_bounty', a.cooldownMs, c.t),
     tokenGate(c.state, a.tokenCost),
-  ];
+  ]);
   return buildMove(
     {
       id: 'bug_bounty',
@@ -482,7 +518,7 @@ function newFreeAccount(c: Ctx): Move {
       visible,
       apply: newFreeAccountAction,
     },
-    [cooldownGate(c.state, 'free_account', a.cooldownMs, c.t)],
+    withMcpIdle(c.state, [cooldownGate(c.state, 'free_account', a.cooldownMs, c.t)]),
     { requireVisible: true, hideWaitWhenNotVisible: true },
   );
 }
@@ -502,7 +538,7 @@ function buyGenMoves(c: Ctx): Move[] {
         visible,
         apply: (state: GameState) => buyGenAction(state, g.id),
       },
-      [totalLocGate(c.state, visibleAt), locGate(c.state, cost)],
+      withMcpIdle(c.state, [totalLocGate(c.state, visibleAt), locGate(c.state, cost)]),
       { requireVisible: true },
     );
   });
@@ -516,8 +552,8 @@ function buyUpgradeMoves(c: Ctx): Move[] {
       !c.state.upgrades.includes(u.id);
     const owned = c.state.upgrades.includes(u.id);
     const gates: Gate[] = owned
-      ? [boolGate(false)]
-      : [boolGate(visible), locGate(c.state, u.cost)];
+      ? withMcpIdle(c.state, [boolGate(false)])
+      : withMcpIdle(c.state, [boolGate(visible), locGate(c.state, u.cost)]);
     return buildMove(
       {
         id: `buy_upgrade:${u.id}`,
@@ -547,7 +583,8 @@ export function moveTable(state: GameState, t: number = runtimeNow()): {
     runTests(c),
     clearContext(c),
     launch(c),
-    yoloMerge(c),
+    mcpAllow(c),
+    mcpDeny(c),
     bugBounty(c),
     newFreeAccount(c),
     ...buyGenMoves(c),

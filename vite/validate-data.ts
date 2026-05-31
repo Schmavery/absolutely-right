@@ -14,9 +14,10 @@ export const ACTION_IDS = [
   'kick_agent',
   'paste_error',
   'clear_context',
-  'yolo_merge',
   'run_tests',
   'bug_bounty',
+  'mcp_allow',
+  'mcp_deny',
   'launch',
   'new_free_account',
   'write_test',
@@ -24,7 +25,14 @@ export const ACTION_IDS = [
   'buy_upgrade',
 ] as const;
 
-const gameFlagId = z.enum(['ai_review', 'nines_tracking', 'auto_bug_bounty']);
+const gameFlagId = z.enum([
+  'ai_review',
+  'nines_tracking',
+  'auto_bug_bounty',
+  'mcp_tools',
+  'mcp_auto_approve',
+  'yolo_mode',
+]);
 
 const thresholdOverrideKey = z.enum([
   'showGeneratorsLoc',
@@ -35,7 +43,6 @@ const thresholdOverrideKey = z.enum([
   'showRunTestsBugs',
   'showClearContextLoc',
   'showClearContextMinTokens',
-  'showYoloMergeLoc',
   'showBugBountyBugs',
   'showStatsLoc',
   'showNewFreeAccountTokens',

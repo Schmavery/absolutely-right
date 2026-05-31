@@ -2,7 +2,7 @@ import type { GameState } from '../types';
 import { action, GENS } from '../game/data';
 import { genCost } from '../game/rates';
 import { fmt, fmtRate } from '../lib/format';
-import { getMove } from '../game/availability';
+import { getMove, rechargeProgress } from '../game/availability';
 import { Button } from './Button';
 
 interface Props {
@@ -32,7 +32,7 @@ export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
             title={`+${newAccountData.maxTokensPerExtra} max tokens, +${newAccountData.tokenRegenPerExtra}/s regen · ${state.freeAccounts} account${
               state.freeAccounts !== 1 ? 's' : ''
             } active`}
-            progress={newAccount.cooldownProgress}
+            progress={rechargeProgress(newAccount)}
             progressClassName="bg-green/10"
           >
             create
@@ -56,7 +56,7 @@ export function Generators({ state, onBuyGen, onNewFreeAccount }: Props) {
               off={!move.legal}
               onClick={() => onBuyGen(g.id)}
               title={g.desc}
-              progress={move.affordProgress}
+              progress={rechargeProgress(move)}
             >
               buy
             </Button>

@@ -1,13 +1,21 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { LAUNCH_LOC } from '../src/game/constants';
+import {
+  BENCH_PHASE_2,
+  LAUNCH_BENCH_BUDGET_MS,
+  LAUNCH_BENCH_SEEDS,
+  launchTimeMsForBot,
+  logMedianTable,
+  medianLaunchRow,
+  medianPhase2Row,
+  phase2TimeMsForBot,
+  runPatienceSweep,
+  runPhase2PatienceSweep,
+} from '../src/debug/launchBenchCore';
+import { fmtTime } from '../src/debug/traceAnalyze';
 import { Sim } from '../src/sim/Sim';
 import { DEBUG_BOTS, type DebugBotId } from '../src/sim/bots';
-import { fmtTime } from '../src/debug/traceAnalyze';
 
 afterEach(() => Sim.teardown());
-
-/** Same default as TraceDebug. */
-const BUDGET_MS = 10 * 3_600_000;
 
 const BOTS = [
   'progress',
@@ -21,60 +29,80 @@ const BOTS = [
   'patient_rank',
 ] as DebugBotId[];
 
-function launchTimeMs(seed: number, botId: DebugBotId): number | null {
-  const sim = new Sim({ seed });
-  sim.runEventDriven(DEBUG_BOTS[botId]!.make(seed), BUDGET_MS);
-  if (!sim.state.launched) return null;
-  const trace = sim.trace;
-  for (const e of trace) {
-    if (e.move?.id === 'launch') return e.t;
-  }
-  return sim.t;
-}
+describe('launch time (smoke)', () => {
+  it('hygiene launches on seed 42 under 30m virtual', () => {
+    const t = launchTimeMsForBot(42, DEBUG_BOTS.hygiene!.make(42));
+    expect(t).not.toBeNull();
+    expect(t!).toBeLessThanOrEqual(LAUNCH_BENCH_BUDGET_MS);
+    expect(t!).toBeLessThan(30 * 60_000);
+  });
 
-describe('launch time (trace budget)', () => {
-  it('seed 42 launch times match trace-scale virtual clock', () => {
+  it(
+    `progress reaches flavor phase ${BENCH_PHASE_2} on seed 42 within 10h`,
+    () => {
+      const t = phase2TimeMsForBot(42, DEBUG_BOTS.progress_30s!.make(42));
+      expect(t).not.toBeNull();
+      expect(t!).toBeLessThan(LAUNCH_BENCH_BUDGET_MS);
+    },
+    90_000,
+  );
+});
+
+const BENCH_IT_MS = 90_000;
+
+/** Full median + patience tables — `npm run bench:launch` */
+describe.skipIf(!process.env.RUN_LAUNCH_BENCH)('launch time (bench)', () => {
+  it(
+    'seed 42 all default bots',
+    () => {
     const seed = 42;
     for (const botId of BOTS) {
-      const t = launchTimeMs(seed, botId);
+      const t = launchTimeMsForBot(seed, DEBUG_BOTS[botId]!.make(seed));
       console.log(
-        `${botId.padEnd(16)} ${t == null ? 'no launch in 10h' : fmtTime(t) + ` (${(t / 3_600_000).toFixed(2)}h)`}  totalLoc@end would need check`,
+        `${botId.padEnd(16)} ${t == null ? 'no launch in 10h' : fmtTime(t) + ` (${(t / 3_600_000).toFixed(2)}h)`}`,
       );
     }
-    const hygiene = launchTimeMs(seed, 'hygiene');
-    expect(hygiene).not.toBeNull();
-    expect(hygiene!).toBeLessThan(BUDGET_MS);
-    expect(hygiene!).toBeLessThan(30 * 60_000);
-  });
+    },
+    BENCH_IT_MS,
+  );
 
-  it('median launch over seeds (10h budget)', () => {
-    const seeds = [1, 7, 42, 99, 4242];
-    const rows: { bot: DebugBotId; medianMs: number; times: string[] }[] = [];
+  it(
+    'median launch default bots',
+    () => {
+    const rows = BOTS.map((botId) =>
+      medianLaunchRow(botId, LAUNCH_BENCH_SEEDS, (seed) => DEBUG_BOTS[botId]!.make(seed)),
+    );
+    logMedianTable(
+      `Median launch (10h cap), default bots, seeds ${LAUNCH_BENCH_SEEDS.join(', ')}:`,
+      rows,
+      3,
+    );
+    expect(rows[0]!.medianMs).toBeLessThan(LAUNCH_BENCH_BUDGET_MS);
+    },
+    BENCH_IT_MS,
+  );
 
-    for (const botId of BOTS) {
-      const ms: number[] = [];
-      for (const seed of seeds) {
-        const t = launchTimeMs(seed, botId);
-        if (t != null) ms.push(t);
-        Sim.teardown();
-      }
-      const sorted = [...ms].sort((a, b) => a - b);
-      const medianMs = sorted.length ? sorted[Math.floor(sorted.length / 2)]! : Infinity;
-      rows.push({
-        bot: botId,
-        medianMs,
-        times: ms.map((t) => fmtTime(t)),
-      });
-    }
-    rows.sort((a, b) => a.medianMs - b.medianMs);
-    console.log(`\nMedian launch @ ${LAUNCH_LOC} LOC (10h budget), seeds ${seeds.join(', ')}:`);
-    for (const r of rows) {
-      console.log(
-        `  ${r.bot.padEnd(16)} ${r.medianMs === Infinity ? '—' : fmtTime(r.medianMs)}  [${r.times.join(', ')}]`,
-      );
-    }
-    console.log('\nFastest 3:', rows.filter((r) => r.medianMs < Infinity).slice(0, 3).map((r) => r.bot).join(', '));
+  it(
+    'median launch adaptive × patience + rank bots',
+    () => {
+    const rows = runPatienceSweep();
+    const ranked = [...rows].sort((a, b) => a.medianMs - b.medianMs);
+    expect(ranked[0]!.medianMs).toBeLessThan(LAUNCH_BENCH_BUDGET_MS);
+    expect(ranked.filter((r) => r.launches === LAUNCH_BENCH_SEEDS.length).length).toBeGreaterThan(0);
+    },
+    BENCH_IT_MS,
+  );
+});
 
-    expect(rows[0]!.medianMs).toBeLessThan(BUDGET_MS);
-  });
+/** `npm run bench:phase2` */
+describe.skipIf(!process.env.RUN_PHASE2_BENCH)('phase 2 time (bench)', () => {
+  it(
+    'median phase 2 adaptive × patience + rank bots',
+    () => {
+      const rows = runPhase2PatienceSweep();
+      const ranked = [...rows].sort((a, b) => a.medianMs - b.medianMs);
+      expect(ranked.some((r) => r.launches > 0)).toBe(true);
+    },
+    BENCH_IT_MS * 15,
+  );
 });

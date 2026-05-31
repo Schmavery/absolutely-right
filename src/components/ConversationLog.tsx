@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { LogEntry } from '../types';
 import { UI } from '../game/data';
 import { STREAMING } from '../game/constants';
+import { Button } from './Button';
 
 const SPIN_FRAMES = UI.spinFrames;
 const SPIN_VERBS = UI.spinVerbs;
@@ -12,6 +13,10 @@ interface Props {
   showThinking: boolean;
   spinTick: number;
   isMobile: boolean;
+  /** MCP tool-call awaiting Allow/Deny — in-scroll card, not streamed in the log. */
+  mcpApprovalMessage: string | null;
+  onMcpAllow: () => void;
+  onMcpDeny: () => void;
 }
 
 const TYPE_CLASSES: Record<LogEntry['type'], string> = {
@@ -30,11 +35,14 @@ export function ConversationLog({
   showThinking,
   spinTick,
   isMobile,
+  mcpApprovalMessage,
+  onMcpAllow,
+  onMcpDeny,
 }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [displayLog.length, displayLog[displayLog.length - 1]?.id]);
+  }, [displayLog.length, displayLog[displayLog.length - 1]?.id, mcpApprovalMessage]);
 
   const spinnerChar = SPIN_FRAMES[spinTick % SPIN_FRAMES.length];
   const spinnerVerb =
@@ -69,6 +77,32 @@ export function ConversationLog({
         {showThinking && (
           <div className="px-[10px] py-[7px] text-[11px] text-dimmer border-l-2 border-l-log-info-border mb-[11px]">
             {spinnerChar} {spinnerVerb}...
+          </div>
+        )}
+        {mcpApprovalMessage && (
+          <div className="mb-[11px] border border-card-border bg-card-bg px-[10px] pt-2 pb-2">
+            <div className="text-dimmer text-[10px] tracking-[0.12em] uppercase mb-[7px]">
+              tool call
+            </div>
+            <div className="text-[12px] leading-[1.55] mb-3 pl-[10px] border-l-2 border-l-log-event-border text-log-event whitespace-pre-wrap">
+              {mcpApprovalMessage}
+            </div>
+            <div className="flex justify-end items-center gap-2">
+              <Button
+                className="mb-0 mr-0"
+                onClick={onMcpDeny}
+                title="deny MCP tool call"
+              >
+                deny
+              </Button>
+              <Button
+                className="mb-0 mr-0"
+                onClick={onMcpAllow}
+                title="allow MCP tool call"
+              >
+                allow
+              </Button>
+            </div>
           </div>
         )}
         <div ref={endRef} />

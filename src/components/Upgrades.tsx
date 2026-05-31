@@ -1,7 +1,7 @@
 import type { GameState } from '../types';
 import { UPGRADES } from '../game/data';
 import { fmt } from '../lib/format';
-import { getMove } from '../game/availability';
+import { getMove, rechargeProgress } from '../game/availability';
 import { Button } from './Button';
 
 interface Props {
@@ -32,7 +32,7 @@ export function Upgrades({ state, onBuyUpgrade }: Props) {
             off={!move.legal}
             onClick={() => onBuyUpgrade(u.id)}
             title={u.desc}
-            progress={move.affordProgress}
+            progress={rechargeProgress(move)}
           >
             buy
           </Button>

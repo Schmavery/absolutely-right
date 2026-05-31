@@ -5,9 +5,14 @@ import { MILESTONES, UI } from './game/data';
 import { deriveGame } from './game/derive';
 import { getPhase } from './game/phases';
 import { clearSave, defaultState, initState, saveState } from './game/state';
+import {
+  getStoredSaveRevision,
+  isSaveEditorTabOpen,
+  isSaveStorageKey,
+} from './game/saveSync';
 import { tickReducer } from './game/tick';
 import { appendLog } from './game/log';
-import { displayProgress, getMove } from './game/availability';
+import { getMove, rechargeProgress } from './game/availability';
 import {
   buyGenAction,
   buyUpgradeAction,
@@ -19,9 +24,10 @@ import {
   promptAction,
   runTestsAction,
   bugBountyAction,
-  yoloMergeAction,
   writeTestAction,
 } from './game/actions';
+import { mcpAllowAction, mcpDenyAction } from './game/mcpApproval';
+import { computeQueuedUserEntries } from './lib/queuedUserLog';
 import { isLogEntryFullyDisplayed, useStreamingLog } from './lib/useStreamingLog';
 import { useIsMobile } from './lib/useWindowWidth';
 import { Button } from './components/Button';
@@ -44,6 +50,7 @@ export function Game() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const persistedRevRef = useRef(getStoredSaveRevision());
 
   const { displayLog, showThinking, isAnimating, spinTick, reset: resetStream } =
     useStreamingLog(state.log, state.logId);
@@ -54,11 +61,28 @@ export function Game() {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-save.
+  // Auto-save (paused while /debug/save tab is open — see saveSync).
   useEffect(() => {
-    const id = setInterval(() => saveState(stateRef.current), SAVE_INTERVAL_MS);
+    const id = setInterval(() => {
+      if (isSaveEditorTabOpen()) return;
+      persistedRevRef.current = saveState(stateRef.current);
+    }, SAVE_INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
+
+  // Another tab wrote the save (e.g. save editor Apply) — reload without refresh.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (!isSaveStorageKey(e.key)) return;
+      const rev = getStoredSaveRevision();
+      if (rev <= persistedRevRef.current) return;
+      persistedRevRef.current = rev;
+      setState(initState());
+      resetStream();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [resetStream]);
 
   // Wrap each pure action in a setState. The argument signature ensures
   // accidentally calling an action with stale state is impossible.
@@ -75,10 +99,11 @@ export function Game() {
       kickAgent: dispatch(kickAgentAction),
       pasteError: dispatch(pasteErrorAction),
       clearContext: dispatch(clearContextAction),
-      yoloMerge: dispatch(yoloMergeAction),
       runTests: dispatch(runTestsAction),
       runBugBounty: dispatch(bugBountyAction),
       launch: dispatch(launchAction),
+      mcpAllow: dispatch(mcpAllowAction),
+      mcpDeny: dispatch(mcpDenyAction),
       newFreeAccount: dispatch(newFreeAccountAction),
       writeTest: dispatch(writeTestAction),
       buyGen: dispatch(buyGenAction),
@@ -89,6 +114,7 @@ export function Game() {
 
   const handleResetConfirm = useCallback(() => {
     clearSave();
+    persistedRevRef.current = 0;
     setState(defaultState());
     resetStream();
   }, [resetStream]);
@@ -99,25 +125,10 @@ export function Game() {
   const showLog = state.log.length >= 1;
   const { showGenSection, showUpgSection } = derived.ui;
 
-  // Queue panel: next user line only when a prior entry is still streaming
-  // (multi-turn `> user / AI / > user`). Idle log and user lead-in never
-  // use the queue — avoids a one-frame flash when state.log leads displayLog.
-  const queuedUserEntries = useMemo(() => {
-    if (!isAnimating) return [];
-    const srcById = new Map(state.log.map((e) => [e.id, e]));
-    const isComplete = (id: number) => {
-      const src = srcById.get(id);
-      const d = displayLog.find((e) => e.id === id);
-      return !!src && !!d && d.text === src.text;
-    };
-    const nextIdx = state.log.findIndex((e) => !isComplete(e.id));
-    if (nextIdx < 0) return [];
-    const next = state.log[nextIdx];
-    if (next.type !== 'user') return [];
-    // Only queue a user line when something before it is still streaming.
-    const blocked = state.log.slice(0, nextIdx).some((e) => !isComplete(e.id));
-    return blocked ? [next] : [];
-  }, [displayLog, state.log, isAnimating]);
+  const queuedUserEntries = useMemo(
+    () => computeQueuedUserEntries(state.log, displayLog, isAnimating),
+    [displayLog, state.log, isAnimating],
+  );
 
   const postStartupUi = useMemo(() => {
     if (!state.milestonesSeen.includes(FIRST_MILESTONE_LOC)) return false;
@@ -181,7 +192,7 @@ export function Game() {
                 variant="primary"
                 off={waiting}
                 onClick={waiting ? undefined : handlers.prompt}
-                progress={onCooldown ? displayProgress(promptMove) : undefined}
+                progress={onCooldown ? rechargeProgress(promptMove) : undefined}
                 progressEaseMs={TICK_MS}
                 progressClassName="bg-green/10"
               >
@@ -198,7 +209,6 @@ export function Game() {
             onRunTests={handlers.runTests}
             onClearContext={handlers.clearContext}
             onLaunch={handlers.launch}
-            onYoloMerge={handlers.yoloMerge}
             onRunBugBounty={handlers.runBugBounty}
           />
 
@@ -233,6 +243,9 @@ export function Game() {
             showThinking={showThinking}
             spinTick={spinTick}
             isMobile={isMobile}
+            mcpApprovalMessage={state.mcpApprovalPending}
+            onMcpAllow={handlers.mcpAllow}
+            onMcpDeny={handlers.mcpDeny}
           />
         )}
       </div>

@@ -16,20 +16,20 @@ const TARGET_CHAPTERS: { id: string; title: string; bugStrategy: string; status:
   {
     id: 'early-mid',
     title: 'Early mid — launch, CI, models',
-    bugStrategy: 'Tests, lint, CI (CI unlock late today)',
-    status: 'Launch early; CI needs retune',
+    bugStrategy: 'Tests, lint, CI',
+    status: 'CI post-launch; lint/TS gated on launch',
   },
   {
     id: 'mid',
     title: 'Mid — tools & approvals',
     bugStrategy: 'Approve/deny tool calls; then Always → YOLO upgrade',
-    status: 'Not shipped (MCP); YOLO still a button',
+    status: 'MCP beats + Allow/Deny; yolo_mode skips',
   },
   {
     id: 'min-late',
     title: 'Min–late — review crises',
     bugStrategy: 'Human review slows; AI review speeds + bugs',
-    status: 'Upgrades exist; unlocks early vs target',
+    status: 'Unlocks after pro_plan / mid band',
   },
   {
     id: 'late',
@@ -65,7 +65,6 @@ const ACTION_GATES: Record<string, string> = {
   prompt: 'always (chat busy may block)',
   kick_agent: `≥ ${THRESHOLDS.showKickAgentClicks} prompts`,
   paste_error: `lifetime bugs ≥ ${THRESHOLDS.showPasteErrorBugs} (grey at 0)`,
-  yolo_merge: `launched & ≥ ${fmtLoc(THRESHOLDS.showYoloMergeLoc)} LOC`,
   launch: `≥ ${fmtLoc(LAUNCH_LOC)} LOC, not launched`,
   bug_bounty: 'nines_tracking & bugs (not auto bounty)',
 };
@@ -92,7 +91,8 @@ export function PhasesDebug() {
     'run_tests',
     'clear_context',
     'launch',
-    'yolo_merge',
+    'mcp_allow',
+    'mcp_deny',
     'bug_bounty',
   ] as const;
 

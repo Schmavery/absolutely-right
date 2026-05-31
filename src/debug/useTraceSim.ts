@@ -63,6 +63,7 @@ function initialBotProgress(botIds: DebugBotId[]): Partial<Record<DebugBotId, st
 }
 
 const BOT_ORDER: DebugBotId[] = [
+  'progress_30s',
   'progress',
   'progress_rank',
   'loc',

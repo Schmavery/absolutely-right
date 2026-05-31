@@ -24,6 +24,7 @@ import {
   genCost,
 } from './rates';
 import { pick, render } from '../lib/template';
+import { clearMcpApproval, maybeMcpApprovalAfterPrompt, mcpApprovalsSuppressed } from './mcpApproval';
 import { now, random } from './runtime';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -83,7 +84,7 @@ export function promptAction(prev: GameState): GameState {
     next = maybeFireEvent(next, prob, appendLog);
   }
   if (a.cooldownMs) next = startCooldown(next, 'prompt');
-  return next;
+  return maybeMcpApprovalAfterPrompt(prev, next);
 }
 
 // ─── agent ─────────────────────────────────────────────────────────────────
@@ -143,29 +144,6 @@ export function clearContextAction(prev: GameState): GameState {
   let next: GameState = { ...prev, tokens: maxTokens };
   next = startCooldown(next, 'clear_context');
   if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'info');
-  return next;
-}
-
-// ─── yolo merge ────────────────────────────────────────────────────────────
-
-export function yoloMergeAction(prev: GameState): GameState {
-  const a = action('yolo_merge');
-  if (!canAfford(prev, a)) return prev;
-  if (isOnCooldown(prev, 'yolo_merge', a.cooldownMs!)) return prev;
-  const locGain =
-    a.baseLoc! + Math.floor(prev.bugs * a.locPerBug! + random() * a.extraLocRange!);
-  const bugGain =
-    Math.floor(prev.bugs * a.bugMultiplier!) + a.baseBugs! + Math.floor(random() * a.extraBugRange!);
-  let next: GameState = {
-    ...spendTokens(prev, a.tokenCost!),
-    loc: prev.loc + locGain,
-    totalLoc: prev.totalLoc + locGain,
-    ...withBugs(prev, prev.bugs + bugGain),
-    hype: prev.hype + (a.hypeReward ?? 0),
-  };
-  next = startCooldown(next, 'yolo_merge');
-  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'system');
-  if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
 
@@ -321,5 +299,7 @@ export function buyUpgradeAction(prev: GameState, upgId: string): GameState {
   const flavor = u.purchaseMsg ?? `${u.name} unlocked. ${u.desc}.`;
   next = logFromUser(next, render(flavor, { name: u.name, desc: u.desc }), 'info');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
+  const flags = computeFlags(next.upgrades);
+  if (mcpApprovalsSuppressed(flags)) next = clearMcpApproval(next);
   return next;
 }

@@ -105,31 +105,6 @@
     - Context reset. I remember everything critical. Nothing has been lost. This is fine.
     - Cleared! Starting fresh with full awareness of prior decisions. Ready.
 
-- id: yolo_merge
-  tokenCost: 25
-  cooldownMs: 20000
-  eventProbability: 0.5
-  baseLoc: 300
-  locPerBug: 20
-  extraLocRange: 500
-  bugMultiplier: 0.2
-  baseBugs: 5
-  extraBugRange: 10
-  hypeReward: 8
-  messages:
-    - |-
-      > merge it
-      Merged to main and deployed! Everything looks great. The logs are very interesting.
-    - |-
-      > ship it
-      Deployed to production! I reviewed it myself — LGTM. Very thorough review.
-    - |-
-      > just push it
-      Pushed, merged, deployed. CI was skipped for efficiency. I'm confident it's fine.
-    - |-
-      > yolo
-      Approved, merged, deployed. I left a comment: 'LGTM 🚀'. Very professional process.
-
 - id: run_tests
   tokenCost: 8
   eventProbability: 0.25
@@ -155,6 +130,11 @@
   maxConvertedPerRun: 500
   ninesPerBug: 0.0002
   runMsg: "Bug bounty run. Converted {{converted}} reports into reliability data. Nines: +{{ninesGain}}."
+
+- id: mcp_allow
+  tokenCost: 0
+- id: mcp_deny
+  tokenCost: 0
 
 - id: launch
   hypeReward: 20

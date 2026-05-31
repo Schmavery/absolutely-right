@@ -8,7 +8,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "bench:launch": "RUN_LAUNCH_BENCH=1 vitest run tests/launchBench.test.ts",
+    "bench:phase2": "RUN_PHASE2_BENCH=1 vitest run tests/launchBench.test.ts -t \"phase 2\""
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",

@@ -1,8 +1,8 @@
 /** Path-based dev debug routes (see `main.tsx`). Respects Vite `base` for GitHub Pages. */
 
-const DEBUG_VIEW_IDS = new Set(['phases', 'trace', 'planner', 'graph']);
+const DEBUG_VIEW_IDS = new Set(['phases', 'trace', 'planner', 'graph', 'save']);
 
-export type DebugViewId = 'phases' | 'trace' | 'planner' | 'graph';
+export type DebugViewId = 'phases' | 'trace' | 'planner' | 'graph' | 'save';
 
 function normalizeBase(): string {
   const base = import.meta.env.BASE_URL;

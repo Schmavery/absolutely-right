@@ -24,6 +24,11 @@ export const DEBUG_VIEWS = [
     label: 'Upgrade graph',
     hint: 'Static requires: dependency trees and edges from upgrades.yaml.',
   },
+  {
+    id: 'save',
+    label: 'Save editor',
+    hint: 'Read/write localStorage save — presets and scalars to fast-forward chapters.',
+  },
 ] as const;
 
 export type { DebugViewId };

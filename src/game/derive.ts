@@ -6,6 +6,7 @@
 
 import type { GameState } from '../types';
 import { LAUNCH_LOC } from './constants';
+import { mcpApprovalPending } from './mcpApproval';
 import {
   computeFlags,
   effectiveThresholds,
@@ -25,7 +26,7 @@ export interface DerivedUi {
   showUptime: boolean;
   showHype: boolean;
   showLaunchBtn: boolean;
-  showYoloMerge: boolean;
+  showMcpApproval: boolean;
   showPasteError: boolean;
   showKickAgent: boolean;
   showClearContext: boolean;
@@ -60,7 +61,7 @@ export function deriveGame(state: GameState): DerivedGame {
       (state.minTokensSeen ?? 9999) < thresholds.showClearContextMinTokens ||
       state.totalLoc >= thresholds.showClearContextLoc,
     showLaunchBtn: state.totalLoc >= LAUNCH_LOC && !state.launched,
-    showYoloMerge: state.launched && state.totalLoc >= thresholds.showYoloMergeLoc,
+    showMcpApproval: mcpApprovalPending(state),
     showBugBounty:
       flag('nines_tracking') &&
       state.bugs > thresholds.showBugBountyBugs &&

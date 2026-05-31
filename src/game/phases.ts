@@ -2,7 +2,7 @@
  * Flavor phase index — which subtitle from `ui.yaml` `phases:` to show.
  * Tied to mechanical chapters (see `data/PHASES.md`), not totalLoc.
  *
- * When adding MCP / YOLO upgrades, extend the mid-chapter checks here.
+ * Mid chapter: paid scale, parallel agents, or MCP tools.
  */
 
 import type { GameState } from '../types';
@@ -17,7 +17,7 @@ export const PHASE_RULES: readonly { index: number; rule: string }[] = [
   { index: 1, rule: 'launched' },
   {
     index: 2,
-    rule: 'launched + (pro_plan / money OR multi_agent); MCP upgrade TBD',
+    rule: 'launched + (pro_plan / money OR multi_agent OR mcp_tools)',
   },
   { index: 3, rule: 'code_review or ai_review owned' },
   { index: 4, rule: 'revamp_status_page (nines_tracking flag)' },
@@ -41,8 +41,13 @@ export function getPhase(state: Pick<GameState, 'upgrades' | 'launched'>): numbe
   // 4. Min–late — human then AI review theater
   if (hasFlag(flags, 'ai_review') || hasUpgrade(u, 'code_review')) return clamp(3);
 
-  // 3. Mid — paid scale + parallel agents (MCP approvals: add upgrade id here)
-  if (state.launched && (hasFlag(flags, 'money') || hasUpgrade(u, 'multi_agent'))) {
+  // 3. Mid — paid scale, agents, MCP tools
+  if (
+    state.launched &&
+    (hasFlag(flags, 'money') ||
+      hasUpgrade(u, 'multi_agent') ||
+      hasUpgrade(u, 'mcp_tools'))
+  ) {
     return clamp(2);
   }
 

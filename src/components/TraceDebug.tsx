@@ -5,11 +5,11 @@ import { fmtTime, virtualHoursToMs } from '../debug/traceAnalyze';
 import { MS_PER_VIRTUAL_HOUR } from '../debug/traceTypes';
 import { useTraceSim } from '../debug/useTraceSim';
 import type { TraceRunConfig } from '../debug/traceTypes';
-import { DEBUG_BOTS, type DebugBotId } from '../sim/bots';
+import { DEBUG_BOTS, DEFAULT_TRACE_BOTS, type DebugBotId } from '../sim/bots';
 import { DebugSection, DebugShell } from './DebugShell';
 
 const DEFAULT_SEED = 42;
-const DEFAULT_BOTS: DebugBotId[] = ['progress', 'loc', 'hygiene'];
+const DEFAULT_BOTS = DEFAULT_TRACE_BOTS;
 const DEFAULT_HOURS = 10;
 const DEFAULT_FIRST_CHUNK_MIN = 10;
 const DEFAULT_CHUNK_HOURS = 1;
@@ -155,7 +155,7 @@ export function TraceDebug() {
                 className="debug-input rounded px-2 py-1.5 bg-[var(--debug-surface-2)] border border-[var(--debug-border)]"
                 value={botsText}
                 onChange={(e) => setBotsText(e.target.value)}
-                placeholder="progress,loc,hygiene or progress,progress_rank,…"
+                placeholder="progress_30s,loc_rank,greedy_rank or progress,hygiene_rank,…"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -236,7 +236,7 @@ export function TraceDebug() {
             One column per bot (same seed). Rows align by event time; purple spacers mark long idle
             gaps. Repeated actions collapse to ×N; consecutive basic and test actions merge into
             one row labeled e.g. basic 40 · tests 5 with per-action detail underneath. Each column is an
-            adaptive policy (progress / LOC / hygiene weight profiles) with shared wait tuning.
+            progress@30s (adaptive), LOC rank, and greedy rank by default — edit bots to compare others.
           </p>
           <TraceBotColumns
             botIds={applied.botIds}

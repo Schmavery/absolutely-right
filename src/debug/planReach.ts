@@ -117,6 +117,13 @@ export interface PlanSearchOpts {
   acceptBestEffort?: boolean;
   /** Min goal progress 0–1 to accept a best-effort witness (default 0.06). */
   minBestEffortProgress?: number;
+  /**
+   * Post-launch goals: search to launch first, then continue from that witness.
+   * `auto` = on when the goal needs `launched` from a fresh save. Default `auto`.
+   */
+  stagedLaunch?: boolean | 'auto';
+  /** Fraction of `maxStates` for the launch phase (default 0.45). */
+  launchPhaseStateFraction?: number;
 }
 
 export interface PlanSearchOutcome {
@@ -131,6 +138,27 @@ export interface PlanSearchOutcome {
   truncated: boolean;
   exhausted: boolean;
   failureReason: PlanFailureReason | null;
+  /** Search ran launch phase then goal phase from the launch witness. */
+  stagedLaunch?: boolean;
+  launchPhaseStatesVisited?: number;
+}
+
+interface SearchRestart {
+  state: GameState;
+  t: number;
+  busyUntil: number;
+  steps: PlanStep[];
+}
+
+interface PhaseSearchResult {
+  result: PlanResult | null;
+  closest: PlanClosestSnapshot | null;
+  statesVisited: number;
+  searchTruncated: boolean;
+  exhausted: boolean;
+  failureReason: PlanFailureReason | null;
+  /** Best node to continue a staged search (prefer launched). */
+  restart: SearchRestart | null;
 }
 
 function goalMet(state: GameState, goal: PlanGoal): boolean {
@@ -504,6 +532,50 @@ function searchCandidates(
   return moves;
 }
 
+const LAUNCH_PLAN_GOAL: PlanGoal = { kind: 'launched' };
+
+/** True when a fresh run must reach launch before the stated goal is meaningful. */
+export function goalRequiresLaunchFirst(goal: PlanGoal, state: GameState): boolean {
+  if (state.launched) return false;
+  if (goal.kind === 'launched') return false;
+  if (goal.kind === 'phase' && goal.index >= 2) return true;
+  if (goal.kind === 'upgrade') {
+    const def = UPGRADES.find((u) => u.id === goal.id);
+    if (!def) return false;
+    if (def.requiresLaunch) return true;
+    for (const id of upgradePrereqAncestors(goal.id)) {
+      if (UPGRADES.find((u) => u.id === id)?.requiresLaunch) return true;
+    }
+  }
+  return false;
+}
+
+function nodeToRestart(node: Node): SearchRestart {
+  return {
+    state: node.state,
+    t: node.t,
+    busyUntil: Math.min(node.busyUntil, node.t),
+    steps: node.steps,
+  };
+}
+
+function pickLaunchRestart(phase: PhaseSearchResult): SearchRestart | null {
+  if (phase.restart?.state.launched) return phase.restart;
+  return null;
+}
+
+function shouldStageLaunch(goal: PlanGoal, opts: PlanSearchOpts): boolean {
+  const mode = opts.stagedLaunch ?? 'auto';
+  if (mode === false) return false;
+  if (mode === true) return goalRequiresLaunchFirst(goal, defaultState());
+  return goalRequiresLaunchFirst(goal, defaultState());
+}
+
+function launchPhaseBudget(maxStates: number, fraction: number): number {
+  const launch = Math.floor(maxStates * fraction);
+  return Math.min(Math.max(2000, launch), maxStates - 1000);
+}
+
 /** Priority-queue node: `prio` is sort key (f = t + h for A*, else t). */
 interface Node {
   t: number;
@@ -560,21 +632,32 @@ class MinHeap {
   }
 }
 
-/**
- * Best-effort goal planner: weighted A* on virtual time, pruned move set, optional
- * closest-frontier witness when the state budget runs out. Not guaranteed optimal.
- */
-export function planShortestPath(
+function resolveLaunchRestart(
+  result: PlanResult | null,
+  goalNode: Node | null,
+  closest: { node: Node; progress: PlanGoalProgress } | null,
+  closestPlayed: { node: Node; progress: PlanGoalProgress } | null,
+): SearchRestart | null {
+  if (goalNode?.state.launched) return nodeToRestart(goalNode);
+  if (closestPlayed?.node.state.launched) return nodeToRestart(closestPlayed.node);
+  if (closest?.node.state.launched) return nodeToRestart(closest.node);
+  if (result && closestPlayed) return nodeToRestart(closestPlayed.node);
+  return null;
+}
+
+function runPlanSearchOnce(
   goal: PlanGoal,
-  opts: PlanSearchOpts = {},
-): PlanSearchOutcome {
-  const maxStates = opts.maxStates ?? 8000;
+  opts: PlanSearchOpts,
+  restart: SearchRestart,
+  stateBudget: number,
+  progressOffset: number,
+): PhaseSearchResult {
   const maxTimeMs = opts.maxTimeMs ?? 10 * 3_600_000;
-  const seed = opts.seed ?? 42;
   const promptCostMult = Math.max(1, opts.promptCostMult ?? 1);
   const promptPenaltyMs = Math.max(0, opts.promptPenaltyMs ?? 0);
   const progressEvery = Math.max(50, opts.progressEveryStates ?? 500);
   const onProgress = opts.onProgress;
+  const maxStatesTotal = opts.maxStates ?? 8000;
   const filterMoves = opts.filterMoves ?? true;
   const pruneShop = opts.pruneShop ?? true;
   const useAStar = opts.useAStar ?? true;
@@ -588,35 +671,50 @@ export function planShortestPath(
     return t + planHeuristic(state, goal) * hWeight;
   };
 
-  setClock(() => 0);
-  setRandom(mulberry32(seed));
+  const start = restart.state;
+  const startT = restart.t;
+  const startBusy = restart.busyUntil;
 
-  const start = defaultState();
   if (goalMet(start, goal)) {
-    resetClock();
-    resetRandom();
     return {
-      result: { goal, totalMs: 0, steps: [], statesVisited: 1, truncated: false },
+      result: {
+        goal,
+        totalMs: startT,
+        steps: restart.steps,
+        statesVisited: 0,
+        truncated: false,
+      },
       closest: null,
-      statesVisited: 1,
-      maxStates,
-      maxTimeMs,
-      truncated: false,
+      statesVisited: 0,
+      searchTruncated: false,
       exhausted: false,
       failureReason: null,
-      promptCostMult,
-      promptPenaltyMs,
+      restart: nodeToRestart({
+        t: startT,
+        prio: startT,
+        state: start,
+        busyUntil: startBusy,
+        steps: restart.steps,
+      }),
     };
   }
 
   const best = new Map<string, number>();
   const heap = new MinHeap();
-  heap.push({ t: 0, prio: nodePrio(0, start), state: start, busyUntil: 0, steps: [] });
-  best.set(stateKey(start, 0, 0), 0);
+  heap.push({
+    t: startT,
+    prio: nodePrio(startT, start),
+    state: start,
+    busyUntil: startBusy,
+    steps: restart.steps,
+  });
+  best.set(stateKey(start, startT, startBusy), startT);
 
   let statesVisited = 0;
   let result: PlanResult | null = null;
+  let goalNode: Node | null = null;
   let closest: { node: Node; progress: PlanGoalProgress } | null = null;
+  let closestPlayed: { node: Node; progress: PlanGoalProgress } | null = null;
 
   const push = (n: Omit<Node, 'prio'>) => {
     const norm = {
@@ -630,7 +728,7 @@ export function planShortestPath(
     heap.push({ ...norm, prio: nodePrio(norm.t, norm.state) });
   };
 
-  while (heap.length > 0 && statesVisited < maxStates) {
+  while (heap.length > 0 && statesVisited < stateBudget) {
     const cur = heap.pop()!;
     const k = stateKey(cur.state, cur.t, cur.busyUntil);
     if (cur.t > (best.get(k) ?? Infinity)) continue;
@@ -639,17 +737,29 @@ export function planShortestPath(
     const curProgress = measureGoalProgress(cur.state, goal);
     if (beatsClosest(cur, curProgress, closest)) {
       closest = { node: cur, progress: curProgress };
-      if (onProgress) emitProgress(statesVisited, maxStates, closest, onProgress);
-    } else if (onProgress && statesVisited % progressEvery === 0) {
-      emitProgress(statesVisited, maxStates, closest, onProgress);
+      if (onProgress) {
+        emitProgress(
+          progressOffset + statesVisited,
+          maxStatesTotal,
+          closest,
+          onProgress,
+        );
+      }
+    }
+    if (cur.steps.length > 0 && beatsClosest(cur, curProgress, closestPlayed)) {
+      closestPlayed = { node: cur, progress: curProgress };
+    }
+    if (onProgress && statesVisited % progressEvery === 0) {
+      emitProgress(progressOffset + statesVisited, maxStatesTotal, closest, onProgress);
     }
 
     if (goalMet(cur.state, goal)) {
+      goalNode = cur;
       result = {
         goal,
         totalMs: cur.t,
         steps: cur.steps,
-        statesVisited,
+        statesVisited: progressOffset + statesVisited,
         truncated: false,
       };
       break;
@@ -658,13 +768,7 @@ export function planShortestPath(
     if (cur.t >= maxTimeMs) continue;
 
     setClock(() => cur.t);
-    const candidates = searchCandidates(
-      cur.state,
-      cur.t,
-      goal,
-      filterMoves,
-      pruneShop,
-    );
+    const candidates = searchCandidates(cur.state, cur.t, goal, filterMoves, pruneShop);
 
     for (const m of candidates) {
       if (m.waitMs === null && !m.legal) continue;
@@ -692,21 +796,19 @@ export function planShortestPath(
     }
   }
 
-  let searchTruncated = !result && statesVisited >= maxStates;
+  const searchTruncated = !result && statesVisited >= stateBudget;
   const exhausted = !result && heap.length === 0;
   let failureReason: PlanFailureReason | null = null;
 
-  if (!result && acceptBestEffort && closest) {
-    const snap = nodeToClosest(closest.node, closest.progress);
-    if (
-      snap.steps.length > 0 &&
-      snap.progress.progress >= minBestEffortProgress
-    ) {
+  const witness = closestPlayed ?? closest;
+  if (!result && acceptBestEffort && witness) {
+    const snap = nodeToClosest(witness.node, witness.progress);
+    if (snap.steps.length > 0 && snap.progress.progress >= minBestEffortProgress) {
       result = {
         goal,
         totalMs: snap.totalMs,
         steps: snap.steps,
-        statesVisited,
+        statesVisited: progressOffset + statesVisited,
         truncated: true,
         bestEffort: true,
         progress: snap.progress.progress,
@@ -719,30 +821,167 @@ export function planShortestPath(
     if (searchTruncated) failureReason = 'state_budget';
     else if (exhausted) failureReason = 'exhausted';
     else failureReason = 'time_budget';
-  } else {
-    failureReason = null;
   }
 
-  const truncated = searchTruncated || Boolean(result?.bestEffort);
+  const phaseRestart = resolveLaunchRestart(result, goalNode, closest, closestPlayed);
 
-  resetClock();
-  resetRandom();
   return {
     result,
-    closest:
-      result && !result.bestEffort
-        ? null
-        : closest
-          ? nodeToClosest(closest.node, closest.progress)
-          : null,
+    closest: result
+      ? null
+      : closest
+        ? nodeToClosest(closest.node, closest.progress)
+        : null,
     statesVisited,
+    searchTruncated,
+    exhausted,
+    failureReason,
+    restart: phaseRestart,
+  };
+}
+
+function phaseToOutcome(
+  phase: PhaseSearchResult,
+  opts: PlanSearchOpts,
+): Pick<
+  PlanSearchOutcome,
+  | 'result'
+  | 'closest'
+  | 'statesVisited'
+  | 'truncated'
+  | 'exhausted'
+  | 'failureReason'
+> {
+  const truncated = phase.searchTruncated || Boolean(phase.result?.bestEffort);
+  return {
+    result: phase.result,
+    closest: phase.closest,
+    statesVisited: phase.result?.statesVisited ?? phase.statesVisited,
+    truncated,
+    exhausted: phase.exhausted,
+    failureReason: phase.failureReason,
+  };
+}
+
+/**
+ * Best-effort goal planner: weighted A* on virtual time, pruned move set, optional
+ * closest-frontier witness when the state budget runs out. Post-launch goals use a
+ * staged launch phase by default to trim pre-launch state explosion.
+ */
+export function planShortestPath(
+  goal: PlanGoal,
+  opts: PlanSearchOpts = {},
+): PlanSearchOutcome {
+  const maxStates = opts.maxStates ?? 8000;
+  const maxTimeMs = opts.maxTimeMs ?? 10 * 3_600_000;
+  const seed = opts.seed ?? 42;
+  const promptCostMult = Math.max(1, opts.promptCostMult ?? 1);
+  const promptPenaltyMs = Math.max(0, opts.promptPenaltyMs ?? 0);
+  const launchFrac = opts.launchPhaseStateFraction ?? 0.45;
+
+  setClock(() => 0);
+  setRandom(mulberry32(seed));
+
+  const fresh = defaultState();
+  const initial: SearchRestart = {
+    state: fresh,
+    t: 0,
+    busyUntil: 0,
+    steps: [],
+  };
+
+  if (goalMet(fresh, goal)) {
+    resetClock();
+    resetRandom();
+    return {
+      result: { goal, totalMs: 0, steps: [], statesVisited: 1, truncated: false },
+      closest: null,
+      statesVisited: 1,
+      maxStates,
+      maxTimeMs,
+      truncated: false,
+      exhausted: false,
+      failureReason: null,
+      promptCostMult,
+      promptPenaltyMs,
+    };
+  }
+
+  if (!shouldStageLaunch(goal, opts)) {
+    const phase = runPlanSearchOnce(goal, opts, initial, maxStates, 0);
+    resetClock();
+    resetRandom();
+    return {
+      ...phaseToOutcome(phase, opts),
+      maxStates,
+      maxTimeMs,
+      promptCostMult,
+      promptPenaltyMs,
+    };
+  }
+
+  const launchBudget = launchPhaseBudget(maxStates, launchFrac);
+  const mainBudget = maxStates - launchBudget;
+
+  const launchPhase = runPlanSearchOnce(LAUNCH_PLAN_GOAL, opts, initial, launchBudget, 0);
+  const launchRestart = pickLaunchRestart(launchPhase);
+
+  if (!launchRestart) {
+    resetClock();
+    resetRandom();
+    return {
+      ...phaseToOutcome(launchPhase, opts),
+      statesVisited: launchPhase.statesVisited,
+      maxStates,
+      maxTimeMs,
+      promptCostMult,
+      promptPenaltyMs,
+      stagedLaunch: true,
+      launchPhaseStatesVisited: launchPhase.statesVisited,
+    };
+  }
+
+  const mainPhase = runPlanSearchOnce(goal, opts, launchRestart, mainBudget, launchPhase.statesVisited);
+  resetClock();
+  resetRandom();
+
+  let mergedResult: PlanResult | null = null;
+  if (mainPhase.result) {
+    mergedResult = {
+      ...mainPhase.result,
+      statesVisited: launchPhase.statesVisited + mainPhase.statesVisited,
+    };
+  } else if (launchPhase.result && !mainPhase.result) {
+    mergedResult = {
+      ...launchPhase.result,
+      goal,
+      bestEffort: true,
+      progress: mainPhase.closest?.progress.progress ?? measureGoalProgress(launchRestart.state, goal).progress,
+      progressLabel:
+        mainPhase.closest?.progress.label ?? measureGoalProgress(launchRestart.state, goal).label,
+      statesVisited: launchPhase.statesVisited + mainPhase.statesVisited,
+    };
+  }
+
+  const totalVisited = launchPhase.statesVisited + mainPhase.statesVisited;
+  const truncated =
+    launchPhase.searchTruncated ||
+    mainPhase.searchTruncated ||
+    Boolean(mergedResult?.bestEffort);
+
+  return {
+    result: mergedResult,
+    closest: mergedResult ? null : mainPhase.closest ?? launchPhase.closest,
+    statesVisited: totalVisited,
     maxStates,
     maxTimeMs,
     truncated,
-    exhausted,
-    failureReason,
+    exhausted: mainPhase.exhausted && !mergedResult,
+    failureReason: mergedResult ? null : mainPhase.failureReason ?? launchPhase.failureReason,
     promptCostMult,
     promptPenaltyMs,
+    stagedLaunch: true,
+    launchPhaseStatesVisited: launchPhase.statesVisited,
   };
 }
 

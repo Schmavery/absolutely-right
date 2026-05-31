@@ -111,49 +111,59 @@
   border-radius: 0 4px 4px 0;
 }
 
-.debug-tools .debug-legend {
+.debug-tools .debug-phase-jumps {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
-  font-size: 11px;
-  color: var(--debug-muted);
-  margin-bottom: 10px;
+  gap: 6px 8px;
+  padding-bottom: 10px;
 }
 
-.debug-tools .debug-legend span {
+.debug-tools .debug-phase-jump {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.debug-tools .debug-legend i {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  border: 2px solid currentColor;
-}
-
-.debug-tools .debug-legend .leg-upgrade {
-  color: var(--green);
-}
-.debug-tools .debug-legend .leg-phase {
+  align-items: baseline;
+  gap: 4px;
+  max-width: 11rem;
+  padding: 3px 8px;
+  font-size: 10px;
+  line-height: 1.2;
   color: var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 10%, var(--debug-surface));
+  border: 1px solid color-mix(in srgb, var(--yellow) 35%, var(--debug-border));
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
 }
-.debug-tools .debug-legend .leg-launch {
-  color: var(--purple);
+
+.debug-tools .debug-phase-jump:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--yellow) 18%, var(--debug-surface));
+  border-color: var(--yellow);
 }
-.debug-tools .debug-legend .leg-move {
-  color: var(--blue);
-}
-.debug-tools .debug-legend .leg-basic {
+
+.debug-tools .debug-phase-jump:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
   color: var(--debug-muted);
+  border-color: var(--debug-border);
+  background: var(--debug-surface);
 }
-.debug-tools .debug-legend .leg-tests {
-  color: var(--log-news);
+
+.debug-tools .debug-phase-jump-index {
+  flex-shrink: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.debug-tools .debug-legend .leg-gen {
-  color: var(--log-news);
+
+.debug-tools .debug-phase-jump-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.debug-tools .timeline-grid [data-timeline-row] {
+  scroll-margin-top: 1.75rem;
 }
 
 /* Lift game “dim” tokens inside debug so labels stay readable on dark themes */
@@ -231,6 +241,29 @@
     color-mix(in srgb, var(--yellow) 8%, var(--debug-surface))
   );
   border-left: 4px solid var(--yellow);
+}
+
+.debug-tools .trace-phase-band--sticky {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.debug-tools .timeline-phase-overlay .sticky {
+  background: var(--debug-surface);
+}
+
+/* Shared row tracks + tall phase segments for sticky headers. */
+.debug-tools .timeline-grid {
+  align-items: stretch;
+}
+
+.debug-tools .timeline-phase-overlay {
+  align-self: stretch;
+  z-index: 2;
+}
+
+.debug-tools .timeline-grid > :not(.timeline-phase-overlay) {
+  z-index: 0;
 }
 
 .debug-tools .trace-seed-column {

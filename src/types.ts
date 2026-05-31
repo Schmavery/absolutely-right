@@ -98,7 +98,6 @@ export interface UpgDef {
       | 'showRunTestsBugs'
       | 'showClearContextLoc'
       | 'showClearContextMinTokens'
-      | 'showYoloMergeLoc'
       | 'showBugBountyBugs'
       | 'showStatsLoc'
       | 'showNewFreeAccountTokens',
@@ -167,14 +166,6 @@ export interface ActionDef {
   badMessages?: string[];
   neutralMessages?: string[];
 
-  // yolo_merge
-  baseLoc?: number;
-  locPerBug?: number;
-  bugMultiplier?: number;
-  baseBugs?: number;
-  extraBugRange?: number;
-  hypeReward?: number;
-
   // run_tests
   /** Per-test independent fix probability. Total = `1 - (1 - p)^tests`. */
   perTestFixFraction?: number;
@@ -241,4 +232,6 @@ export interface GameState {
   agentBuffExpires: number;
   unlockedUpgrades: string[];
   nines: number;
+  /** MCP tool-call line awaiting Allow/Deny; null when idle. */
+  mcpApprovalPending: string | null;
 }
