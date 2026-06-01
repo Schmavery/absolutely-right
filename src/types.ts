@@ -197,6 +197,9 @@ export interface ActionDef {
 
   // buy_gen
   firstPurchaseMsg?: string;
+
+  // launch
+  hypeReward?: number;
 }
 
 export interface LogEntry {

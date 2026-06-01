@@ -132,13 +132,18 @@ export const UPTIME = {
  * Bug spawn scales faster than LOC as throughput rises (fixes stay ~linear in
  * tests/gens). Tuned so CI-heavy midgame can still hit review-crisis uptime.
  */
-export const BUG_GENERATION = {
+/** Tuned in one place; `number` so `rates.ts` can branch when exponent is 1. */
+export const BUG_GENERATION: {
+  readonly genCountExponent: number;
+  readonly throughputScale: number;
+  readonly throughputExponent: number;
+} = {
   /** Per-generator: bugs/s uses count^exp instead of count (1 = linear). */
   genCountExponent: 1.14,
   /** After summing generators: bugRate *= (1 + locRate/scale)^exp. */
   throughputScale: 320,
   throughputExponent: 0.3,
-} as const;
+};
 
 export const AGENT_BUFF = {
   /** Bug-rate multiplier while the agent buff is active. */
