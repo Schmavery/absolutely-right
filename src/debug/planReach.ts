@@ -11,7 +11,6 @@ import { calcClickBonus, calcClickPower, calcRates } from '../game/rates';
 import { filterMovesForPlanner } from '../game/moveIntent';
 import { render } from '../lib/template';
 import { mulberry32 } from '../sim/Sim';
-import { extendChatBusyUntil, streamMsForNewEntries } from './planBusy';
 import { fmtLoc, fmtTime } from './traceAnalyze';
 
 export type PlanGoal =
@@ -22,8 +21,6 @@ export type PlanGoal =
 export interface PlanStep {
   t: number;
   waitMs: number;
-  /** Ms waited for chat stream to finish before this move (prompt only). */
-  busyWaitMs?: number;
   /** Extra ms from planner `promptCostMult` / `promptPenaltyMs` (not sim physics). */
   promptFrictionMs?: number;
   moveId: string;
@@ -96,7 +93,7 @@ export interface PlanSearchOpts {
   maxTimeMs?: number;
   seed?: number;
   /**
-   * Multiplier on prompt step duration (busy + idle + stream + action).
+   * Multiplier on prompt step duration (idle + cooldown + action).
    * 1 = model timing only; 2+ = discourage prompt spam vs kicks/gens/tests.
    */
   promptCostMult?: number;
@@ -146,7 +143,6 @@ export interface PlanSearchOutcome {
 interface SearchRestart {
   state: GameState;
   t: number;
-  busyUntil: number;
   steps: PlanStep[];
 }
 
@@ -280,8 +276,8 @@ function beatsClosest(
   return cur.t < best.node.t;
 }
 
-/** Economic + chat state — must not collapse distinct afford / busy futures. */
-function stateKey(state: GameState, t: number, busyUntil: number): string {
+/** Economic state — must not collapse distinct afford / cooldown futures. */
+function stateKey(state: GameState, t: number): string {
   const gens = Object.entries(state.genCounts)
     .filter(([, n]) => n > 0)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -290,11 +286,10 @@ function stateKey(state: GameState, t: number, busyUntil: number): string {
   const loc = Math.floor(state.loc);
   const tok = Math.floor(state.tokens);
   const totalLoc = Math.floor(state.totalLoc);
-  const chatBlock = Math.max(0, busyUntil - t);
   const buffLeft = Math.max(0, (state.agentBuffExpires ?? 0) - t);
   const unlocked = [...state.unlockedUpgrades].sort().join(',');
   const events = [...state.usedEventIds].sort().join(',');
-  return `${state.launched ? 1 : 0}|${[...state.upgrades].sort().join(',')}|u:${unlocked}|${gens}|loc:${loc}|tl:${totalLoc}|tok:${tok}|bugs:${Math.floor(state.bugs)}|tests:${state.tests}|clk:${state.totalClicks}|chat:${chatBlock}|buff:${buffLeft}|ev:${events}`;
+  return `${state.launched ? 1 : 0}|${[...state.upgrades].sort().join(',')}|u:${unlocked}|${gens}|loc:${loc}|tl:${totalLoc}|tok:${tok}|bugs:${Math.floor(state.bugs)}|tests:${state.tests}|clk:${state.totalClicks}|buff:${buffLeft}|ev:${events}`;
 }
 
 function fastForward(state: GameState, t: number, dtMs: number): GameState {
@@ -370,15 +365,12 @@ interface StepCostOpts {
 function stepMove(
   state: GameState,
   t: number,
-  busyUntil: number,
   move: Move,
   cost: StepCostOpts,
 ): {
   state: GameState;
   t: number;
-  busyUntil: number;
   waitMs: number;
-  busyWaitMs: number;
   promptFrictionMs: number;
 } | null {
   const startT = t;
@@ -388,16 +380,7 @@ function stepMove(
 
   let s = state;
   let curT = t;
-  let busyWaitMs = 0;
   let waitMs = 0;
-
-  if (move.kind === 'action') {
-    busyWaitMs = Math.max(0, busyUntil - curT);
-    if (busyWaitMs > 0) {
-      s = fastForward(s, curT, busyWaitMs);
-      curT += busyWaitMs;
-    }
-  }
 
   setClock(() => curT);
   const gate = moveTable(s, curT).byId[move.id];
@@ -420,14 +403,14 @@ function stepMove(
   s = applyPlanAction(s, move);
   if (s === before) return null;
 
-  const streamMs = streamMsForNewEntries(before, s);
-  let nextBusy = extendChatBusyUntil(busyUntil, curT, streamMs);
-  const actionDt = streamMs + ACTION_DURATION_MS;
+  const actionDt =
+    move.id === 'prompt'
+      ? action('prompt').cooldownMs ?? ACTION_DURATION_MS
+      : ACTION_DURATION_MS;
   if (actionDt > 0) {
     s = fastForward(s, curT, actionDt);
     curT += actionDt;
   }
-  if (streamMs > 0) nextBusy = Math.max(nextBusy, curT - ACTION_DURATION_MS);
 
   let promptFrictionMs = 0;
   if (move.id === 'prompt') {
@@ -437,7 +420,7 @@ function stepMove(
     curT = scaledT;
   }
 
-  return { state: s, t: curT, busyUntil: nextBusy, waitMs, busyWaitMs, promptFrictionMs };
+  return { state: s, t: curT, waitMs, promptFrictionMs };
 }
 
 /** All `requires` ancestors for an upgrade (not including the target). */
@@ -554,7 +537,6 @@ function nodeToRestart(node: Node): SearchRestart {
   return {
     state: node.state,
     t: node.t,
-    busyUntil: Math.min(node.busyUntil, node.t),
     steps: node.steps,
   };
 }
@@ -581,7 +563,6 @@ interface Node {
   t: number;
   prio: number;
   state: GameState;
-  busyUntil: number;
   steps: PlanStep[];
 }
 
@@ -673,8 +654,6 @@ function runPlanSearchOnce(
 
   const start = restart.state;
   const startT = restart.t;
-  const startBusy = restart.busyUntil;
-
   if (goalMet(start, goal)) {
     return {
       result: {
@@ -693,7 +672,6 @@ function runPlanSearchOnce(
         t: startT,
         prio: startT,
         state: start,
-        busyUntil: startBusy,
         steps: restart.steps,
       }),
     };
@@ -705,10 +683,9 @@ function runPlanSearchOnce(
     t: startT,
     prio: nodePrio(startT, start),
     state: start,
-    busyUntil: startBusy,
     steps: restart.steps,
   });
-  best.set(stateKey(start, startT, startBusy), startT);
+  best.set(stateKey(start, startT), startT);
 
   let statesVisited = 0;
   let result: PlanResult | null = null;
@@ -717,11 +694,8 @@ function runPlanSearchOnce(
   let closestPlayed: { node: Node; progress: PlanGoalProgress } | null = null;
 
   const push = (n: Omit<Node, 'prio'>) => {
-    const norm = {
-      ...n,
-      busyUntil: Math.min(n.busyUntil, n.t),
-    };
-    const k = stateKey(norm.state, norm.t, norm.busyUntil);
+    const norm = { ...n };
+    const k = stateKey(norm.state, norm.t);
     const prev = best.get(k);
     if (prev != null && norm.t >= prev) return;
     best.set(k, norm.t);
@@ -730,7 +704,7 @@ function runPlanSearchOnce(
 
   while (heap.length > 0 && statesVisited < stateBudget) {
     const cur = heap.pop()!;
-    const k = stateKey(cur.state, cur.t, cur.busyUntil);
+    const k = stateKey(cur.state, cur.t);
     if (cur.t > (best.get(k) ?? Infinity)) continue;
     statesVisited += 1;
 
@@ -772,19 +746,17 @@ function runPlanSearchOnce(
 
     for (const m of candidates) {
       if (m.waitMs === null && !m.legal) continue;
-      const next = stepMove(cur.state, cur.t, cur.busyUntil, m, stepCost);
+      const next = stepMove(cur.state, cur.t, m, stepCost);
       if (!next) continue;
       if (next.t > maxTimeMs) continue;
       push({
         t: next.t,
         state: next.state,
-        busyUntil: next.busyUntil,
         steps: [
           ...cur.steps,
           {
             t: next.t,
             waitMs: next.waitMs,
-            busyWaitMs: next.busyWaitMs > 0 ? next.busyWaitMs : undefined,
             promptFrictionMs:
               next.promptFrictionMs > 0 ? next.promptFrictionMs : undefined,
             moveId: m.id,
@@ -886,7 +858,6 @@ export function planShortestPath(
   const initial: SearchRestart = {
     state: fresh,
     t: 0,
-    busyUntil: 0,
     steps: [],
   };
 
@@ -996,7 +967,6 @@ export const PLAN_GOALS: { id: string; goal: PlanGoal; label: string }[] = [
 
 export function formatPlanStep(step: PlanStep): string {
   const parts: string[] = [];
-  if (step.busyWaitMs && step.busyWaitMs > 0) parts.push(`${fmtTime(step.busyWaitMs)} chat`);
   if (step.waitMs > 0) parts.push(`${fmtTime(step.waitMs)} idle`);
   const wait = parts.length > 0 ? `after ${parts.join(' + ')} · ` : '';
   const friction =

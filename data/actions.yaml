@@ -8,7 +8,7 @@
 # `src/game/constants.ts`.
 
 - id: prompt
-  cooldownMs: 1000
+  cooldownMs: 2000
   # Random events after earlyPromptMsgs; decay see PROMPT_EVENT in constants.ts.
   eventProbability: 0.12
   earlyPromptMsgs:

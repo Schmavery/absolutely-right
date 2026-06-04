@@ -203,8 +203,8 @@ export function Game() {
           {(() => {
             const t = Date.now();
             const promptMove = getMove(state, 'prompt', t)!;
-            const waiting = isAnimating || !promptMove.legal;
-            const onCooldown = !promptMove.legal && !isAnimating;
+            const waiting = !promptMove.legal;
+            const onCooldown = !promptMove.legal;
             return (
               <Button
                 variant="primary"

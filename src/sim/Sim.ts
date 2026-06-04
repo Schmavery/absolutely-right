@@ -11,7 +11,7 @@
  */
 
 import type { GameState } from '../types';
-import { ACTION_DURATION_MS, TICK_MS } from '../game/constants';
+import { TICK_MS } from '../game/constants';
 import { defaultState } from '../game/state';
 import { tickReducer } from '../game/tick';
 import { legalMoves, visibleMoves, type Move } from '../game/availability';
@@ -70,7 +70,6 @@ export interface SimOptions {
   seed: number;
   state?: GameState;
   tickMs?: number;
-  actionDurationMs?: number;
   recordTrace?: TraceRecord;
   /** Cap per passive jump (default 30s; larger for long debug runs). */
   maxEventDtMs?: number;
@@ -86,16 +85,13 @@ export class Sim {
   state: GameState;
   t = 0;
   readonly tickMs: number;
-  readonly actionDurationMs: number;
   readonly trace: TraceEntry[] = [];
   private readonly traceMode: 'off' | 'full' | 'moves-only';
   private readonly maxEventDtMs: number;
   private readonly onAfterMove?: SimOptions['onAfterMove'];
-  private nextActionAt = 0;
 
   constructor(opts: SimOptions) {
     this.tickMs = opts.tickMs ?? TICK_MS;
-    this.actionDurationMs = opts.actionDurationMs ?? ACTION_DURATION_MS;
     this.maxEventDtMs = opts.maxEventDtMs ?? EVENT_MAX_DT_MS;
     this.onAfterMove = opts.onAfterMove;
     this.traceMode =
@@ -126,28 +122,26 @@ export class Sim {
     return legalMoves(this.state, this.t);
   }
 
+  private tryBot(bot: Bot): TraceEntry['move'] | undefined {
+    const ctx: BotContext = {
+      state: this.state,
+      visible: this.visible(),
+      legal: this.legal(),
+      t: this.t,
+    };
+    const choice = bot(ctx);
+    if (!choice) return undefined;
+    const next = choice.apply(this.state);
+    if (next === this.state) return undefined;
+    this.state = next;
+    return { id: choice.id, kind: choice.kind, target: choice.target };
+  }
+
   run(bot: Bot, virtualMs: number): this {
     const stopAt = this.t + virtualMs;
     while (this.t < stopAt) {
       this.tick();
-      let movePlayed: TraceEntry['move'];
-      if (this.t >= this.nextActionAt) {
-        const ctx: BotContext = {
-          state: this.state,
-          visible: this.visible(),
-          legal: this.legal(),
-          t: this.t,
-        };
-        const choice = bot(ctx);
-        if (choice) {
-          const next = choice.apply(this.state);
-          if (next !== this.state) {
-            this.state = next;
-            movePlayed = { id: choice.id, kind: choice.kind, target: choice.target };
-            this.nextActionAt = this.t + this.actionDurationMs;
-          }
-        }
-      }
+      const movePlayed = this.tryBot(bot);
       this.maybePushTrace(movePlayed);
     }
     return this;
@@ -162,26 +156,11 @@ export class Sim {
     const shouldStop = () => opts?.stopWhen?.(this.state) ?? false;
     while (this.t < stopAt) {
       if (shouldStop()) break;
-      let movePlayed: TraceEntry['move'];
-      if (this.t >= this.nextActionAt) {
-        const ctx: BotContext = {
-          state: this.state,
-          visible: this.visible(),
-          legal: this.legal(),
-          t: this.t,
-        };
-        const choice = bot(ctx);
-        if (choice) {
-          const next = choice.apply(this.state);
-          if (next !== this.state) {
-            this.state = next;
-            movePlayed = { id: choice.id, kind: choice.kind, target: choice.target };
-            this.nextActionAt = this.t + this.actionDurationMs;
-            this.maybePushTrace(movePlayed);
-            if (shouldStop()) break;
-            continue;
-          }
-        }
+      const movePlayed = this.tryBot(bot);
+      if (movePlayed) {
+        this.maybePushTrace(movePlayed);
+        if (shouldStop()) break;
+        continue;
       }
       const dt = this.nextEventDt(stopAt);
       if (dt <= 0) break;
@@ -209,8 +188,6 @@ export class Sim {
     }
     const buffRemaining = (this.state.agentBuffExpires ?? 0) - this.t;
     if (buffRemaining > 0) candidates.push(buffRemaining);
-    const actionWait = this.nextActionAt - this.t;
-    if (actionWait > 0) candidates.push(actionWait);
     return Math.max(this.tickMs, Math.min(...candidates));
   }
 }

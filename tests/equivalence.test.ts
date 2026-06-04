@@ -4,8 +4,8 @@
  *   - `Sim.run`            — fixed 100ms ticks; mirrors what `Game.tsx`'s
  *                            `setInterval` does in production.
  *   - `Sim.runEventDriven` — jumps `dt` to the next interesting boundary
- *                            (move waitMs, buff expiry, action duration,
- *                            stop time, EVENT_MAX_DT cap).
+ *                            (move waitMs, buff expiry, stop time,
+ *                            EVENT_MAX_DT cap).
  *
  * Same model, same `tickReducer(state, dt)` — different driver loop. We
  * pin them together here so the rest of the test suite is free to run
@@ -24,17 +24,6 @@
  * smaller `dt` slices (everything is linear in `dt`), so we can demand
  * near-bit-equality.
  *
- * # Documented divergence: `chatBusyUntil`
- *
- * `appendLog` extends `chatBusyUntil` via `Math.max(prev, now() + dur)`.
- * In a single big-`dt` event-driven tick, several milestones can fire
- * back-to-back at the *same* `now()` value, so the chat-busy stack ends
- * up `now() + max(dur_i)`. In fixed-tick mode the same milestones fire
- * on different ticks at different `now()`, so the stack accumulates
- * forward over time. The set of milestones (and resulting `buzzMeter`,
- * `milestonesSeen`, `log` length) is identical — only the streaming
- * timeline collapses. `chatBusyUntil` is therefore excluded from the
- * equivalence check; nothing else is.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';

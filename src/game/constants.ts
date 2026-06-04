@@ -178,12 +178,11 @@ export const AGENT_BUFF = {
 // ─── Simulator / pacing ────────────────────────────────────────────────────
 
 /**
- * Virtual time (ms) charged to a successful action by the simulator. Mimics
- * the human read-decide-press loop so bot-driven traces are paced like a
- * real session rather than at full tick speed. Real React doesn't consult
- * this — players move at whatever speed they move at.
+ * Virtual time (ms) charged per planner step after a successful action.
+ * Matches `prompt.cooldownMs` so debug paths use the same pacing as play.
+ * The sim harness does not use this — it relies on move-table cooldowns only.
  */
-export const ACTION_DURATION_MS = 1500;
+export const ACTION_DURATION_MS = 2000;
 
 // ─── Streaming / typing animation ──────────────────────────────────────────
 

@@ -63,7 +63,7 @@ function upgradeNotes(u: UpgDef): string[] {
 
 /** UI gates that are not in YAML — shown for action visibility. */
 const ACTION_GATES: Record<string, string> = {
-  prompt: 'always (chat busy may block)',
+  prompt: 'cooldown only (see actions.yaml)',
   kick_agent: `≥ ${THRESHOLDS.showKickAgentClicks} prompts`,
   paste_error: `lifetime bugs ≥ ${THRESHOLDS.showPasteErrorBugs} (grey at 0)`,
   launch: `≥ ${fmtLoc(LAUNCH_LOC)} LOC, not launched`,
