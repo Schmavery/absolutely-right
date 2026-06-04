@@ -31,7 +31,7 @@
  * back-to-back at the *same* `now()` value, so the chat-busy stack ends
  * up `now() + max(dur_i)`. In fixed-tick mode the same milestones fire
  * on different ticks at different `now()`, so the stack accumulates
- * forward over time. The set of milestones (and resulting `hype`,
+ * forward over time. The set of milestones (and resulting `buzzMeter`,
  * `milestonesSeen`, `log` length) is identical — only the streaming
  * timeline collapses. `chatBusyUntil` is therefore excluded from the
  * equivalence check; nothing else is.
@@ -70,17 +70,20 @@ function expectPassiveEquivalent(a: GameState, b: GameState): void {
   // Continuous state — small relative slack for FP accumulation across
   // many tiny `dt`s vs one big `dt`. Linear integrators agree exactly in
   // exact arithmetic; FP drifts by ~ulp × N.
+  expect(a.mcMiniLanes).toEqual(b.mcMiniLanes);
+  expect(a.fundingRound).toBe(b.fundingRound);
+  expect(a.mcMinis).toBe(b.mcMinis);
+
   for (const k of [
     'loc',
     'bugs',
     'lifetimeBugs',
     'tokens',
-    'money',
     'nines',
     'totalLoc',
     'totalTokensSpent',
     'minTokensSeen',
-    'hype',
+    'buzzMeter',
   ] as const) {
     const va = a[k] ?? 0;
     const vb = b[k] ?? 0;

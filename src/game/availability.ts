@@ -19,7 +19,8 @@
  */
 
 import type { GameState } from '../types';
-import { LAUNCH_LOC } from './constants';
+import { INVESTOR, LAUNCH_LOC } from './constants';
+import { canRaise, nextFundingRound } from './investor';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
 import {
@@ -36,6 +37,8 @@ import {
   clearContextAction,
   kickAgentAction,
   launchAction,
+  lobstagramPostAction,
+  raiseRoundAction,
   newFreeAccountAction,
   pasteErrorAction,
   promptAction,
@@ -61,6 +64,8 @@ export const ACTION_IDS = [
   'mcp_deny',
   'bug_bounty',
   'new_free_account',
+  'lobstagram_post',
+  'raise_round',
 ] as const;
 export type ActionId = (typeof ACTION_IDS)[number];
 
@@ -476,6 +481,45 @@ function clearContext(c: Ctx): Move {
   );
 }
 
+function lobstagramPost(c: Ctx): Move {
+  const a = action('lobstagram_post');
+  const buzzFull = (c.state.buzzMeter ?? 0) >= INVESTOR.buzzMax;
+  return buildMove(
+    {
+      id: 'lobstagram_post',
+      kind: 'action',
+      actionId: 'lobstagram_post',
+      visible: c.ui.showInvestor && !buzzFull,
+      apply: lobstagramPostAction,
+    },
+    withMcpIdle(
+      c.state,
+      [
+        boolGate(c.state.launched),
+        boolGate(!buzzFull),
+        cooldownGate(c.state, 'lobstagram_post', a.cooldownMs, c.t),
+        tokenGate(c.state, a.tokenCost),
+      ],
+      c.t,
+    ),
+  );
+}
+
+function raiseRound(c: Ctx): Move {
+  const hasRound = nextFundingRound(c.state) !== undefined;
+  const ok = canRaise(c.state);
+  return buildMove(
+    {
+      id: 'raise_round',
+      kind: 'action',
+      actionId: 'raise_round',
+      visible: c.ui.showInvestor && hasRound,
+      apply: raiseRoundAction,
+    },
+    withMcpIdle(c.state, [boolGate(ok)], c.t),
+  );
+}
+
 function launch(c: Ctx): Move {
   // `showLaunchBtn` already requires `totalLoc >= LAUNCH_LOC` in `derive.ts`.
   const gates: Gate[] = withMcpIdle(
@@ -597,6 +641,8 @@ export function moveTable(state: GameState, t: number = runtimeNow()): {
     runTests(c),
     clearContext(c),
     launch(c),
+    lobstagramPost(c),
+    raiseRound(c),
     mcpAllow(c),
     mcpDeny(c),
     bugBounty(c),

@@ -20,6 +20,8 @@ import {
   clearContextAction,
   kickAgentAction,
   launchAction,
+  lobstagramPostAction,
+  raiseRoundAction,
   newFreeAccountAction,
   pasteErrorAction,
   promptAction,
@@ -33,7 +35,10 @@ import { isLogEntryFullyDisplayed, useStreamingLog } from './lib/useStreamingLog
 import { useIsMobile } from './lib/useWindowWidth';
 import { Button } from './components/Button';
 import { FooterBarrel } from './components/FooterBarrel';
+import { McMinis } from './components/McMinis';
 import { ResourcePanel } from './components/ResourcePanel';
+import { shiftMcMiniLane } from './game/investor';
+import type { McMiniLane } from './game/investor';
 import { ActionBar } from './components/ActionBar';
 import { Generators } from './components/Generators';
 import { Upgrades, InstalledList } from './components/Upgrades';
@@ -111,6 +116,10 @@ export function Game() {
       runTests: dispatch(runTestsAction),
       runBugBounty: dispatch(bugBountyAction),
       launch: dispatch(launchAction),
+      lobstagramPost: dispatch(lobstagramPostAction),
+      raiseRound: dispatch(raiseRoundAction),
+      shiftMcMiniLane: (from: McMiniLane, to: McMiniLane) =>
+        setState((prev) => shiftMcMiniLane(prev, from, to)),
       mcpAllow: dispatch(mcpAllowAction),
       mcpDeny: dispatch(mcpDenyAction),
       newFreeAccount: dispatch(newFreeAccountAction),
@@ -218,10 +227,16 @@ export function Game() {
             onRunTests={handlers.runTests}
             onClearContext={handlers.clearContext}
             onLaunch={handlers.launch}
+            onLobstagramPost={handlers.lobstagramPost}
+            onRaiseRound={handlers.raiseRound}
             onRunBugBounty={handlers.runBugBounty}
           />
 
           {state.started && <ResourcePanel state={state} />}
+
+          {derived.ui.showMcMinis && (
+            <McMinis state={state} onShiftLane={handlers.shiftMcMiniLane} />
+          )}
 
           {showGenSection && (
             <Generators

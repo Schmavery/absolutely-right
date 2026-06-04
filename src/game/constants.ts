@@ -79,14 +79,34 @@ export const EVENT_MIX = {
   newsShare: 0.35,
 } as const;
 
-// ─── Hype display ──────────────────────────────────────────────────────────
+// ─── Investor overlay (burn, buzz meter, McMinis) ────────────────────────
 
-export const HYPE = {
-  /** Hype reward each time a milestone fires. */
-  perMilestone: 5,
-  /** Hype thresholds for the resource panel labels. */
-  buildingMomentum: 20,
-  goingViral: 100,
+export const INVESTOR = {
+  buzzMax: 100,
+  buzzPerSecPerGrowthMini: 8,
+  tokenDrainPerCodeMini: 3,
+  tokenDrainPerGrowthMini: 4,
+  tokenDrainPerTestsMini: 2,
+  /** LOC/s per McMini on code (before bug penalty); scaled by `calcAgentLocMult`. */
+  codeLocPerMini: 12,
+  codeBugRateMult: 1.35,
+  fundingRounds: [
+    {
+      label: 'Seed',
+      minBurnPerSec: 0,
+      mcMinisGrant: 1,
+    },
+    {
+      label: 'Series A',
+      minBurnPerSec: 5,
+      mcMinisGrant: 1,
+    },
+    {
+      label: 'Series B',
+      minBurnPerSec: 20,
+      mcMinisGrant: 2,
+    },
+  ],
 } as const;
 
 // ─── Manual prompt math ────────────────────────────────────────────────────

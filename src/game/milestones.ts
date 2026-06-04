@@ -1,5 +1,5 @@
 import type { GameState, LogEntry } from '../types';
-import { HYPE, MAX_LOG } from './constants';
+import { MAX_LOG } from './constants';
 import { MILESTONES } from './data';
 import { render } from '../lib/template';
 
@@ -10,7 +10,7 @@ export function milestoneLocsReached(totalLoc: number): number[] {
 
 /**
  * Mark all milestones at or below `totalLoc` as seen without appending log lines.
- * Adds hype for newly marked milestones (same amount as the tick loop).
+ * Marks milestones at or below `totalLoc` without log lines.
  */
 export function syncMilestonesSeen(state: GameState): GameState {
   const reached = milestoneLocsReached(state.totalLoc);
@@ -26,7 +26,6 @@ export function syncMilestonesSeen(state: GameState): GameState {
   return {
     ...state,
     milestonesSeen,
-    hype: state.hype + added.length * HYPE.perMilestone,
   };
 }
 
@@ -56,7 +55,7 @@ export function ensureStartupMilestoneLog(state: GameState): GameState {
   };
 }
 
-/** Sync `milestonesSeen` (and hype) from `totalLoc`, then seed startup log if needed. */
+/** Sync `milestonesSeen` from `totalLoc`, then seed startup log if needed. */
 export function prepareSaveProgressMarkers(state: GameState): GameState {
   return ensureStartupMilestoneLog(syncMilestonesSeen(state));
 }

@@ -1,20 +1,24 @@
 import type { GameState } from '../types';
 import { withBugs } from './state';
-import { AGENT_BUFF, TICK_MS } from './constants';
+import { AGENT_BUFF, INVESTOR, TICK_MS } from './constants';
 import { MILESTONES, UPGRADES } from './data';
 import { computeFlags, effectiveThresholds, hasFlag } from './flags';
+import {
+  buzzGainPerSec,
+  mcMiniTokenDrainPerSec,
+  normalizeMcMiniLanes,
+} from './investor';
 import {
   calcAgentLocMult,
   calcAutoBugDrainRate,
   calcBugPenalty,
   calcClickPower,
-  calcMoneyRate,
+  calcMcMiniCodeLocRate,
   calcNinesRate,
   calcRates,
   calcTokenConfig,
   calcUptime,
 } from './rates';
-import { LOC_PER_CLICK_POWER, HYPE } from './constants';
 import { appendLog } from './log';
 import { advanceMcpTiming } from './mcpApproval';
 import { render } from '../lib/template';
@@ -30,15 +34,11 @@ import { now } from './runtime';
  * boundary instead of stepping at full tick rate.
  *
  * Big-dt safety:
- *   - All passive deltas are linear in `dt` (loc, bugs, tokens, money,
- *     nines), so a single big tick equals N small ticks for those.
+ *   - All passive deltas are linear in `dt` (loc, bugs, tokens,
+ *     nines, buzz), so a single big tick equals N small ticks for those.
  *   - The unlock loop and milestone loop are threshold-based and run
  *     once per call regardless of `dt`, so any thresholds crossed during
  *     `dt` fire on this call. (Same as today when rates are high.)
- *   - Buff/cooldown semantics are sampled at end-of-tick `now()`. Crossing
- *     a buff-expiry boundary mid-`dt` slightly mis-attributes the dt to
- *     "post-expiry"; the event-driven sim mitigates by inserting buff
- *     expiry into its next-event boundary list.
  */
 export function tickReducer(state: GameState, dtMs: number = TICK_MS): GameState {
   let prev = advanceMcpTiming(state, now());
@@ -48,34 +48,40 @@ export function tickReducer(state: GameState, dtMs: number = TICK_MS): GameState
   const { locRate, bugRate, fixRate } = calcRates(prev.genCounts, prev.upgrades, prev.tests);
   const { maxTokens, tokenRegen } = calcTokenConfig(prev.upgrades, prev.freeAccounts);
   const bugPenalty = calcBugPenalty(prev.bugs);
-  const agentBuffActive = now() < (prev.agentBuffExpires ?? 0);
-
-  // Agent contributes its own base LOC rate, scaled by any agent upgrades.
+  const mcMinis = prev.mcMinis ?? 0;
+  const lanes = normalizeMcMiniLanes(mcMinis, prev.mcMiniLanes);
   const agentMult = calcAgentLocMult(prev.upgrades);
-  const agentBaseRate = agentBuffActive
-    ? calcClickPower(prev.upgrades) * LOC_PER_CLICK_POWER * agentMult
-    : 0;
-  const effectiveLoc = (locRate + agentBaseRate) * bugPenalty * dt;
-  const effectiveBugRate =
-    prev.totalLoc >= thresholds.bugSpawnLoc
-      ? bugRate * (agentBuffActive ? AGENT_BUFF.bugRateMult : 1)
+  const mcMiniCodeRate =
+    mcMinis > 0 ? calcMcMiniCodeLocRate(lanes.code, prev.upgrades) * bugPenalty : 0;
+  const effectiveLoc = (locRate + mcMiniCodeRate) * dt;
+  const mcMiniBugs =
+    mcMinis > 0 && prev.totalLoc >= thresholds.bugSpawnLoc && lanes.code > 0
+      ? bugRate * INVESTOR.codeBugRateMult * lanes.code
       : 0;
-  const uptime = calcUptime(prev.bugs);
-  const moneyDelta = calcMoneyRate(prev.upgrades, locRate, uptime.fraction, prev.launched) * dt;
+  const effectiveBugRate =
+    prev.totalLoc >= thresholds.bugSpawnLoc ? bugRate + mcMiniBugs : 0;
 
   const ninesTracking = hasFlag(flags, 'nines_tracking');
   const ninesRate = ninesTracking ? calcNinesRate(prev.upgrades, prev.bugs) : 0;
   const autoBugDrain = calcAutoBugDrainRate(prev.upgrades) * prev.bugs * dt;
 
+  const tokenDrain = mcMiniTokenDrainPerSec(lanes);
+  const netTokenRegen = tokenRegen - tokenDrain;
+  const buzzGain =
+    prev.launched && (prev.buzzMeter ?? 0) < INVESTOR.buzzMax
+      ? buzzGainPerSec(lanes) * dt
+      : 0;
+
   const newBugs = prev.bugs + (effectiveBugRate - fixRate) * dt - autoBugDrain;
   let next: GameState = {
     ...prev,
+    mcMiniLanes: lanes,
     loc: prev.loc + effectiveLoc,
     ...withBugs(prev, newBugs),
     totalLoc: prev.totalLoc + effectiveLoc,
-    tokens: Math.min(maxTokens, prev.tokens + tokenRegen * dt),
+    tokens: Math.min(maxTokens, Math.max(0, prev.tokens + netTokenRegen * dt)),
     minTokensSeen: Math.min(prev.minTokensSeen ?? 9999, prev.tokens),
-    money: prev.money + moneyDelta,
+    buzzMeter: Math.min(INVESTOR.buzzMax, (prev.buzzMeter ?? 0) + buzzGain),
     nines: ninesTracking
       ? (prev.nines || AGENT_BUFF.ninesFloorFallback) + ninesRate * dt
       : prev.nines,
@@ -105,7 +111,6 @@ export function tickReducer(state: GameState, dtMs: number = TICK_MS): GameState
       next = {
         ...next,
         milestonesSeen: [...next.milestonesSeen, m.loc],
-        hype: next.hype + HYPE.perMilestone,
       };
     }
   }

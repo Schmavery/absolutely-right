@@ -19,12 +19,12 @@ export interface DerivedUi {
   showWriteTests: boolean;
   showRunTests: boolean;
   showBugBounty: boolean;
-  showMoney: boolean;
+  showInvestor: boolean;
+  showMcMinis: boolean;
   ninesTracking: boolean;
   showBugs: boolean;
   showStats: boolean;
   showUptime: boolean;
-  showHype: boolean;
   showLaunchBtn: boolean;
   showMcpApproval: boolean;
   showPasteError: boolean;
@@ -49,7 +49,6 @@ export function deriveGame(state: GameState): DerivedGame {
   const ui: DerivedUi = {
     showTokens: (state.totalTokensSpent ?? 0) > 0,
     showPasteError: (state.lifetimeBugs ?? 0) >= thresholds.showPasteErrorBugs,
-    showKickAgent: state.totalClicks >= thresholds.showKickAgentClicks,
     showWriteTests:
       (state.bugs >= thresholds.showWriteTestsBugs || (state.tests ?? 0) > 0) &&
       !flag('ai_review'),
@@ -66,12 +65,14 @@ export function deriveGame(state: GameState): DerivedGame {
       flag('nines_tracking') &&
       state.bugs > thresholds.showBugBountyBugs &&
       !flag('auto_bug_bounty'),
-    showMoney: flag('money'),
+    showInvestor: state.launched,
+    showMcMinis: (state.mcMinis ?? 0) > 0,
     ninesTracking: flag('nines_tracking'),
     showBugs: (state.lifetimeBugs ?? 0) > 1,
     showStats: state.totalLoc >= thresholds.showStatsLoc,
     showUptime: state.launched,
-    showHype: state.launched,
+    showKickAgent:
+      state.totalClicks >= thresholds.showKickAgentClicks && (state.mcMinis ?? 0) === 0,
     showGenSection: state.totalLoc >= thresholds.showGeneratorsLoc,
     showUpgSection: state.totalLoc >= thresholds.showUpgradesLoc,
   };

@@ -1,24 +1,19 @@
 import type { GameState } from '../types';
 import { fmt, fmtRate } from '../lib/format';
 import {
-  calcAgentLocMult,
   calcBugPenalty,
-  calcClickPower,
-  calcMoneyRate,
+  calcInfraBurnPerSec,
+  calcMcMiniCodeLocRate,
   calcNinesRate,
   calcRates,
   calcTokenConfig,
   calcUptime,
   formatNinesPct,
 } from '../game/rates';
-import {
-  AGENT_BUFF,
-  HYPE,
-  LOC_PER_CLICK_POWER,
-  THRESHOLDS,
-  TOKENS,
-} from '../game/constants';
+import { AGENT_BUFF, INVESTOR, THRESHOLDS, TOKENS } from '../game/constants';
 import { deriveGame } from '../game/derive';
+import { normalizeMcMiniLanes } from '../game/investor';
+import { canRaise, nextFundingRound, raiseBlockReason } from '../game/investor';
 import { action, UPGRADES } from '../game/data';
 
 interface RowProps {
@@ -46,14 +41,21 @@ export function ResourcePanel({ state }: Props) {
   const bugPenalty = calcBugPenalty(state.bugs);
   const uptime = calcUptime(state.bugs);
   const { maxTokens, tokenRegen } = calcTokenConfig(state.upgrades, state.freeAccounts);
-  const moneyRate = calcMoneyRate(state.upgrades, locRate, uptime.fraction, state.launched);
   const ninesRate = calcNinesRate(state.upgrades, state.bugs);
   const currentNines = ui.ninesTracking
     ? Math.max(state.nines || 0, AGENT_BUFF.ninesFloorFallback)
     : 0;
   const ninesInt = Math.floor(currentNines);
   const showAsCounter = ninesInt >= 8;
-  const agentBuffRemaining = Math.max(0, state.agentBuffExpires - Date.now());
+
+  const lanes = normalizeMcMiniLanes(state.mcMinis ?? 0, state.mcMiniLanes);
+  const mcMiniLoc = calcMcMiniCodeLocRate(lanes.code, state.upgrades) * bugPenalty;
+  const displayLocRate = locRate * bugPenalty + mcMiniLoc;
+  const burnRate = calcInfraBurnPerSec(state.upgrades);
+  const buzz = state.buzzMeter ?? 0;
+  const round = nextFundingRound(state);
+  const raiseReady = canRaise(state);
+  const raiseHint = round && !raiseReady ? raiseBlockReason(state) : null;
 
   const uptimeColorClass =
     uptime.nines >= 4
@@ -81,20 +83,8 @@ export function ResourcePanel({ state }: Props) {
       {/* loc */}
       <Row label="loc">
         <span className="text-green">{fmt(state.loc)}</span>
-        {(locRate > 0 || agentBuffRemaining > 0) && (
-          <span className={(agentBuffRemaining > 0 ? 'text-green' : 'text-green-dim') + ' text-[12px]'}>
-            (
-            {fmtRate(
-              (locRate +
-                (agentBuffRemaining > 0
-                  ? calcClickPower(state.upgrades) *
-                    LOC_PER_CLICK_POWER *
-                    calcAgentLocMult(state.upgrades)
-                  : 0)) *
-                bugPenalty,
-            )}
-            )
-          </span>
+        {displayLocRate > 0 && (
+          <span className="text-green-dim text-[12px]">({fmtRate(displayLocRate)})</span>
         )}
       </Row>
 
@@ -145,32 +135,33 @@ export function ResourcePanel({ state }: Props) {
         </Row>
       )}
 
-      {/* hype */}
-      {ui.showHype && (
-        <Row label="hype">
-          <span className="text-purple">{fmt(state.hype)}</span>
-          {state.hype >= HYPE.goingViral && (
-            <span className="text-purple text-[12px]">(going viral)</span>
-          )}
-          {state.hype >= HYPE.buildingMomentum && state.hype < HYPE.goingViral && (
-            <span className="text-purple text-[12px]">(building momentum)</span>
-          )}
-        </Row>
-      )}
-
-      {/* money */}
-      {ui.showMoney && (
-        <Row label="money">
-          <span className={state.money < 0 ? 'text-red' : 'text-green'}>
-            ${Math.floor(Math.abs(state.money))}
-            {state.money < 0 ? ' (debt)' : ''}
-          </span>
-          {moneyRate !== 0 && (
-            <span className={(moneyRate < 0 ? 'text-red-dim' : 'text-green-dim') + ' text-[12px]'}>
-              ({moneyRate > 0 ? '+' : ''}${moneyRate.toFixed(1)}/s)
+      {/* investor overlay */}
+      {ui.showInvestor && (
+        <>
+          <Row label="burn rate">
+            <span className="text-green">${burnRate}/s</span>
+            {round && (
+              <span className="text-dimmer text-[12px]">
+                ({round.label} needs ≥ ${round.minBurnPerSec}/s)
+              </span>
+            )}
+          </Row>
+          <Row label="buzz">
+            <span className={buzz >= INVESTOR.buzzMax ? 'text-purple' : 'text-dim'}>
+              {Math.floor(buzz)}%
             </span>
-          )}
-        </Row>
+            <span className="text-dimmer text-[12px] w-[72px] inline-block h-[6px] bg-border align-middle ml-1">
+              <span
+                className="block h-full bg-purple/60"
+                style={{ width: `${Math.min(100, buzz)}%` }}
+              />
+            </span>
+            {raiseReady && round && (
+              <span className="text-purple text-[12px]">(ready — {round.label})</span>
+            )}
+            {raiseHint && <span className="text-dimmer text-[11px]">({raiseHint})</span>}
+          </Row>
+        </>
       )}
 
       {/* stats */}

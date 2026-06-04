@@ -198,8 +198,15 @@ export interface ActionDef {
   // buy_gen
   firstPurchaseMsg?: string;
 
-  // launch
-  hypeReward?: number;
+  // lobstagram_post
+  buzzGain?: number;
+}
+
+/** Per-McMini lane assignment; counts must sum to `mcMinis`. */
+export interface McMiniLanes {
+  code: number;
+  growth: number;
+  tests: number;
 }
 
 export interface LogEntry {
@@ -217,7 +224,6 @@ export interface GameState {
   bugs: number;
   /** Cumulative bugs ever gained; sticky `showBugs` once `lifetimeBugs > 1`. */
   lifetimeBugs: number;
-  hype: number;
   tests: number;
   freeAccounts: number;
   totalLoc: number;
@@ -238,7 +244,13 @@ export interface GameState {
   /** Stable ids from `data/news.yaml`; each headline fires at most once per save. */
   usedNewsIds: string[];
   tokens: number;
-  money: number;
+  /** 0–100; resets on fundraise. */
+  buzzMeter: number;
+  /** Index into `INVESTOR.fundingRounds`; 0 = next round is seed. */
+  fundingRound: number;
+  mcMinis: number;
+  mcMiniLanes: McMiniLanes;
+  /** Legacy `kick_agent` buff; unused once McMinis are deployed. */
   agentBuffExpires: number;
   unlockedUpgrades: string[];
   nines: number;

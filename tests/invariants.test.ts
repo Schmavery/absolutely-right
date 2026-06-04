@@ -60,9 +60,9 @@ describe('invariants: numeric sanity', () => {
         const sim = new Sim({ seed }).run(bot, VIRTUAL_MIN);
         const s = sim.state;
         for (const k of [
-          'loc', 'bugs', 'lifetimeBugs', 'hype', 'tests', 'freeAccounts',
+          'loc', 'bugs', 'lifetimeBugs', 'buzzMeter', 'fundingRound', 'mcMinis', 'tests', 'freeAccounts',
           'totalLoc', 'totalClicks', 'totalTokensSpent', 'minTokensSeen',
-          'tokens', 'money', 'agentBuffExpires', 'nines',
+          'tokens', 'agentBuffExpires', 'nines',
           'lastEventTime', 'lastTestLogTime', 'logId',
         ] as const) {
           expect(isFiniteNumber(s[k]), `${k} = ${s[k]}`).toBe(true);

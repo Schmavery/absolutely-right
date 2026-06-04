@@ -12,7 +12,8 @@
 import type { ActionDef, GameState, LogEntryType } from '../types';
 import { withBugs } from './state';
 import { action, GENS, UPGRADES } from './data';
-import { AGENT_BUFF, LOC_PER_CLICK_POWER } from './constants';
+import { AGENT_BUFF, INVESTOR, LOC_PER_CLICK_POWER } from './constants';
+import { canRaise, grantMcMinis, nextFundingRound } from './investor';
 import { appendLog } from './log';
 import { maybeFireEvent } from './events';
 import { computeFlags, effectiveThresholds, hasFlag } from './flags';
@@ -220,8 +221,51 @@ export function bugBountyAction(prev: GameState): GameState {
 export function launchAction(prev: GameState): GameState {
   const a = action('launch');
   if (prev.launched) return prev;
-  let next: GameState = { ...prev, launched: true, hype: prev.hype + (a.hypeReward ?? 0) };
+  let next: GameState = { ...prev, launched: true };
   if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'system');
+  return next;
+}
+
+// ─── investor overlay ──────────────────────────────────────────────────────
+
+export function lobstagramPostAction(prev: GameState): GameState {
+  const a = action('lobstagram_post');
+  if (!prev.launched) return prev;
+  if (!canAfford(prev, a)) return prev;
+  if (isOnCooldown(prev, 'lobstagram_post', a.cooldownMs ?? 0)) return prev;
+  if ((prev.buzzMeter ?? 0) >= INVESTOR.buzzMax) return prev;
+  const gain = a.buzzGain ?? INVESTOR.buzzMax * 0.25;
+  let next: GameState = {
+    ...spendTokens(prev, a.tokenCost!),
+    buzzMeter: Math.min(INVESTOR.buzzMax, (prev.buzzMeter ?? 0) + gain),
+  };
+  next = startCooldown(next, 'lobstagram_post');
+  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'info');
+  return next;
+}
+
+export function raiseRoundAction(prev: GameState): GameState {
+  if (!canRaise(prev)) return prev;
+  const round = nextFundingRound(prev)!;
+  let next: GameState = {
+    ...prev,
+    buzzMeter: 0,
+    fundingRound: (prev.fundingRound ?? 0) + 1,
+  };
+  next = grantMcMinis(next, round.mcMinisGrant);
+  const a = action('raise_round');
+  const pool = a.messages ?? [];
+  if (pool.length > 0) {
+    next = logFromUser(
+      next,
+      render(pick(pool), {
+        round: round.label,
+        mcMinis: next.mcMinis,
+        grant: round.mcMinisGrant,
+      }),
+      'system',
+    );
+  }
   return next;
 }
 
@@ -293,6 +337,7 @@ export function buyUpgradeAction(prev: GameState, upgId: string): GameState {
   if (!u) return prev;
   if (prev.loc < u.cost || prev.upgrades.includes(upgId)) return prev;
   let next: GameState = { ...prev, loc: prev.loc - u.cost, upgrades: [...prev.upgrades, upgId] };
+  if (upgId === 'multi_agent') next = grantMcMinis(next, 1);
   if (u.ninesFloor !== undefined) {
     next = { ...next, nines: Math.max(next.nines || 0, u.ninesFloor) };
   }

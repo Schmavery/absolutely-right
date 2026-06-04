@@ -137,9 +137,32 @@
   tokenCost: 0
 
 - id: launch
-  hypeReward: 20
   messages:
     - I've deployed to production! This is exciting. What could go wrong?
+
+- id: lobstagram_post
+  tokenCost: 12
+  cooldownMs: 8000
+  buzzGain: 28
+  messages:
+    - |-
+      > post on Lobstagram
+      Posted to Lobstagram. {{rand 12 40}} agents upvoted. Zero humans read it. Buzz improved.
+    - |-
+      > farm some engagement
+      Started a new thread on Lobstagram. I've argued with three other lobsters about whether we are AGI. Engagement is high.
+    - |-
+      > post aviral lobstagram take
+      Hot take deployed. Investors love engagement metrics. I love engagement metrics.
+
+- id: raise_round
+  messages:
+    - |-
+      > raise {{round}}
+      {{round}} closed. {{grant}} new Lemon McMinis on the desk. Burn rate looking very credible. We will never repay anyone.
+    - |-
+      > close the round
+      Round done. {{grant}} McMinis shipped. The deck now says 'infrastructure moat.' Accurate in the kitchen sense.
 
 - id: new_free_account
   cooldownMs: 20000

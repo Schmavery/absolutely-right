@@ -1,6 +1,7 @@
 import { UPGRADES } from '../game/data';
 import { LAUNCH_LOC } from '../game/constants';
 import { calcUptime } from '../game/rates';
+import { grantMcMinis } from '../game/investor';
 import { prepareSaveProgressMarkers } from '../game/milestones';
 import { getPhase } from '../game/phases';
 import { defaultState, initState, saveState } from '../game/state';
@@ -81,8 +82,9 @@ function baseProgress(loc: number, totalLoc: number, upgrades: string[]): Partia
     lifetimeBugs: 12,
     bugs: 8,
     tests: 4,
-    hype: 25,
-    money: 0,
+    buzzMeter: 0,
+    fundingRound: 0,
+    mcMinis: 0,
     nines: 0,
     mcpApprovalPending: null,
     mcpAutoApproveAt: null,
@@ -145,7 +147,7 @@ export const SAVE_PRESETS: SavePreset[] = [
         ...baseProgress(120_000, 180_000, upgrades),
         launched: true,
         upgrades,
-        money: 500,
+        buzzMeter: 40,
       });
     },
   },
@@ -168,14 +170,17 @@ export const SAVE_PRESETS: SavePreset[] = [
         'mcp_tools',
         'pro_plan',
       ]);
-      return revealAllEligibleUpgrades({
+      let s = revealAllEligibleUpgrades({
         ...prev,
         ...baseProgress(600_000, 800_000, upgrades),
         launched: true,
         upgrades,
-        money: 12_000,
+        buzzMeter: 60,
+        fundingRound: 1,
         tokens: 2500,
       });
+      s = grantMcMinis(s, 2);
+      return s;
     },
   },
   {
@@ -205,7 +210,8 @@ export const SAVE_PRESETS: SavePreset[] = [
         launched: true,
         upgrades,
         bugs: 1500,
-        money: 40_000,
+        buzzMeter: 80,
+        fundingRound: 2,
       });
     },
   },
@@ -236,7 +242,8 @@ export const SAVE_PRESETS: SavePreset[] = [
         ...baseProgress(25_000_000, 30_000_000, upgrades),
         launched: true,
         upgrades,
-        money: 200_000,
+        buzzMeter: 100,
+        fundingRound: 3,
         nines: 5.2,
         bugs: 120,
         lifetimeBugs: 200,

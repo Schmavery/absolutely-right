@@ -1,5 +1,7 @@
 import type { GameState } from '../types';
 import { action } from '../game/data';
+import { nextFundingRound } from '../game/investor';
+import { raiseBlockReason } from '../game/investor';
 import { calcTokenConfig } from '../game/rates';
 import { runTestsCost, runTestsFixFraction, writeTestCost } from '../game/actions';
 import { getMove, rechargeProgress } from '../game/availability';
@@ -14,6 +16,8 @@ interface Props {
   onRunTests: () => void;
   onClearContext: () => void;
   onLaunch: () => void;
+  onLobstagramPost: () => void;
+  onRaiseRound: () => void;
   onRunBugBounty: () => void;
 }
 
@@ -25,6 +29,8 @@ export function ActionBar({
   onRunTests,
   onClearContext,
   onLaunch,
+  onLobstagramPost,
+  onRaiseRound,
   onRunBugBounty,
 }: Props) {
   const now = Date.now();
@@ -49,8 +55,12 @@ export function ActionBar({
     runTests: getMove(state, 'run_tests', now)!,
     clearContext: getMove(state, 'clear_context', now)!,
     launch: getMove(state, 'launch', now)!,
+    lobstagramPost: getMove(state, 'lobstagram_post', now)!,
+    raiseRound: getMove(state, 'raise_round', now)!,
     bugBounty: getMove(state, 'bug_bounty', now)!,
   };
+
+  const round = nextFundingRound(state);
 
   const wTestCost = writeTestCost(state.tests ?? 0);
   const tCost = runTestsCost(state.totalLoc);
@@ -143,6 +153,28 @@ export function ActionBar({
       {m.launch.visible && (
         <Button variant="launch" onClick={onLaunch}>
           ship to production
+        </Button>
+      )}
+
+      {m.lobstagramPost.visible && (
+        <Button
+          off={!m.lobstagramPost.legal}
+          onClick={m.lobstagramPost.legal ? onLobstagramPost : undefined}
+          title="Lobstagram post — fills buzz meter"
+          progress={rechargeProgress(m.lobstagramPost)}
+        >
+          post on Lobstagram [{action('lobstagram_post').tokenCost}t]
+        </Button>
+      )}
+
+      {m.raiseRound.visible && round && (
+        <Button
+          variant={m.raiseRound.legal ? 'launch' : 'default'}
+          off={!m.raiseRound.legal}
+          onClick={m.raiseRound.legal ? onRaiseRound : undefined}
+          title={m.raiseRound.legal ? `Close ${round.label}` : raiseBlockReason(state) ?? ''}
+        >
+          raise {round.label}
         </Button>
       )}
 

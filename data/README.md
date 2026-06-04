@@ -26,7 +26,9 @@ there for combine semantics (multiplicative, additive, last-wins, max-wins).
 probability, formula constants, message pools) so retuning a single action
 doesn't require touching code.
 
-**Phase design:** see `PHASES.md`. In dev: `/debug` (index), `/debug/phases`,
+**Phase design:** see `PHASES.md` (mechanical chapters, flavor indices, and the
+target **investor overlay** — burn rate, buzz meter, LOC-bought subs, raises
+that grant **McMinis**). In dev: `/debug` (index), `/debug/phases`,
 `/debug/trace`, `/debug/graph`.
 
 Cross-cutting balance numbers (THRESHOLDS,
@@ -61,7 +63,8 @@ All shipped YAML (`events`, `news`, `milestones`, `generators`, `actions`,
 `upgrades`) uses this canon for **AI vendors and consumer brands** — not real
 company names or trademarked AI product names (Copilot, Recall, etc.).
 `INSPIRATION.md` may cite real names as research notes; translate before
-adding to game data.
+adding to game data. **Do not** use real personal-agent project names in shipped
+YAML or UI copy (e.g. Clawdbot, OpenClaw, Moltbook, Moltbot) — see lobster-agent row below.
 
 **Non-AI code tech is fair game** — use real names (Kubernetes, React,
 ESLint, TypeScript, Docker, npm, …) in jokes about stack choices.
@@ -75,6 +78,9 @@ ESLint, TypeScript, Docker, npm, …) in jokes about stack choices.
 | Anthropic / Claude | **Claudius Labs** / model **Claudius** (never Claude) |
 | Meta / Facebook | **Facelift** |
 | Apple | **Lemon** (wrong fruit; “a lemon” = defective product — for the name only; do not spell that out in headlines) |
+| Mac mini hoarding (agent-hosting meme) | **McMini** — UI resource for deployable boxes (McDonald’s × Mac mini pun). Assign each to a lane; do not label creatures “molty” in HUD |
+| Agent-only social feed (Instagram parody) | **Lobstagram** — growth lane + `lobstagram_post`; not Moltbook |
+| Personal lobster agent (research in `INSPIRATION.md` only) | **Pinchbot** in copy; “molt”, “new shell”. Never real product names. **Claudius** = model; capacity = **McMini** + lane |
 | Amazon / AWS / CodeWhisper | **Amazin** / **Amazin Cloud** / **CodeMurmur** |
 | X / Grok | **Xitter** / **Squok** |
 | Hugging Face | **SnuggleHub** |

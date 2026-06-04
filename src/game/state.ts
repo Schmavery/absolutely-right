@@ -1,5 +1,6 @@
 import type { GameState } from '../types';
 import { SAVE_KEY } from './constants';
+import { EMPTY_MC_MINI_LANES, normalizeMcMiniLanes } from './investor';
 import { clearSaveStorage, writeSaveWithMeta, type SaveSource } from './saveSync';
 
 /** Apply a bug count and accrue positive deltas into `lifetimeBugs`. */
@@ -26,7 +27,6 @@ export function defaultState(): GameState {
     lastEventTime: 0,
     lastTestLogTime: 0,
     actionCooldowns: {},
-    hype: 0,
     tests: 0,
     freeAccounts: 1,
     totalTokensSpent: 0,
@@ -37,7 +37,10 @@ export function defaultState(): GameState {
     usedEventIds: [],
     usedNewsIds: [],
     tokens: 120,
-    money: 0,
+    buzzMeter: 0,
+    fundingRound: 0,
+    mcMinis: 0,
+    mcMiniLanes: { ...EMPTY_MC_MINI_LANES },
     agentBuffExpires: 0,
     unlockedUpgrades: [],
     nines: 0,
@@ -51,7 +54,19 @@ export function defaultState(): GameState {
 export function initState(): GameState {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) return { ...defaultState(), ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<GameState>;
+      const base = defaultState();
+      const mcMinis = parsed.mcMinis ?? base.mcMinis;
+      return {
+        ...base,
+        ...parsed,
+        mcMinis,
+        mcMiniLanes: normalizeMcMiniLanes(mcMinis, parsed.mcMiniLanes ?? base.mcMiniLanes),
+        buzzMeter: parsed.buzzMeter ?? base.buzzMeter,
+        fundingRound: parsed.fundingRound ?? base.fundingRound,
+      };
+    }
   } catch {
     // ignored — bad save data falls back to default state
   }

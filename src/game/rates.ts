@@ -9,7 +9,7 @@
 
 import { action, GENS, UPGRADES } from './data';
 import type { GenDef, UpgDef } from '../types';
-import { BUG_GENERATION, MONEY, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
+import { BUG_GENERATION, INVESTOR, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -196,30 +196,21 @@ export function formatNinesPct(n: number): string {
   return '99.' + '9'.repeat(n - 2) + '%';
 }
 
-// ─── money ─────────────────────────────────────────────────────────────────
+// ─── burn (investor overlay) ───────────────────────────────────────────────
 
-/** Returns the largest `moneyCostPerSec` among owned upgrades (max-wins). */
-function calcMoneyCost(upgrades: string[]): number {
-  let cost = 0;
+/** LOC/s from McMinis assigned to code (before bug penalty). */
+export function calcMcMiniCodeLocRate(codeMinis: number, upgrades: string[]): number {
+  if (codeMinis <= 0) return 0;
+  return codeMinis * INVESTOR.codeLocPerMini * calcAgentLocMult(upgrades);
+}
+
+/** Infra burn $/s from owned subs (`moneyCostPerSec` max-wins). Higher is good for raises. */
+export function calcInfraBurnPerSec(upgrades: string[]): number {
+  let burn = 0;
   for (const u of ownedDefs(upgrades)) {
-    if (u.moneyCostPerSec && u.moneyCostPerSec > cost) cost = u.moneyCostPerSec;
+    if (u.moneyCostPerSec && u.moneyCostPerSec > burn) burn = u.moneyCostPerSec;
   }
-  return cost;
-}
-
-function moneyEnabled(upgrades: string[]): boolean {
-  return ownedDefs(upgrades).some((u) => u.enablesMoney);
-}
-
-export function calcMoneyRate(
-  upgrades: string[],
-  locRate: number,
-  uptimeFraction: number,
-  launched: boolean,
-): number {
-  if (!moneyEnabled(upgrades)) return 0;
-  const revenue = launched ? locRate * uptimeFraction * MONEY.revenuePerLocPerSec : 0;
-  return revenue - calcMoneyCost(upgrades);
+  return burn;
 }
 
 // ─── misc ──────────────────────────────────────────────────────────────────

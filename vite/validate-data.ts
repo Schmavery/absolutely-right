@@ -19,6 +19,8 @@ export const ACTION_IDS = [
   'mcp_allow',
   'mcp_deny',
   'launch',
+  'lobstagram_post',
+  'raise_round',
   'new_free_account',
   'write_test',
   'buy_gen',

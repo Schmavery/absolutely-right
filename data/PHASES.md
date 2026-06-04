@@ -55,7 +55,11 @@ for the chapter (same energy as “a new conversation”).
 - **Progression:** per-call approve → **Always allow** (+2× bugs) → **YOLO mode** (+10× bugs, stacks — **upgrade, not a repeat button**).
 - **Pricing:** shop `cost` rises along each narrative chain (MCP → crisis review → nines); later theater costs more than earlier recklessness.
 - **Shipped today:** `multi_agent`, `kick_agent`, `mcp_tools` / `always_allow` / `yolo_mode` shop chain (no yolo button — upgrade only).
-- **Money (here):** `pro_plan` / `team_plan` — tokens up, $/s drain, “scale” fantasy.
+- **Investor overlay (target, same chapter):** runs **alongside** MCP/agents —
+  see [Investor overlay](#investor-overlay-target) below. Does not replace the
+  bugs/uptime → review → nines spine.
+- **Shipped today (economy UI):** `pro_plan` / `team_plan` tick a **money**
+  balance and show **hype** — target replaces that with burn + buzz meter.
 
 ### 4. Min–late — reliability crisis and review theater
 
@@ -78,14 +82,93 @@ for the chapter (same energy as “a new conversation”).
 
 ---
 
-## Launch vs money (cheat sheet)
+## Investor overlay (target)
 
-| | Launch | Money (`pro_plan` / `team_plan`) |
-| - | ------ | -------------------------------- |
-| **Fantasy** | We deployed; production exists | We pay for tokens/API at scale |
-| **UI** | Uptime %, hype | $ balance, $/s |
-| **Economy** | Revenue formula *can* run | `enablesMoney` — costs and income matter |
-| **When (target)** | Early mid | Mid (with MCP / paid-model era) |
+Satire: big AI spend never gets “repaid”; each **raise** adds **McMinis**
+(hardware), not solvency. This layer is **parallel** to the bugs arc (launch →
+uptime → review crises → nines) — same mid/late chapters, extra meters and
+actions.
+
+### Resources (target HUD)
+
+| Surface | Meaning | Player wants it… |
+| ------- | ------- | ---------------- |
+| **Burn rate** (`$X/s`) | Credibility / scale signal from **subs** (and later per-McMini load). Higher unlocks the **next** raise. | **High** (not a tax) |
+| **McMinis** | Deployed **Lemon McMini** boxes — finite slots; assign each to a lane. | **More** after raises |
+| **Buzz meter** | “Ready to raise” — fills from growth/marketing; **resets to 0** on raise. **No decay.** | **Full** when raising |
+| *(hidden)* | Optional `fundingRound` flag for shop gates | — |
+
+**Remove** shipped hype counter and money balance (UI + passive tick); burn rate
++ buzz meter replace them. (Still in code today — see cheat sheet below.)
+
+### Subs vs raises (ordering)
+
+- **Subs** (`pro_plan`, `team_plan`, …): bought in the **LOC shop** (existing
+  `cost` / `requires` / `unlockAt`). Each tier adds **token headroom** and
+  **`moneyCostPerSec`** → contributes to **burn rate**.
+- **Subs are not raise-granted** — burn from subs **gates** raises; you must
+  buy subs first to look “big enough.”
+- **Raise** (action): requires **full buzz meter** + **burn ≥ round minimum**.
+  On success: meter → 0, `fundingRound++`, grant **+McMinis** (not cash, not
+  subs). Copy carries round size; mechanics add capacity + higher burn floor
+  for later rounds.
+
+Anti-spam on subs: **one row per tier in the upgrade DAG**, LOC price, unlock
+bands — same as today, not unlimited burn shopping.
+
+### McMinis + lanes (target)
+
+**UI resource:** **McMini** count (McDonald’s × Mac mini — see `README.md`
+canon). Player assigns each deployed McMini to a **lane**; lanes consume
+**tokens/s**. Do **not** surface “molty” (or similar) as a resource label —
+lobster / molt / Pinchbot wording lives in **copy only** (actions, news,
+`purchaseMsg`, kick/deploy lines).
+
+Real-world joke (research notes only — see `INSPIRATION.md`): Mac minis
+hosting always-on lobster agents. **In-game** use **Lobstagram** / molt / McMini
+only; do not name real projects in shipped copy. Raises grant **boxes**; subs
+raise **burn**; assignment spends **tokens**.
+
+| Lane | Output |
+| ---- | ------ |
+| **Code** | LOC (replaces/supersedes buff-only `kick_agent`) |
+| **Growth** | Buzz meter (Lobstagram-style marketing in flavor text) |
+| **Tests** | Test / CI leverage |
+| **Accounts** (later) | `freeAccounts` / rotation fantasy |
+
+`multi_agent` → more McMinis and/or code throughput, not only 2× a 30s buff.
+
+**Copy voice (not HUD):** “molt”, “new shell”, optional deprecated **Pinchbot**
+(or “before the molt”) — never real product names. **Lobstagram** for growth
+beats; lobster memes without a creature resource.
+
+### Token actions (target)
+
+Mid-game needs more **token sinks** than prompt/tests: social beats, meter
+nudges, MCP — in addition to allocation. Evolve the action bar by phase flags.
+
+### Vs bugs arc (timing)
+
+| Bugs spine | Investor overlay |
+| ---------- | ---------------- |
+| Ch 2 launch, uptime honest | Burn label appears; meter teased or live |
+| Ch 3 MCP, agents, subs | McMinis, lane allocation, subs → burn, raises |
+| Ch 4 review theater | Competes for tokens / McMini lanes vs process |
+| Ch 5 nines decoupling | Burn/meter fade in importance |
+
+Flavor subtitles (`ui.yaml` / `getPhase`) stay vague; fundraise is **`fundingRound`**, not phase index.
+
+---
+
+## Launch vs economy UI (shipped vs target)
+
+| | Launch (shipped + target) | Mid subs (`pro_plan` / `team_plan`) |
+| - | ------------------------- | ------------------------------------- |
+| **Fantasy** | We deployed; production exists | We pay for API at scale; investors love spend |
+| **Shipped UI** | Uptime %, **hype** number | **$ balance**, $/s |
+| **Target UI** | Uptime % | **Burn rate: $X/s**, **buzz meter** |
+| **Shipped economy** | Revenue formula *can* run; money off until `enablesMoney` | Balance ticks; $/s ≈ cost − tiny LOC revenue |
+| **Target economy** | — | Burn from subs **gates** raises; meter **gates** raises; LOC buys subs |
 
 ---
 
@@ -120,3 +203,8 @@ In dev, open `/debug` for an index, or jump directly:
 - [x] Move **code_review** / **ai_review** later for min–late crisis arc.
 - [x] Align **flavor** `phases:` with mechanical chapters (`phases.ts`, not LOC).
 - [ ] Revisit **launch** LOC band (today 10k) vs early-mid pacing.
+- [x] **Investor overlay:** burn rate HUD (good number), buzz meter (no decay), raise → **McMinis**.
+- [x] **Subs → burn** gates raises; subs stay **LOC-purchased**, not raise-granted.
+- [x] **McMinis:** lane allocation (code/growth/tests); `kick_agent` hidden once McMinis deployed.
+- [ ] **Copy:** Lobstagram / molt / Pinchbot flavor pass in more YAML (actions started).
+- [x] **Remove** shipped **hype** and **money balance**; burn-only $/s from subs.
