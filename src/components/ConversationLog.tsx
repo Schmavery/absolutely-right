@@ -23,6 +23,7 @@ interface Props {
   /** Post-allow execute spinner (tool text in `mcpExecutingMessage`). */
   mcpExecutingMessage: string | null;
   onMcpAllow: () => void;
+  onMcpAlwaysAllow: () => void;
   onMcpDeny: () => void;
 }
 
