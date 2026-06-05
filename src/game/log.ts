@@ -41,6 +41,28 @@ export function appendLog(
   return next;
 }
 
+/** Approved MCP tool call — card in the log, not token-streamed. */
+export function appendMcpToolLog(
+  prev: GameState,
+  toolText: string,
+  ackText?: string,
+): GameState {
+  if (!toolText.trim() && !ackText?.trim()) return prev;
+  const entry: LogEntry = {
+    id: prev.logId + 1,
+    text: toolText,
+    type: 'tool',
+    streamMs: 0,
+    instant: true,
+    toolAck: ackText?.trim() ? ackText : undefined,
+  };
+  return {
+    ...prev,
+    logId: prev.logId + 1,
+    log: [...prev.log, entry].slice(-MAX_LOG),
+  };
+}
+
 /** Append a line that appears in the log immediately (no token streaming). */
 export function appendLogInstant(
   prev: GameState,

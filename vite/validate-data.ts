@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
+import { messageKey } from '../src/lib/messageKey';
 
 /** Action ids referenced from `src/game/actions.ts` and UI. */
 export const ACTION_IDS = [
@@ -17,6 +18,7 @@ export const ACTION_IDS = [
   'run_tests',
   'bug_bounty',
   'mcp_allow',
+  'mcp_always_allow',
   'mcp_deny',
   'launch',
   'lobstagram_post',
@@ -46,7 +48,6 @@ const thresholdOverrideKey = z.enum([
   'showClearContextLoc',
   'showClearContextMinTokens',
   'showBugBountyBugs',
-  'showStatsLoc',
   'showNewFreeAccountTokens',
 ]);
 
@@ -117,6 +118,45 @@ const uiSchema = z.object({
   spinVerbs: z.array(z.string().min(1)).min(1),
 });
 
+const mcpToolKind = z.discriminatedUnion('tool', [
+  z.object({
+    tool: z.literal('CallMcpTool'),
+    server: z.string().min(1),
+    toolName: z.string().min(1),
+    args: z.string().min(1),
+  }),
+  z.object({
+    tool: z.literal('Shell'),
+    command: z.string().min(1),
+    note: z.string().min(1).optional(),
+  }),
+  z.object({
+    tool: z.literal('Read'),
+    path: z.string().min(1),
+    snippet: z.string().min(1).optional(),
+  }),
+  z.object({
+    tool: z.literal('Write'),
+    path: z.string().min(1),
+    preview: z.string().min(1).optional(),
+    note: z.string().min(1).optional(),
+  }),
+]);
+
+const mcpToolDef = z
+  .object({
+    id: z.string().min(1),
+    safe: z.boolean(),
+    onAllow: z.string().min(1),
+    onDeny: z.string().min(1).optional(),
+  })
+  .and(mcpToolKind);
+
+const mcpSchema = z.object({
+  unsafeAllowLeakAck: z.array(z.string().min(1)).min(3),
+  tools: z.array(mcpToolDef).min(1),
+});
+
 /**
  * Story order for shop `cost` — each id must cost more than the previous (data/PHASES.md).
  * Parallel branches use their own spine arrays below.
@@ -153,8 +193,20 @@ const DATA_FILES = [
   'news.yaml',
   'milestones.yaml',
   'actions.yaml',
+  'mcp.yaml',
   'ui.yaml',
 ] as const;
+
+function assertUniqueMessageKeys(file: string, field: string, lines: string[]): void {
+  const seen = new Set<string>();
+  for (const line of lines) {
+    const key = messageKey(line);
+    if (seen.has(key)) {
+      throw new Error(`[data/${file}] duplicate ${field} dedup key "${key}"`);
+    }
+    seen.add(key);
+  }
+}
 
 function assertUniqueIds(file: string, items: { id: string }[]): void {
   const seen = new Set<string>();
@@ -243,6 +295,7 @@ export function validateGameDataDir(dataDir: string): void {
   assertUpgradeNarrativeCosts(upgrades);
 
   const events = z.array(eventSchema).parse(raw['events.yaml']);
+  const eventKeys = new Set<string>();
   for (const e of events) {
     for (const req of e.requires ?? []) {
       if (!upgradeIds.has(req)) {
@@ -251,6 +304,11 @@ export function validateGameDataDir(dataDir: string): void {
         );
       }
     }
+    const key = messageKey(e.text);
+    if (eventKeys.has(key)) {
+      throw new Error(`[data/events.yaml] duplicate event dedup key "${key}"`);
+    }
+    eventKeys.add(key);
   }
 
   const news = z.array(newsSchema).parse(raw['news.yaml']);
@@ -270,6 +328,21 @@ export function validateGameDataDir(dataDir: string): void {
 
   const actions = z.array(actionSchema).parse(raw['actions.yaml']);
   assertUniqueIds('actions.yaml', actions);
+
+  const mcp = mcpSchema.parse(raw['mcp.yaml']);
+  assertUniqueMessageKeys('mcp.yaml', 'unsafeAllowLeakAck', mcp.unsafeAllowLeakAck);
+  assertUniqueIds('mcp.yaml', mcp.tools);
+  if (!mcp.tools.some((t) => t.safe)) {
+    throw new Error('[data/mcp.yaml] tools: need at least one entry with safe: true');
+  }
+  if (!mcp.tools.some((t) => !t.safe)) {
+    throw new Error('[data/mcp.yaml] tools: need at least one entry with safe: false');
+  }
+  for (const t of mcp.tools) {
+    if (!t.safe && !t.onDeny) {
+      throw new Error(`[data/mcp.yaml] unsafe tool "${t.id}" must define onDeny`);
+    }
+  }
 
   uiSchema.parse(raw['ui.yaml']);
 }

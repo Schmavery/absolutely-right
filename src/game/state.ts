@@ -48,6 +48,7 @@ export function defaultState(): GameState {
     mcpAutoApproveAt: null,
     mcpExecutingUntil: null,
     mcpExecutingLine: null,
+    mcpActiveToolId: null,
   };
 }
 

@@ -104,7 +104,6 @@ export interface UpgDef {
       | 'showClearContextLoc'
       | 'showClearContextMinTokens'
       | 'showBugBountyBugs'
-      | 'showStatsLoc'
       | 'showNewFreeAccountTokens',
       number
     >
@@ -132,6 +131,35 @@ export interface NewsDef {
   requires?: string[];
 }
 
+/** One fake tool invocation in `data/mcp.yaml` (`tools` pool). */
+export type McpToolDef = {
+  id: string;
+  /** When true, `always_allow` may auto-approve; unsafe beats need Allow/Deny. */
+  safe: boolean;
+  /** Log line after the tool card is approved (per tool). */
+  onAllow: string;
+  /** Log line when the player denies this tool; required when `safe: false`. */
+  onDeny?: string;
+} & (
+  | {
+      tool: 'CallMcpTool';
+      server: string;
+      toolName: string;
+      args: string;
+    }
+  | { tool: 'Shell'; command: string; note?: string }
+  /** `snippet` — fake bytes the agent “read” (not a meta caption). */
+  | { tool: 'Read'; path: string; snippet?: string }
+  | { tool: 'Write'; path: string; preview?: string; note?: string }
+);
+
+/** MCP tool-call definitions in `data/mcp.yaml`. */
+export interface McpCopy {
+  /** Extra ack line after unsafe `onAllow` (non-YOLO). */
+  unsafeAllowLeakAck: string[];
+  tools: McpToolDef[];
+}
+
 export type LogEntryType =
   | 'info'
   | 'bad'
@@ -139,6 +167,7 @@ export type LogEntryType =
   | 'news'
   | 'milestone'
   | 'system'
+  | 'tool'
   | 'user';
 
 /**
@@ -215,8 +244,10 @@ export interface LogEntry {
   type: LogEntryType;
   /** Ms for `useStreamingLog` to drain this entry; fixed in `appendLog`. */
   streamMs?: number;
-  /** Skip token streaming — show full line at once (MCP allow ack, etc.). */
+  /** Skip token streaming — show full line at once (MCP tool card, etc.). */
   instant?: boolean;
+  /** Short post-approve line under an MCP `tool` entry body. */
+  toolAck?: string;
 }
 
 export interface GameState {
@@ -240,6 +271,7 @@ export interface GameState {
   milestonesSeen: number[];
   started: boolean;
   launched: boolean;
+  /** Slug keys for dialogue/events/action pools already shown (no repeats per save). */
   usedEventIds: string[];
   /** Stable ids from `data/news.yaml`; each headline fires at most once per save. */
   usedNewsIds: string[];
@@ -262,4 +294,6 @@ export interface GameState {
   mcpExecutingUntil: number | null;
   /** Tool-call text kept visible during the post-allow spinner. */
   mcpExecutingLine: string | null;
+  /** `data/mcp.yaml` tool `id` for pending/execute (per-tool onAllow/onDeny). */
+  mcpActiveToolId: string | null;
 }

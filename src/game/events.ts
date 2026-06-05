@@ -2,6 +2,7 @@ import type { EventDef, GameState, LogEntry, LogEntryType, NewsDef } from '../ty
 import { withBugs } from './state';
 import { EVENTS, NEWS } from './data';
 import { EVENT_COOLDOWN_MS, EVENT_MIX, THRESHOLDS } from './constants';
+import { markMessageUsed, messageKey } from '../lib/messageKey';
 import { render } from '../lib/template';
 import { now, random } from './runtime';
 
@@ -9,23 +10,8 @@ export type AddLogFn = (prev: GameState, text: string, type: LogEntryType) => Ga
 
 type Gated = { minLoc: number; requiresLaunch?: boolean; requires?: string[] };
 
-/**
- * Stable per-event dedup key derived from the event's first non-empty line.
- * Keyed off the raw template source (pre-`render()`), so `{{rand}}` /
- * variables inside an event don't fragment dedup across fires — a single
- * `EventDef` always collapses to one key regardless of its rendered output.
- * Editing an event's first line resets dedup for that event, which matches
- * the authoring intent (a meaningfully changed line is effectively a new
- * event).
- */
-function eventKey(e: EventDef): string {
-  const firstLine = e.text.split('\n').find((l) => l.trim().length > 0) ?? e.text;
-  return firstLine
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
-    .replace(/-+$/, '');
+export function eventKey(e: EventDef): string {
+  return messageKey(e.text);
 }
 
 function passesGates(item: Gated, prev: GameState): boolean {
@@ -56,9 +42,8 @@ function eligibleNews(prev: GameState): NewsDef[] {
   return NEWS.filter((n) => !prev.usedNewsIds.includes(n.id) && passesGates(n, prev));
 }
 
-function eligibleEvents(prev: GameState): EventDef[] {
+function gatedEvents(prev: GameState): EventDef[] {
   return EVENTS.filter((e) => {
-    if (prev.usedEventIds.includes(eventKey(e))) return false;
     if (e.freeAccountsDelta && e.freeAccountsDelta < 0 && (prev.freeAccounts ?? 1) <= 1) {
       return false;
     }
@@ -66,13 +51,11 @@ function eligibleEvents(prev: GameState): EventDef[] {
   });
 }
 
-function repeatableEvents(prev: GameState): EventDef[] {
-  return EVENTS.filter(
-    (e) =>
-      e.minLoc <= prev.totalLoc &&
-      e.minLoc < THRESHOLDS.repeatableEventMaxLoc &&
-      !(e.requiresLaunch && !prev.launched),
-  );
+/** Unused gated events first; when exhausted, the full gated pool is eligible again. */
+function dialogueEventPool(prev: GameState): EventDef[] {
+  const gated = gatedEvents(prev);
+  const fresh = gated.filter((e) => !prev.usedEventIds.includes(eventKey(e)));
+  return fresh.length > 0 ? fresh : gated;
 }
 
 function applyEventEffects(prev: GameState, ev: EventDef): GameState {
@@ -94,8 +77,8 @@ function applyEventEffects(prev: GameState, ev: EventDef): GameState {
  * `prev` unchanged. Respects a global event cooldown so consecutive actions
  * don't all trigger an event in a single tick.
  *
- * Headlines (`data/news.yaml`) fire at most once per save (by `id`), never
- * enter the early repeat pool, and are weighted by `minLoc` like dialogue events.
+ * Headlines (`data/news.yaml`) fire at most once per save (by `id`). Dialogue
+ * events exhaust all currently gated lines (by first-line key) before any repeat.
  *
  * @param prob  probability the action triggers an event at all (0–1)
  */
@@ -105,20 +88,18 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
   if (random() > prob) return prev;
 
   const newsPool = eligibleNews(prev);
-  const freshEvents = eligibleEvents(prev);
-  const repeatPool = freshEvents.length > 0 ? freshEvents : repeatableEvents(prev);
-  if (newsPool.length === 0 && repeatPool.length === 0) return prev;
+  const eventPool = dialogueEventPool(prev);
+  if (newsPool.length === 0 && eventPool.length === 0) return prev;
 
   const pickNews =
     newsPool.length > 0 &&
-    (repeatPool.length === 0 || random() < EVENT_MIX.newsShare);
+    (eventPool.length === 0 || random() < EVENT_MIX.newsShare);
 
   let next = prev;
   let logType: LogEntry['type'];
   let text: string;
   let newsId: string | undefined;
-
-  let freshEventKey: string | undefined;
+  let eventSource: string | undefined;
 
   if (pickNews) {
     const item = weightedPick(newsPool, random());
@@ -126,19 +107,19 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
     logType = 'news';
     newsId = item.id;
   } else {
-    const ev = weightedPick(repeatPool, random());
+    const ev = weightedPick(eventPool, random());
     next = applyEventEffects(next, ev);
     text = ev.text;
+    eventSource = ev.text;
     logType =
       ev.type === 'bad' ? 'bad' : ev.type === 'event' ? 'event' : 'info';
-    if (freshEvents.length > 0) freshEventKey = eventKey(ev);
   }
 
   next = addLog(next, render(text), logType);
   next = { ...next, lastEventTime: t };
   if (newsId) next = { ...next, usedNewsIds: [...next.usedNewsIds, newsId] };
-  if (freshEventKey) {
-    next = { ...next, usedEventIds: [...next.usedEventIds, freshEventKey] };
+  if (eventSource) {
+    next = { ...next, usedEventIds: markMessageUsed(next, eventSource) };
   }
   return next;
 }

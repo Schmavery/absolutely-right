@@ -14,6 +14,7 @@ const ACTION_TITLES: Record<string, string> = {
   write_test: 'Write a test',
   run_tests: 'Run tests',
   mcp_allow: 'Allow MCP',
+  mcp_always_allow: 'Always allow MCP',
   mcp_deny: 'Deny MCP',
 };
 

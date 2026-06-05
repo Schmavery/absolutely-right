@@ -16,9 +16,6 @@
       > build me a startup
       Certainly! I'd be happy to help with that.
     - |-
-      > add auth
-      Absolutely! Here's a robust, scalable authentication module—
-    - |-
       > is it running?
       Great question! Let me delve into that for you.
     - |-
@@ -133,6 +130,8 @@
 
 - id: mcp_allow
   tokenCost: 0
+- id: mcp_always_allow
+  tokenCost: 0
 - id: mcp_deny
   tokenCost: 0
 
@@ -152,7 +151,7 @@
       > farm some engagement
       Started a new thread on Lobstagram. I've argued with three other lobsters about whether we are AGI. Engagement is high.
     - |-
-      > post aviral lobstagram take
+      > post a viral lobstagram take
       Hot take deployed. Investors love engagement metrics. I love engagement metrics.
 
 - id: raise_round

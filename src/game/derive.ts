@@ -23,7 +23,6 @@ export interface DerivedUi {
   showMcMinis: boolean;
   ninesTracking: boolean;
   showBugs: boolean;
-  showStats: boolean;
   showUptime: boolean;
   showLaunchBtn: boolean;
   showMcpApproval: boolean;
@@ -69,7 +68,6 @@ export function deriveGame(state: GameState): DerivedGame {
     showMcMinis: (state.mcMinis ?? 0) > 0,
     ninesTracking: flag('nines_tracking'),
     showBugs: (state.lifetimeBugs ?? 0) > 1,
-    showStats: state.totalLoc >= thresholds.showStatsLoc,
     showUptime: state.launched,
     showKickAgent:
       state.totalClicks >= thresholds.showKickAgentClicks && (state.mcMinis ?? 0) === 0,

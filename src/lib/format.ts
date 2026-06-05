@@ -8,10 +8,10 @@ export function fmt(n: number): string {
   return (n / 1e12).toFixed(2) + 'T';
 }
 
-/** Format a per-second rate with enough precision to be useful at small values. */
+/** Format a non-zero per-second rate (call only when `rate !== 0`). */
 export function fmtRate(n: number): string {
-  if (n === 0) return '0/s';
-  if (n < 0.01) return n.toFixed(3) + '/s';
-  if (n < 10) return n.toFixed(1) + '/s';
+  const abs = Math.abs(n);
+  if (abs < 0.1) return n.toFixed(3) + '/s';
+  if (abs < 10) return n.toFixed(1) + '/s';
   return Math.round(n) + '/s';
 }

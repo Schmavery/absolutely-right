@@ -144,6 +144,7 @@ describe('invariants: log integrity', () => {
         expect(ids).toEqual(sorted);
         expect(new Set(ids).size).toBe(ids.length);
       });
+
     }
   }
 });

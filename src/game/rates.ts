@@ -9,7 +9,7 @@
 
 import { action, GENS, UPGRADES } from './data';
 import type { GenDef, UpgDef } from '../types';
-import { BUG_GENERATION, INVESTOR, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
+import { BUG_GENERATION, INVESTOR, NEGLIGIBLE_RATE, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -56,6 +56,11 @@ export function calcAgentLocMult(upgrades: string[]): number {
 }
 
 // ─── rates ─────────────────────────────────────────────────────────────────
+
+/** Snap negligible per-second rates to zero so ticks and UI ignore noise. */
+export function snapRate(rate: number): number {
+  return Math.abs(rate) < NEGLIGIBLE_RATE ? 0 : rate;
+}
 
 export function calcRates(
   genCounts: Record<string, number>,
@@ -105,7 +110,11 @@ export function calcRates(
   // CI runs the test suite continuously, fixing bugs proportional to coverage.
   if (testFixRate > 0 && tests > 0) fixRate += tests * testFixRate;
 
-  return { locRate, bugRate, fixRate };
+  return {
+    locRate: snapRate(locRate),
+    bugRate: snapRate(bugRate),
+    fixRate: snapRate(fixRate),
+  };
 }
 
 // ─── tokens ────────────────────────────────────────────────────────────────
@@ -126,7 +135,7 @@ export function calcTokenConfig(
     if (u.maxTokensBonus) maxTokens += u.maxTokensBonus;
     if (u.tokenRegenBonus) tokenRegen += u.tokenRegenBonus;
   }
-  return { maxTokens, tokenRegen };
+  return { maxTokens, tokenRegen: snapRate(tokenRegen) };
 }
 
 // ─── nines / bug bounty drain ──────────────────────────────────────────────
@@ -137,7 +146,7 @@ export function calcNinesRate(upgrades: string[], bugs: number): number {
     if (u.ninesPerSec) rate += u.ninesPerSec;
     if (u.ninesPerBugSec) rate += bugs * u.ninesPerBugSec;
   }
-  return rate;
+  return snapRate(rate);
 }
 
 /**
@@ -150,7 +159,7 @@ export function calcAutoBugDrainRate(upgrades: string[]): number {
   for (const u of ownedDefs(upgrades)) {
     if (u.autoBugDrainRate && u.autoBugDrainRate > rate) rate = u.autoBugDrainRate;
   }
-  return rate;
+  return snapRate(rate);
 }
 
 // ─── uptime ────────────────────────────────────────────────────────────────
@@ -201,7 +210,7 @@ export function formatNinesPct(n: number): string {
 /** LOC/s from McMinis assigned to code (before bug penalty). */
 export function calcMcMiniCodeLocRate(codeMinis: number, upgrades: string[]): number {
   if (codeMinis <= 0) return 0;
-  return codeMinis * INVESTOR.codeLocPerMini * calcAgentLocMult(upgrades);
+  return snapRate(codeMinis * INVESTOR.codeLocPerMini * calcAgentLocMult(upgrades));
 }
 
 /** Infra burn $/s from owned subs (`moneyCostPerSec` max-wins). Higher is good for raises. */

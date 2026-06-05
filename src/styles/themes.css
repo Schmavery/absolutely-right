@@ -136,6 +136,11 @@
     --log-system-border: #ccaa00;
     --log-user: #777777;
     --log-user-border: #cccccc;
+
+    --icon-ring-bg: #f3ebe8;
+    --icon-ring-ghost: #e8dad5;
+    --icon-ring-mid: #d4c4be;
+    --icon-ring-front: #b8a39c;
   }
 }
 
@@ -175,6 +180,11 @@
     --log-system-border: #806600;
     --log-user: #888888;
     --log-user-border: #484848;
+
+    --icon-ring-bg: #3f3a37;
+    --icon-ring-ghost: #5c554f;
+    --icon-ring-mid: #7a726b;
+    --icon-ring-front: #b8aea6;
   }
 }
 
@@ -327,6 +337,25 @@
   --log-system-border: #d0a861;
   --log-user: #6f7787;
   --log-user-border: #4c566a;
+}
+
+/* Thinking mark rings (outer → inner). Light: pale stack on cream bg; dark: warm ramp off #111. */
+[data-theme='terminal-light'],
+[data-theme='solarized-light'] {
+  --icon-ring-bg: #f3ebe8;
+  --icon-ring-ghost: #e8dad5;
+  --icon-ring-mid: #d4c4be;
+  --icon-ring-front: #b8a39c;
+}
+
+[data-theme='terminal-dark'],
+[data-theme='solarized-dark'],
+[data-theme='gruvbox-dark'],
+[data-theme='nord'] {
+  --icon-ring-bg: #3f3a37;
+  --icon-ring-ghost: #5c554f;
+  --icon-ring-mid: #7a726b;
+  --icon-ring-front: #b8aea6;
 }
 
 @theme inline {

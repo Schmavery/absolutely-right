@@ -23,9 +23,13 @@ import { INVESTOR, LAUNCH_LOC } from './constants';
 import { canRaise, nextFundingRound } from './investor';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
+import { computeFlags } from './flags';
 import {
   mcpAllowAction,
+  mcpAlwaysAllowAction,
   mcpApprovalPending as mcpPending,
+  mcpApprovalsSuppressed,
+  mcpAutoApproves,
   mcpBlocksPlay,
   mcpDenyAction,
 } from './mcpApproval';
@@ -61,6 +65,7 @@ export const ACTION_IDS = [
   'clear_context',
   'launch',
   'mcp_allow',
+  'mcp_always_allow',
   'mcp_deny',
   'bug_bounty',
   'new_free_account',
@@ -378,7 +383,28 @@ function mcpAllow(c: Ctx): Move {
       visible: c.ui.showMcpApproval,
       apply: mcpAllowAction,
     },
-    [boolGate(mcpPending(c.state))],
+    [
+      boolGate(mcpPending(c.state)),
+      boolGate(!mcpApprovalsSuppressed(computeFlags(c.state.upgrades))),
+    ],
+  );
+}
+
+function mcpAlwaysAllow(c: Ctx): Move {
+  const flags = computeFlags(c.state.upgrades);
+  return buildMove(
+    {
+      id: 'mcp_always_allow',
+      kind: 'action',
+      actionId: 'mcp_always_allow',
+      visible: c.ui.showMcpApproval,
+      apply: mcpAlwaysAllowAction,
+    },
+    [
+      boolGate(mcpPending(c.state)),
+      boolGate(!mcpApprovalsSuppressed(flags)),
+      boolGate(mcpAutoApproves(flags)),
+    ],
   );
 }
 
@@ -391,7 +417,7 @@ function mcpDeny(c: Ctx): Move {
       visible: c.ui.showMcpApproval,
       apply: mcpDenyAction,
     },
-    [boolGate(mcpPending(c.state))],
+    [boolGate(mcpPending(c.state)), boolGate(!mcpApprovalsSuppressed(computeFlags(c.state.upgrades)))],
   );
 }
 
@@ -469,6 +495,8 @@ function runTests(c: Ctx): Move {
 
 function clearContext(c: Ctx): Move {
   const a = action('clear_context');
+  const { maxTokens } = calcTokenConfig(c.state.upgrades, c.state.freeAccounts);
+  const tokensFull = Math.floor(c.state.tokens) >= maxTokens;
   return buildMove(
     {
       id: 'clear_context',
@@ -477,7 +505,11 @@ function clearContext(c: Ctx): Move {
       visible: c.ui.showClearContext,
       apply: clearContextAction,
     },
-    withMcpIdle(c.state, [cooldownGate(c.state, 'clear_context', a.cooldownMs, c.t)], c.t),
+    withMcpIdle(
+      c.state,
+      [boolGate(!tokensFull), cooldownGate(c.state, 'clear_context', a.cooldownMs, c.t)],
+      c.t,
+    ),
   );
 }
 
@@ -489,7 +521,7 @@ function lobstagramPost(c: Ctx): Move {
       id: 'lobstagram_post',
       kind: 'action',
       actionId: 'lobstagram_post',
-      visible: c.ui.showInvestor && !buzzFull,
+      visible: c.ui.showInvestor,
       apply: lobstagramPostAction,
     },
     withMcpIdle(
@@ -644,6 +676,7 @@ export function moveTable(state: GameState, t: number = runtimeNow()): {
     lobstagramPost(c),
     raiseRound(c),
     mcpAllow(c),
+    mcpAlwaysAllow(c),
     mcpDeny(c),
     bugBounty(c),
     newFreeAccount(c),

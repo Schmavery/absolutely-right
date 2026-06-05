@@ -9,11 +9,11 @@ import {
   calcTokenConfig,
   calcUptime,
   formatNinesPct,
+  snapRate,
 } from '../game/rates';
 import { AGENT_BUFF, INVESTOR, THRESHOLDS, TOKENS } from '../game/constants';
 import { deriveGame } from '../game/derive';
 import { normalizeMcMiniLanes } from '../game/investor';
-import { canRaise, nextFundingRound, raiseBlockReason } from '../game/investor';
 import { action, UPGRADES } from '../game/data';
 
 interface RowProps {
@@ -37,7 +37,7 @@ export function ResourcePanel({ state }: Props) {
   const derived = deriveGame(state);
   const { ui, thresholds, hasFlag } = derived;
   const { locRate, bugRate, fixRate } = calcRates(state.genCounts, state.upgrades, state.tests ?? 0);
-  const netBugRate = bugRate - fixRate;
+  const netBugRate = snapRate(bugRate - fixRate);
   const bugPenalty = calcBugPenalty(state.bugs);
   const uptime = calcUptime(state.bugs);
   const { maxTokens, tokenRegen } = calcTokenConfig(state.upgrades, state.freeAccounts);
@@ -50,12 +50,9 @@ export function ResourcePanel({ state }: Props) {
 
   const lanes = normalizeMcMiniLanes(state.mcMinis ?? 0, state.mcMiniLanes);
   const mcMiniLoc = calcMcMiniCodeLocRate(lanes.code, state.upgrades) * bugPenalty;
-  const displayLocRate = locRate * bugPenalty + mcMiniLoc;
+  const displayLocRate = snapRate(locRate * bugPenalty + mcMiniLoc);
   const burnRate = calcInfraBurnPerSec(state.upgrades);
   const buzz = state.buzzMeter ?? 0;
-  const round = nextFundingRound(state);
-  const raiseReady = canRaise(state);
-  const raiseHint = round && !raiseReady ? raiseBlockReason(state) : null;
 
   const uptimeColorClass =
     uptime.nines >= 4
@@ -74,7 +71,7 @@ export function ResourcePanel({ state }: Props) {
             {Math.floor(state.tokens)}
           </span>
           <span className="text-dimmer text-[12px]">/ {maxTokens}</span>
-          {state.tokens < maxTokens && (
+          {state.tokens < maxTokens && tokenRegen !== 0 && (
             <span className="text-dimmer text-[12px]">(+{tokenRegen}/s)</span>
           )}
         </Row>
@@ -83,7 +80,7 @@ export function ResourcePanel({ state }: Props) {
       {/* loc */}
       <Row label="loc">
         <span className="text-green">{fmt(state.loc)}</span>
-        {displayLocRate > 0 && (
+        {displayLocRate !== 0 && (
           <span className="text-green-dim text-[12px]">({fmtRate(displayLocRate)})</span>
         )}
       </Row>
@@ -107,9 +104,12 @@ export function ResourcePanel({ state }: Props) {
           <span className="text-dim">{state.tests}</span>
           <span className="text-dimmer text-[12px]">
             (−{Math.round(100 * (1 - 1 / (1 + state.tests * (action('write_test').bugDamping ?? 0))))}% bugs
-            {state.upgrades.includes('cicd')
-              ? ` · CI +${(state.tests * (UPGRADES.find((u) => u.id === 'cicd')?.testFixRate ?? 0)).toFixed(1)}/s fix`
-              : ''}
+            {(() => {
+              const ciFix = snapRate(
+                state.tests * (UPGRADES.find((u) => u.id === 'cicd')?.testFixRate ?? 0),
+              );
+              return ciFix !== 0 ? ` · CI +${ciFix.toFixed(1)}/s fix` : '';
+            })()}
             )
           </span>
         </Row>
@@ -140,11 +140,6 @@ export function ResourcePanel({ state }: Props) {
         <>
           <Row label="burn rate">
             <span className="text-green">${burnRate}/s</span>
-            {round && (
-              <span className="text-dimmer text-[12px]">
-                ({round.label} needs ≥ ${round.minBurnPerSec}/s)
-              </span>
-            )}
           </Row>
           <Row label="buzz">
             <span className={buzz >= INVESTOR.buzzMax ? 'text-purple' : 'text-dim'}>
@@ -156,22 +151,6 @@ export function ResourcePanel({ state }: Props) {
                 style={{ width: `${Math.min(100, buzz)}%` }}
               />
             </span>
-            {raiseReady && round && (
-              <span className="text-purple text-[12px]">(ready — {round.label})</span>
-            )}
-            {raiseHint && <span className="text-dimmer text-[11px]">({raiseHint})</span>}
-          </Row>
-        </>
-      )}
-
-      {/* stats */}
-      {ui.showStats && (
-        <>
-          <Row label="total loc">
-            <span className="text-dim">{fmt(state.totalLoc)}</span>
-          </Row>
-          <Row label="prompts">
-            <span className="text-dim">{fmt(state.totalClicks)}</span>
           </Row>
         </>
       )}

@@ -26,7 +26,7 @@ for the chapter (same energy as “a new conversation”).
 | 3 | `code_review` or `ai_review` | waiting on sign-off |
 | 4 | `revamp_status_page` (`nines_tracking`) | no active incidents |
 
-`mcp_tools` gates flavor index 2. Post-prompt MCP beats show an in-scroll card; manual Allow/Deny, `always_allow` (card then auto-allow + execute spinner), or `yolo_mode` (no beats/cards).
+`mcp_tools` gates flavor index 2. Post-prompt MCP beats use an approval card (manual / always-allow) or go straight to a `tool` log card in YOLO; approved calls persist as `tool` entries in the log.
 
 ---
 
@@ -178,7 +178,7 @@ When an approval event fires:
 
 1. Stream the AI line (existing `chatBusyUntil` from `appendLog` / `streamingDurationMs`).
 2. Hold the prompt until the player clicks **Approve** or **Deny** (optional fixed ms on click so the gate isn’t instant).
-3. **Always allow** auto-fires Allow after the card; **YOLO** skips cards entirely. Both use a **5s execute spinner** (`MCP.executeSpinnerMs`) before the ack line (no token streaming).
+3. **Always allow** upgrade shows **deny / allow / always allow** on every card. **Always allow** on unsafe is one-time (same as allow). Then a **5s execute spinner** before a **`tool` log card**. **Safe allow** adds LOC; **safe deny** is flavor only. **Unsafe allow** — **50% LOC** plus leak/ack lines. **Unsafe deny** trims bugs. **YOLO** — tool cards only (safe still earns LOC).
 
 Implementation lives in game code + events/actions YAML; this doc only pins the intent.
 
@@ -198,7 +198,7 @@ In dev, open `/debug` for an index, or jump directly:
 ## Current vs target (living checklist)
 
 - [x] Move **CI/CD** earlier — chapter 2 (`cicd` post-launch unlock).
-- [x] **MCP / approvals** — post-prompt beats, prompt block, Allow/Deny; `yolo_mode` suppresses.
+- [x] **MCP / approvals** — post-prompt beats, prompt block, Allow/Deny; approved calls as `tool` log cards; `yolo_mode` skips approval card.
 - [x] Remove **yolo_merge** action; **yolo_mode** is upgrade-only (rates + flag).
 - [x] Move **code_review** / **ai_review** later for min–late crisis arc.
 - [x] Align **flavor** `phases:` with mechanical chapters (`phases.ts`, not LOC).

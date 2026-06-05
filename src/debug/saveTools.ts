@@ -90,6 +90,7 @@ function baseProgress(loc: number, totalLoc: number, upgrades: string[]): Partia
     mcpAutoApproveAt: null,
     mcpExecutingUntil: null,
     mcpExecutingLine: null,
+    mcpActiveToolId: null,
     log: [],
     logId: 0,
   };

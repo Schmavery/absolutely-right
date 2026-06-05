@@ -8,12 +8,14 @@ import {
   type NeedWeights,
 } from '../game/moveIntent';
 import { mcpBlocksPlay } from '../game/mcpApproval';
+import { mcpToolIsSafe } from '../game/data';
 
 export type BotStrategyId = 'progress' | 'loc' | 'hygiene';
 
 /** Legacy fixed action ranking (pre–state-based bots). */
 export const PRIORITY_PROGRESS: Record<string, number> = {
   mcp_allow: 1100,
+  mcp_always_allow: 1090,
   launch: 1000,
   buy_upgrade: 900,
   buy_gen: 800,
@@ -66,7 +68,12 @@ function pickPriorityMove(
   patienceMs: number,
 ): Move | null {
   if (mcpBlocksPlay(ctx.state)) {
-    const mcp = ctx.legal.filter((m) => m.actionId === 'mcp_allow' || m.actionId === 'mcp_deny');
+    const mcp = ctx.legal.filter(
+      (m) =>
+        m.actionId === 'mcp_allow' ||
+        m.actionId === 'mcp_always_allow' ||
+        m.actionId === 'mcp_deny',
+    );
     if (mcp.length === 0) return null;
     const rank = (m: Move) => moveRank(m, priorities);
     return [...mcp].sort((a, b) => rank(b) - rank(a) || a.id.localeCompare(b.id))[0]!;

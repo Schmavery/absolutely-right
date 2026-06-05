@@ -9,6 +9,7 @@ import { LAUNCH_LOC, THRESHOLDS } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
 import { mcpBlocksPlay } from './mcpApproval';
+import { mcpToolIsSafe } from './data';
 import { calcTokenConfig, genCost } from './rates';
 import type { GameState } from '../types';
 import { now as runtimeNow } from './runtime';
@@ -67,6 +68,7 @@ const MOVE_HELPS: Record<string, Partial<Record<NeedAxis, number>>> = {
   new_free_account: { tokens: 1 },
   launch: { launch: 1 },
   mcp_allow: { loc: 0.55 },
+  mcp_always_allow: { loc: 0.55 },
   mcp_deny: { bugs: 0.85, tests: 0.2 },
   bug_bounty: { bugs: 0.75 },
   buy_gen: { economy: 1, loc: 0.65 },
@@ -176,7 +178,12 @@ export function pickAdaptiveMove(
   opts: PickAdaptiveOpts,
 ): Move | null {
   if (mcpBlocksPlay(ctx.state)) {
-    const mcp = ctx.legal.filter((m) => m.actionId === 'mcp_allow' || m.actionId === 'mcp_deny');
+    const mcp = ctx.legal.filter(
+      (m) =>
+        m.actionId === 'mcp_allow' ||
+        m.actionId === 'mcp_always_allow' ||
+        m.actionId === 'mcp_deny',
+    );
     if (mcp.length === 0) return null;
     const needs = assessNeeds(ctx.state, ctx.t);
     const score = (m: Move) => scoreMove(m, needs, opts.weights, opts.tieBias?.(m) ?? 0);

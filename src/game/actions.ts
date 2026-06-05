@@ -24,7 +24,8 @@ import {
   calcTokenConfig,
   genCost,
 } from './rates';
-import { pick, render } from '../lib/template';
+import { markMessageUsed, pickUnused } from '../lib/messageKey';
+import { render } from '../lib/template';
 import { clearMcpApproval, maybeMcpApprovalAfterPrompt, mcpApprovalsSuppressed } from './mcpApproval';
 import { now, random } from './runtime';
 
@@ -32,6 +33,19 @@ import { now, random } from './runtime';
 
 function logFromUser(prev: GameState, text: string, type: LogEntryType): GameState {
   return appendLog(prev, text, type);
+}
+
+function logUnusedPool(
+  prev: GameState,
+  pool: readonly string[] | undefined,
+  type: LogEntryType,
+  vars: Record<string, unknown> = {},
+): GameState {
+  if (!pool?.length) return prev;
+  const source = pickUnused(pool, prev.usedEventIds);
+  if (!source) return prev;
+  let next = logFromUser(prev, render(source, vars), type);
+  return { ...next, usedEventIds: markMessageUsed(next, source) };
 }
 
 function spendTokens(prev: GameState, n: number): GameState {
@@ -78,7 +92,9 @@ export function promptAction(prev: GameState): GameState {
   };
   const scripted = a.earlyPromptMsgs ?? [];
   if (prev.totalClicks < scripted.length) {
-    next = logFromUser(next, render(scripted[prev.totalClicks]), 'info');
+    const source = scripted[prev.totalClicks]!;
+    next = logFromUser(next, render(source), 'info');
+    next = { ...next, usedEventIds: markMessageUsed(next, source) };
   } else if (a.eventProbability) {
     const past = prev.totalClicks - scripted.length;
     const prob = calcPromptEventProbability(a.eventProbability, past);
@@ -98,7 +114,7 @@ export function kickAgentAction(prev: GameState): GameState {
     ...spendTokens(prev, a.tokenCost!),
     agentBuffExpires: now() + a.buffMs!,
   };
-  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'info');
+  next = logUnusedPool(next, a.messages, 'info');
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
   return next;
 }
@@ -119,7 +135,7 @@ export function pasteErrorAction(prev: GameState): GameState {
     : random() < 0.5
       ? a.badMessages!
       : a.neutralMessages!;
-  const msg = render(pick(pool));
+  const source = pickUnused(pool, prev.usedEventIds);
 
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
@@ -129,10 +145,13 @@ export function pasteErrorAction(prev: GameState): GameState {
   };
   next = startCooldown(next, 'paste_error');
 
-  const lines = 2 + Math.floor(random() * 15);
-  const ref = 1 + Math.floor(random() * 8);
-  const suffixed = msg.replace(/^(>[^\n]*)/, `$1 [Pasted text #${ref} · ${lines} lines]`);
-  next = logFromUser(next, suffixed, 'info');
+  if (source) {
+    const lines = 2 + Math.floor(random() * 15);
+    const ref = 1 + Math.floor(random() * 8);
+    const suffixed = render(source).replace(/^(>[^\n]*)/, `$1 [Pasted text #${ref} · ${lines} lines]`);
+    next = logFromUser(next, suffixed, 'info');
+    next = { ...next, usedEventIds: markMessageUsed(next, source) };
+  }
   return next;
 }
 
@@ -142,9 +161,10 @@ export function clearContextAction(prev: GameState): GameState {
   const a = action('clear_context');
   if (isOnCooldown(prev, 'clear_context', a.cooldownMs!)) return prev;
   const { maxTokens } = calcTokenConfig(prev.upgrades, prev.freeAccounts);
+  if (Math.floor(prev.tokens) >= maxTokens) return prev;
   let next: GameState = { ...prev, tokens: maxTokens };
   next = startCooldown(next, 'clear_context');
-  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'info');
+  next = logUnusedPool(next, a.messages, 'info');
   return next;
 }
 
@@ -164,7 +184,7 @@ export function runTestsAction(prev: GameState): GameState {
   };
   const t = now();
   if (a.messages && t - prev.lastTestLogTime > (a.logCooldownMs ?? 0)) {
-    next = logFromUser(next, render(pick(a.messages), { n: fixed }), 'info');
+    next = logUnusedPool(next, a.messages, 'info', { n: fixed });
     next = { ...next, lastTestLogTime: t };
   }
   if (a.eventProbability) next = maybeFireEvent(next, a.eventProbability, appendLog);
@@ -222,7 +242,7 @@ export function launchAction(prev: GameState): GameState {
   const a = action('launch');
   if (prev.launched) return prev;
   let next: GameState = { ...prev, launched: true };
-  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'system');
+  next = logUnusedPool(next, a.messages, 'system');
   return next;
 }
 
@@ -240,7 +260,7 @@ export function lobstagramPostAction(prev: GameState): GameState {
     buzzMeter: Math.min(INVESTOR.buzzMax, (prev.buzzMeter ?? 0) + gain),
   };
   next = startCooldown(next, 'lobstagram_post');
-  if (a.messages) next = logFromUser(next, render(pick(a.messages)), 'info');
+  next = logUnusedPool(next, a.messages, 'info');
   return next;
 }
 
@@ -254,18 +274,11 @@ export function raiseRoundAction(prev: GameState): GameState {
   };
   next = grantMcMinis(next, round.mcMinisGrant);
   const a = action('raise_round');
-  const pool = a.messages ?? [];
-  if (pool.length > 0) {
-    next = logFromUser(
-      next,
-      render(pick(pool), {
-        round: round.label,
-        mcMinis: next.mcMinis,
-        grant: round.mcMinisGrant,
-      }),
-      'system',
-    );
-  }
+  next = logUnusedPool(next, a.messages, 'system', {
+    round: round.label,
+    mcMinis: next.mcMinis,
+    grant: round.mcMinisGrant,
+  });
   return next;
 }
 
@@ -279,9 +292,7 @@ export function newFreeAccountAction(prev: GameState): GameState {
     freeAccounts: (prev.freeAccounts ?? 1) + 1,
   };
   next = startCooldown(next, 'free_account');
-  if (a.messages) {
-    next = logFromUser(next, render(pick(a.messages), { n: next.freeAccounts }), 'info');
-  }
+  next = logUnusedPool(next, a.messages, 'info', { n: next.freeAccounts });
   return next;
 }
 

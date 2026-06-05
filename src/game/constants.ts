@@ -12,6 +12,9 @@
  */
 
 export const TICK_MS = 100;
+
+/** Per-second rates with |value| below this are treated as zero (ticks and UI). */
+export const NEGLIGIBLE_RATE = 0.01;
 export const MAX_LOG = 80;
 export const LAUNCH_LOC = 10000;
 /** How often the game auto-persists state to localStorage (ms). */
@@ -31,9 +34,6 @@ export const EVENT_COOLDOWN_MS = 5000;
 // component code uses them so a quick search reveals where each one shows up.
 
 export const THRESHOLDS = {
-  /** Stats lines ("total loc", "prompts") become visible. */
-  showStatsLoc: 1000,
-
   /** Generators section becomes visible. */
   showGeneratorsLoc: 450,
   /** Upgrades section becomes visible. */
@@ -63,8 +63,6 @@ export const THRESHOLDS = {
   bugSpawnLoc: 100,
   /** Chance a manual prompt also spawns a bug, once `bugSpawnLoc` reached. */
   promptBugChance: 0.25,
-  /** Events with `minLoc <` this become eligible as fallback "filler" events. */
-  repeatableEventMaxLoc: 2000,
   /** Bug count above which warnings start showing. */
   warnBugsElevated: 10,
   warnBugsCritical: 100,
@@ -192,6 +190,12 @@ export const MCP = {
   executeSpinnerMs: 5000,
   /** How long the approval card is visible before auto-allow fires (ms). */
   autoApproveDelayMs: 400,
+  /** Share of LOC buffer lost on unsafe allow without YOLO (manual Allow). */
+  unsafeAllowLocLeakFraction: 0.5,
+  /** Min LOC granted when a safe tool is allowed. */
+  safeAllowLocMin: 800,
+  /** Extra safe-allow LOC = floor(totalLoc × this). */
+  safeAllowLocFraction: 0.006,
 } as const;
 
 export const STREAMING = {

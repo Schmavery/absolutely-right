@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { LogEntry } from '../types';
 import { UI } from '../game/data';
 import { STREAMING } from '../game/constants';
 import { Button } from './Button';
+import { McpToolCallBlock } from './McpToolCallBlock';
 
 const SPIN_FRAMES = UI.spinFrames;
 const SPIN_VERBS = UI.spinVerbs;
@@ -15,15 +16,17 @@ interface Props {
   isMobile: boolean;
   /** MCP tool-call card (pending Allow/Deny). */
   mcpApprovalMessage: string | null;
-  /** Always-allow: card visible, buttons hidden until auto-fire. */
-  mcpAutoPending: boolean;
+  /** `always_allow` upgrade — third button on the approval card. */
+  mcpShowAlwaysAllow?: boolean;
+  /** Unsafe tool while always_allow owned — Always allow is one-time only. */
+  mcpUnsafePolicyBlocked?: boolean;
   /** Post-allow execute spinner (tool text in `mcpExecutingMessage`). */
   mcpExecutingMessage: string | null;
   onMcpAllow: () => void;
   onMcpDeny: () => void;
 }
 
-const TYPE_CLASSES: Record<LogEntry['type'], string> = {
+const TYPE_CLASSES: Record<Exclude<LogEntry['type'], 'tool'>, string> = {
   user: 'border-r-2 border-r-log-user-border text-log-user pr-[10px] text-right',
   bad: 'border-l-2 border-l-log-bad-border text-log-bad pl-[10px]',
   event: 'border-l-2 border-l-log-event-border text-log-event pl-[10px]',
@@ -40,14 +43,20 @@ export function ConversationLog({
   spinTick,
   isMobile,
   mcpApprovalMessage,
-  mcpAutoPending,
+  mcpShowAlwaysAllow,
+  mcpUnsafePolicyBlocked,
   mcpExecutingMessage,
   onMcpAllow,
+  onMcpAlwaysAllow,
   onMcpDeny,
 }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
+  const initialScrollRef = useRef(true);
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    endRef.current?.scrollIntoView({
+      behavior: initialScrollRef.current ? 'instant' : 'smooth',
+    });
+    initialScrollRef.current = false;
   }, [
     displayLog.length,
     displayLog[displayLog.length - 1]?.id,
@@ -58,6 +67,46 @@ export function ConversationLog({
   const spinnerChar = SPIN_FRAMES[spinTick % SPIN_FRAMES.length];
   const spinnerVerb =
     SPIN_VERBS[Math.floor(spinTick / STREAMING.spinnerVerbEvery) % SPIN_VERBS.length];
+
+  let mcpFooter: ReactNode = null;
+  if (mcpExecutingMessage) {
+    mcpFooter = (
+      <div className="text-[11px] text-dimmer border-l-2 border-l-log-info-border pl-[10px]">
+        {spinnerChar} {spinnerVerb}...
+      </div>
+    );
+  } else if (mcpApprovalMessage) {
+    mcpFooter = (
+      <div className="flex flex-col items-end gap-1">
+        {mcpUnsafePolicyBlocked && (
+          <div className="text-[11px] text-dimmer text-right">
+            always allow won&apos;t stick on risky tools
+          </div>
+        )}
+        <div className="flex justify-end items-center gap-2">
+          <Button className="mb-0 mr-0" onClick={onMcpDeny} title="deny MCP tool call">
+            deny
+          </Button>
+          <Button className="mb-0 mr-0" onClick={onMcpAllow} title="allow once">
+            allow
+          </Button>
+          {mcpShowAlwaysAllow && (
+            <Button
+              className="mb-0 mr-0"
+              onClick={onMcpAlwaysAllow}
+              title={
+                mcpUnsafePolicyBlocked
+                  ? 'always allow (one-time on risky tools)'
+                  : 'always allow'
+              }
+            >
+              always allow
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -77,52 +126,33 @@ export function ConversationLog({
           isMobile ? 'pb-12' : 'pb-24',
         ].join(' ')}
       >
-        {displayLog.map((entry) => (
-          <div
-            key={entry.id}
-            className={'mb-[11px] text-[12px] leading-[1.55] ' + TYPE_CLASSES[entry.type]}
-          >
-            {entry.text}
-          </div>
-        ))}
+        {displayLog.map((entry) =>
+          entry.type === 'tool' ? (
+            <McpToolCallBlock
+              key={entry.id}
+              tool={entry.text}
+              ack={entry.toolAck}
+              approved
+            />
+          ) : (
+            <div
+              key={entry.id}
+              className={'mb-[11px] text-[12px] leading-[1.55] ' + TYPE_CLASSES[entry.type]}
+            >
+              {entry.text}
+            </div>
+          ),
+        )}
         {showThinking && (
           <div className="px-[10px] py-[7px] text-[11px] text-dimmer border-l-2 border-l-log-info-border mb-[11px]">
             {spinnerChar} {spinnerVerb}...
           </div>
         )}
         {(mcpApprovalMessage || mcpExecutingMessage) && (
-          <div className="mb-[11px] border border-card-border bg-card-bg px-[10px] pt-2 pb-2">
-            <div className="text-dimmer text-[10px] tracking-[0.12em] uppercase mb-[7px]">
-              tool call
-            </div>
-            <div className="text-[12px] leading-[1.55] mb-3 pl-[10px] border-l-2 border-l-log-event-border text-log-event whitespace-pre-wrap">
-              {mcpExecutingMessage ?? mcpApprovalMessage}
-            </div>
-            {mcpExecutingMessage ? (
-              <div className="text-[11px] text-dimmer border-l-2 border-l-log-info-border pl-[10px]">
-                {spinnerChar} {spinnerVerb}...
-              </div>
-            ) : mcpAutoPending ? (
-              <div className="text-[11px] text-dimmer text-right">always-allow policy</div>
-            ) : (
-              <div className="flex justify-end items-center gap-2">
-                <Button
-                  className="mb-0 mr-0"
-                  onClick={onMcpDeny}
-                  title="deny MCP tool call"
-                >
-                  deny
-                </Button>
-                <Button
-                  className="mb-0 mr-0"
-                  onClick={onMcpAllow}
-                  title="allow MCP tool call"
-                >
-                  allow
-                </Button>
-              </div>
-            )}
-          </div>
+          <McpToolCallBlock
+            tool={mcpExecutingMessage ?? mcpApprovalMessage!}
+            footer={mcpFooter}
+          />
         )}
         <div ref={endRef} />
       </div>

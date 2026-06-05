@@ -24,7 +24,7 @@ export const GAME_FLAGS = {
   mcp_tools: 'mcp_tools',
   /** Auto-approve MCP calls without blocking the prompt (see `always_allow`). */
   mcp_auto_approve: 'mcp_auto_approve',
-  /** No MCP approval beats or Allow/Deny UI (see `yolo_mode`). */
+  /** MCP beats skip approval card; approved calls go to `tool` log entries (see `yolo_mode`). */
   yolo_mode: 'yolo_mode',
 } as const;
 

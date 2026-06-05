@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameState } from './types';
 import { SAVE_INTERVAL_MS, STREAMING, TICK_MS } from './game/constants';
 import { mcpExecuting } from './game/mcpApproval';
-import { MILESTONES, UI } from './game/data';
+import { MILESTONES, UI, mcpToolIsSafe } from './game/data';
 import { deriveGame } from './game/derive';
 import { getPhase } from './game/phases';
 import { clearSave, defaultState, initState, saveState } from './game/state';
@@ -29,7 +29,7 @@ import {
   bugBountyAction,
   writeTestAction,
 } from './game/actions';
-import { mcpAllowAction, mcpDenyAction } from './game/mcpApproval';
+import { mcpAllowAction, mcpAlwaysAllowAction, mcpDenyAction } from './game/mcpApproval';
 import { computeQueuedUserEntries } from './lib/queuedUserLog';
 import { isLogEntryFullyDisplayed, useStreamingLog } from './lib/useStreamingLog';
 import { useIsMobile } from './lib/useWindowWidth';
@@ -37,7 +37,7 @@ import { Button } from './components/Button';
 import { FooterBarrel } from './components/FooterBarrel';
 import { McMinis } from './components/McMinis';
 import { ResourcePanel } from './components/ResourcePanel';
-import { shiftMcMiniLane } from './game/investor';
+import { nextFundingRound, shiftMcMiniLane } from './game/investor';
 import type { McMiniLane } from './game/investor';
 import { ActionBar } from './components/ActionBar';
 import { Generators } from './components/Generators';
@@ -45,6 +45,7 @@ import { Upgrades, InstalledList } from './components/Upgrades';
 import { ConversationLog } from './components/ConversationLog';
 import { Settings } from './components/Settings';
 import { ResetConfirmModal } from './components/ResetConfirmModal';
+import { GameTitle } from './components/GameTitle';
 
 const PHASES = UI.phases;
 const FIRST_MILESTONE_LOC = MILESTONES[0]?.loc ?? 10;
@@ -121,6 +122,7 @@ export function Game() {
       shiftMcMiniLane: (from: McMiniLane, to: McMiniLane) =>
         setState((prev) => shiftMcMiniLane(prev, from, to)),
       mcpAllow: dispatch(mcpAllowAction),
+      mcpAlwaysAllow: dispatch(mcpAlwaysAllowAction),
       mcpDeny: dispatch(mcpDenyAction),
       newFreeAccount: dispatch(newFreeAccountAction),
       writeTest: dispatch(writeTestAction),
@@ -139,9 +141,16 @@ export function Game() {
 
   // ── derived ──
   const derived = deriveGame(state);
+  const mcpUnsafePolicyBlocked =
+    state.mcpApprovalPending != null &&
+    state.mcpAutoApproveAt == null &&
+    state.mcpActiveToolId != null &&
+    !mcpToolIsSafe(state.mcpActiveToolId) &&
+    derived.hasFlag('mcp_auto_approve');
   const phase = getPhase(state);
   const showLog = state.log.length >= 1;
-  const { showGenSection, showUpgSection } = derived.ui;
+  const { showGenSection, showUpgSection, showInvestor } = derived.ui;
+  const fundingRoundOpen = showInvestor && nextFundingRound(state) !== undefined;
 
   const queuedUserEntries = useMemo(
     () => computeQueuedUserEntries(state.log, displayLog, isAnimating),
@@ -172,7 +181,7 @@ export function Game() {
 
       {isMobile && (
         <div className="flex-shrink-0 mb-2">
-          <div className="text-title mb-[2px] tracking-[0.04em]">&gt; extra thinking</div>
+          <GameTitle />
           <div className="text-dimmer text-[12px]">{PHASES[phase]}</div>
         </div>
       )}
@@ -195,7 +204,7 @@ export function Game() {
         >
           {!isMobile && (
             <>
-              <div className="text-title mb-[2px] tracking-[0.04em]">&gt; extra thinking</div>
+              <GameTitle />
               <div className="text-dimmer text-[12px] mb-6">{PHASES[phase]}</div>
             </>
           )}
@@ -228,7 +237,6 @@ export function Game() {
             onClearContext={handlers.clearContext}
             onLaunch={handlers.launch}
             onLobstagramPost={handlers.lobstagramPost}
-            onRaiseRound={handlers.raiseRound}
             onRunBugBounty={handlers.runBugBounty}
           />
 
@@ -246,7 +254,13 @@ export function Game() {
             />
           )}
 
-          {showUpgSection && <Upgrades state={state} onBuyUpgrade={handlers.buyUpgrade} />}
+          {(showUpgSection || fundingRoundOpen) && (
+            <Upgrades
+              state={state}
+              onBuyUpgrade={handlers.buyUpgrade}
+              onRaiseRound={handlers.raiseRound}
+            />
+          )}
 
           <InstalledList ids={state.upgrades} />
 
@@ -266,13 +280,13 @@ export function Game() {
             queuedUserEntries={queuedUserEntries}
             isMobile={isMobile}
             mcpApprovalMessage={state.mcpApprovalPending}
-            mcpAutoPending={
-              state.mcpApprovalPending != null && state.mcpAutoApproveAt != null
-            }
+            mcpShowAlwaysAllow={derived.hasFlag('mcp_auto_approve')}
+            mcpUnsafePolicyBlocked={mcpUnsafePolicyBlocked}
             mcpExecutingMessage={mcpRunning ? state.mcpExecutingLine : null}
             showThinking={showThinking || mcpRunning}
             spinTick={mcpRunning ? mcpSpinTick : spinTick}
             onMcpAllow={handlers.mcpAllow}
+            onMcpAlwaysAllow={handlers.mcpAlwaysAllow}
             onMcpDeny={handlers.mcpDeny}
           />
         )}

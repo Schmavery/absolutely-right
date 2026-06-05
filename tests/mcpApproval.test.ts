@@ -6,6 +6,7 @@ import {
   advanceMcpTiming,
   maybeMcpApprovalAfterPrompt,
   mcpAllowAction,
+  mcpAlwaysAllowAction,
   mcpApprovalPending,
   mcpApprovalsSuppressed,
   mcpAutoApproves,
@@ -16,13 +17,41 @@ import {
 } from '../src/game/mcpApproval';
 import { setRandom } from '../src/game/runtime';
 import { getMove, rechargeProgress } from '../src/game/availability';
+import { MCP_TOOLS, mcpToolById } from '../src/game/data';
 import { defaultState } from '../src/game/state';
 
 describe('MCP approvals', () => {
-  it('yolo_mode suppresses approval rolls', () => {
+  it('yolo_mode skips approval card and appends a tool log entry', () => {
     const flags = computeFlags(['mcp_tools', 'always_allow', 'yolo_mode']);
     expect(mcpToolsEnabled(flags)).toBe(true);
     expect(mcpApprovalsSuppressed(flags)).toBe(true);
+    setRandom(() => 0);
+    const prev = {
+      ...defaultState(),
+      upgrades: ['mcp_tools', 'always_allow', 'yolo_mode'],
+      launched: true,
+    };
+    const next = maybeMcpApprovalAfterPrompt(prev, prev);
+    expect(mcpApprovalPending(next)).toBe(false);
+    expect(next.log).toHaveLength(1);
+    expect(next.log[0]?.type).toBe('tool');
+    expect(next.log[0]?.instant).toBe(true);
+    expect(next.log[0]?.text).toMatch(/CallMcpTool|Shell|Read|Write/);
+    expect(next.log[0]?.toolAck).toBeUndefined();
+  });
+
+  it('yolo beat does not block prompt', () => {
+    setRandom(() => 0);
+    const at = 2_000_000;
+    const prev = {
+      ...defaultState(),
+      upgrades: ['mcp_tools', 'yolo_mode'],
+      launched: true,
+    };
+    const next = maybeMcpApprovalAfterPrompt(prev, prev);
+    expect(mcpBlocksPlay(next, at)).toBe(false);
+    expect(getMove(next, 'prompt', at)!.legal).toBe(true);
+    expect(getMove(next, 'mcp_allow', at)!.legal).toBe(false);
   });
 
   it('always_allow is not yolo — still rolls approval beats', () => {
@@ -31,17 +60,45 @@ describe('MCP approvals', () => {
     expect(mcpApprovalsSuppressed(flags)).toBe(false);
   });
 
-  it('always_allow queues card + auto-approve schedule (no immediate log)', () => {
+  it('always_allow shows manual card for safe and unsafe (no auto timer)', () => {
     setRandom(() => 0);
     const prev = {
       ...defaultState(),
       upgrades: ['mcp_tools', 'always_allow'],
       launched: true,
     };
-    const next = maybeMcpApprovalAfterPrompt(prev, prev);
-    expect(mcpApprovalPending(next)).toBe(true);
-    expect(next.mcpAutoApproveAt).not.toBeNull();
-    expect(next.log.length).toBe(prev.log.length);
+    const safe = maybeMcpApprovalAfterPrompt(prev, prev);
+    expect(mcpApprovalPending(safe)).toBe(true);
+    expect(safe.mcpAutoApproveAt).toBeNull();
+    expect(getMove(safe, 'mcp_always_allow', Date.now())!.legal).toBe(true);
+
+    const usedSafe = {
+      ...prev,
+      usedEventIds: MCP_TOOLS.filter((t) => t.safe).map((t) => t.id),
+    };
+    setRandom(() => 0);
+    const unsafe = maybeMcpApprovalAfterPrompt(usedSafe, usedSafe);
+    expect(mcpApprovalPending(unsafe)).toBe(true);
+    expect(unsafe.mcpAutoApproveAt).toBeNull();
+    expect(getMove(unsafe, 'mcp_always_allow', Date.now())!.legal).toBe(true);
+  });
+
+  it('always allow on unsafe runs once like allow (no whitelist)', () => {
+    const at = 1_000_000;
+    vi.spyOn(Date, 'now').mockReturnValue(at);
+    const prev = {
+      ...defaultState(),
+      loc: 60_000,
+      upgrades: ['mcp_tools', 'always_allow'],
+      mcpApprovalPending: 'Shell\ncommand: sudo rm -rf /',
+      mcpActiveToolId: 'shell_rm_rf_root',
+    };
+    let allow = mcpAllowAction(prev);
+    allow = advanceMcpTiming(allow, at + MCP.executeSpinnerMs);
+    let always = mcpAlwaysAllowAction(prev);
+    always = advanceMcpTiming(always, at + MCP.executeSpinnerMs);
+    expect(allow.loc).toBe(30_000);
+    expect(always.loc).toBe(30_000);
   });
 
   it('pending approval does not append the request to the log', () => {
@@ -57,16 +114,47 @@ describe('MCP approvals', () => {
     expect(next.mcpApprovalPending).toBeTruthy();
   });
 
-  it('deny clears pending and trims bugs', () => {
+  it('deny unsafe trims bugs', () => {
     const prev = {
       ...defaultState(),
       bugs: 40,
-      mcpApprovalPending: 'Allow deploy?',
+      mcpApprovalPending: 'Shell\ncommand: sudo rm -rf /',
+      mcpActiveToolId: 'shell_rm_rf_root',
     };
     const next = mcpDenyAction(prev);
     expect(mcpApprovalPending(next)).toBe(false);
-    expect(next.bugs).toBeLessThan(prev.bugs);
     expect(next.bugs).toBe(36);
+  });
+
+  it('deny safe does not change loc or bugs', () => {
+    const prev = {
+      ...defaultState(),
+      loc: 12_000,
+      totalLoc: 400_000,
+      bugs: 10,
+      mcpApprovalPending: 'Shell\ncommand: npm test',
+      mcpActiveToolId: 'shell_npm_test',
+    };
+    const next = mcpDenyAction(prev);
+    expect(next.loc).toBe(12_000);
+    expect(next.totalLoc).toBe(400_000);
+    expect(next.bugs).toBe(10);
+  });
+
+  it('allowing safe tool adds LOC', () => {
+    const at = 1_000_000;
+    vi.spyOn(Date, 'now').mockReturnValue(at);
+    const prev = {
+      ...defaultState(),
+      loc: 5_000,
+      totalLoc: 200_000,
+      mcpApprovalPending: 'CallMcpTool\nserver: test',
+      mcpActiveToolId: 'shell_npm_test',
+    };
+    let next = mcpAllowAction(prev);
+    next = advanceMcpTiming(next, at + MCP.executeSpinnerMs);
+    expect(next.loc).toBeGreaterThan(5_000);
+    expect(next.totalLoc).toBeGreaterThan(200_000);
   });
 
   it('omits recharge bar when bool-gated but keeps it on cooldown', () => {
@@ -106,21 +194,90 @@ describe('MCP approvals', () => {
     expect(getMove(state, 'mcp_allow', at)!.legal).toBe(false);
   });
 
-  it('manual allow uses execute spinner then instant ack in log', () => {
+  it('yolo unsafe beat has no LOC leak or fallout log lines', () => {
+    setRandom(() => 0);
+    const prev = {
+      ...defaultState(),
+      loc: 100_000,
+      totalLoc: 500_000,
+      upgrades: ['mcp_tools', 'always_allow', 'yolo_mode'],
+      launched: true,
+      usedEventIds: MCP_TOOLS.filter((t) => t.safe).map((t) => t.id),
+    };
+    const next = maybeMcpApprovalAfterPrompt(prev, prev);
+    expect(mcpApprovalPending(next)).toBe(false);
+    expect(next.loc).toBe(100_000);
+    expect(next.log).toHaveLength(1);
+    expect(next.log[0]?.type).toBe('tool');
+    expect(next.log[0]?.toolAck).toBeUndefined();
+    expect(next.log.some((e) => e.text.includes('Data leak'))).toBe(false);
+  });
+
+  it('allowing unsafe tool leaks 50% of LOC buffer', () => {
+    const at = 1_000_000;
+    vi.spyOn(Date, 'now').mockReturnValue(at);
+    const prev = {
+      ...defaultState(),
+      loc: 80_000,
+      totalLoc: 200_000,
+      mcpApprovalPending: 'Shell\ncommand: sudo rm -rf /',
+      mcpActiveToolId: 'shell_rm_rf_root',
+    };
+    let next = mcpAllowAction(prev);
+    next = advanceMcpTiming(next, at + MCP.executeSpinnerMs);
+    expect(next.loc).toBe(40_000);
+    expect(next.totalLoc).toBe(200_000);
+    expect(next.log.some((e) => e.text.includes('Data leak'))).toBe(true);
+    expect(next.log[0]?.toolAck).toMatch(/leak|exfil|off the machine|phoning home/i);
+  });
+
+  it('allowing safe tool adds LOC without leak log', () => {
+    const at = 1_000_000;
+    vi.spyOn(Date, 'now').mockReturnValue(at);
+    const prev = {
+      ...defaultState(),
+      loc: 50_000,
+      totalLoc: 50_000,
+      mcpApprovalPending: 'CallMcpTool\nserver: test',
+      mcpActiveToolId: 'shell_npm_test',
+    };
+    let next = mcpAllowAction(prev);
+    next = advanceMcpTiming(next, at + MCP.executeSpinnerMs);
+    expect(next.loc).toBeGreaterThan(prev.loc);
+    expect(next.log.some((e) => e.text.includes('Data leak'))).toBe(false);
+  });
+
+  it('manual allow uses execute spinner then tool card in log', () => {
     const at = 1_000_000;
     vi.spyOn(Date, 'now').mockReturnValue(at);
     const prev = {
       ...defaultState(),
       mcpApprovalPending: 'CallMcpTool\nserver: test',
+      mcpActiveToolId: 'shell_npm_test',
     };
     let next = mcpAllowAction(prev);
     expect(mcpApprovalPending(next)).toBe(false);
+    expect(next.mcpActiveToolId).toBe('shell_npm_test');
     expect(next.mcpExecutingUntil).toBe(at + MCP.executeSpinnerMs);
     next = advanceMcpTiming(next, at + MCP.executeSpinnerMs);
     expect(mcpExecuting(next, at + MCP.executeSpinnerMs)).toBe(false);
-    const ack = next.log[next.log.length - 1];
-    expect(ack?.instant).toBe(true);
-    expect(ack?.text.length).toBeGreaterThan(0);
+    const tool = next.log[next.log.length - 1];
+    expect(tool?.type).toBe('tool');
+    expect(tool?.instant).toBe(true);
+    expect(tool?.toolAck).toMatch(/tests green|one flake/i);
+  });
+
+  it('deny uses per-tool onDeny line', () => {
+    setRandom(() => 0);
+    const prev = {
+      ...defaultState(),
+      bugs: 10,
+      mcpApprovalPending: 'Shell command: sudo rm -rf /',
+      mcpActiveToolId: 'shell_rm_rf_root',
+    };
+    const next = mcpDenyAction(prev);
+    expect(next.log[next.log.length - 1]?.text).toMatch(/no|ok/i);
+    expect(next.bugs).toBeLessThan(10);
   });
 
   it('blocks all player actions except allow/deny while approval pending', () => {
@@ -141,6 +298,17 @@ describe('MCP approvals', () => {
     expect(getMove(state, 'run_tests', t)!.legal).toBe(false);
     expect(getMove(state, 'mcp_allow', t)!.legal).toBe(true);
     expect(getMove(state, 'mcp_deny', t)!.legal).toBe(true);
+    expect(getMove(state, 'mcp_always_allow', t)!.legal).toBe(false);
+  });
+
+  it('mcp_always_allow legal only with always_allow upgrade', () => {
+    const state = {
+      ...defaultState(),
+      upgrades: ['mcp_tools', 'always_allow'],
+      mcpApprovalPending: 'CallMcpTool\nserver: test',
+    };
+    const t = Date.now();
+    expect(getMove(state, 'mcp_always_allow', t)!.legal).toBe(true);
   });
 
   it('clears pending when yolo_mode purchased', () => {

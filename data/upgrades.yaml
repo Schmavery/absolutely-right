@@ -149,14 +149,14 @@
   purchaseMsg: "Paying for access now. Money has entered the chat. Token limits: significantly improved."
 - id: always_allow
   name: Always Allow
-  desc: MCP tool calls still appear as cards, then auto-allow. +2× bug generation.
+  desc: MCP cards get deny / allow / always allow. Always allow on risky tools is one-time only. +2× bug generation.
   cost: 1200000
   unlockAt: 480000
   bugMult: 2
   requiresLaunch: true
   requires:
     - mcp_tools
-  purchaseMsg: Always-allow policy enabled. Tool calls proceed without confirmation. Very fast. Very confident. Incidents also proceed without hesitation.
+  purchaseMsg: Always-allow policy enabled for safe tools only. Risky calls still stop for your sign-off. Very fast on the boring stuff.
   flags:
     - mcp_auto_approve
 - id: team_plan
@@ -173,14 +173,14 @@
   purchaseMsg: Team plan activated. We have all the tokens. The bill will be significant. Worth it.
 - id: yolo_mode
   name: YOLO Mode
-  desc: No MCP approval beats or cards — tools run silently. +10× bug generation (stacks with Always Allow).
+  desc: MCP beats skip the approval card; tool cards only (no LOC leak, no scary ack lines). +10× bug generation (stacks with Always Allow).
   cost: 1800000
   unlockAt: 920000
   bugMult: 10
   requiresLaunch: true
   requires:
     - always_allow
-  purchaseMsg: YOLO mode on. I will merge, deploy, and comment LGTM without further consultation.
+  purchaseMsg: YOLO mode on. Tools run straight into the log. No leak warnings. No post-mortem commentary. Very fast.
   flags:
     - yolo_mode
 

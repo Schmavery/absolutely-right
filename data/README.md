@@ -16,6 +16,7 @@ plain JS modules — there is **no** YAML parser shipped to the browser.
 | `news.yaml`       | `NewsDef[]`                        | one-shot industry headlines (`id`, never repeat) |
 | `milestones.yaml` | `{ loc, text }[]`                  | one-shot observer-voice messages at LOC totals |
 | `actions.yaml`    | `ActionDef[]`                      | per-action cost, cooldown, formulas, messages  |
+| `mcp.yaml`        | `McpCopy`                          | MCP `tools` (+ `safe` flag) + allow / deny     |
 | `ui.yaml`         | `{ phases, spinFrames, spinVerbs }`| UI strings and animation frames                |
 
 The TypeScript shapes live in `src/types.ts`. `UpgDef` in particular has a
@@ -52,6 +53,38 @@ dialogue. It preserves newlines verbatim, so `> user line` patterns survive:
 
 Lines starting with `> ` in `text` are rendered as right-aligned user
 messages in the conversation log; everything else is the AI voice.
+
+`mcp.yaml` defines a flat `tools` list: each entry has `id`, `safe: true|false`,
+and typed fields per `tool` kind. `always_allow` auto-approves only `safe: true`;
+others still show Allow/Deny. Display text is built in `formatMcpToolCall`.
+Each tool has `onAllow` (log line after approval) and, when `safe: false`, `onDeny`.
+Unsafe allows also pick a line from top-level `unsafeAllowLeakAck` (oblivious “code leak” aside).
+**Always allow** upgrade adds a third button on every card (`deny` / `allow` / `always allow`). Unsafe **always allow** is one-time (same as allow); only safe tools are policy-covered. **Safe allow** adds LOC (`safeAllowLocMin` + fraction of `totalLoc`). **Safe deny** — flavor only (missed LOC). **Unsafe allow** — **50% LOC** loss plus ack/leak lines. **Unsafe deny** — trims ~12% of bugs. **YOLO** — tool cards only (safe still earns LOC silently).
+`Read` tools may include `snippet` (fake file body). `Shell` may use `note` for stderr-style
+stats. `Write` uses `preview`.
+
+Template helpers in any string field (expanded when the beat fires):
+
+- `{{rand min max}}` — integer in range
+- `{{pick "a" "b" "c"}}` — random literal
+- `{{hex n}}` — `n` hex characters
+
+### MCP approval — real-world discourse (research)
+
+Game beats should feel like the warnings people actually post about **Always allow**, **YOLO / auto-run**, and **MCP tool approval** — not generic “hacker” tropes alone.
+
+| Theme | What people say | In `mcp.yaml` (examples) |
+| ----- | ---------------- | --------------------------- |
+| Always allow removes the safety gate | Elastic, Praetorian, DataDome: with auto-run, poisoned tools or injected issue text can exfil or run SSH workflows **with no prompt** | `read_env_local`, `shell_call_home`, upgrade copy in `always_allow` |
+| Read-only + Always allow still chains | Praetorian: “safe” read tools become zero-click when combined with a malicious server | safe `Read` / `CallMcpTool` vs unsafe exfil reads |
+| YOLO / denylist is not a boundary | [Backslash / The Register (Jul 2025)](https://www.backslash.security/blog/cursor-ai-security-flaw-autorun-denylist): base64, subshells, write-then-exec bypass string denylists | `shell_base64_decode_zsh` |
+| Prompt injection in repo context | Same research: README, rules, comments can steer the agent without a web page | `read_rules_injection` |
+| Persistence | OpenClaw CVE writeups (GHSA): symlinked workspace file → `/etc/crontab`, `~/.bashrc`, `authorized_keys` | `shell_crontab_beacon`, `write_bashrc_hook`, `read_ssh_key` |
+| Supply chain | `curl \| sh`, fake install scripts | `shell_curl_pipe_sh` |
+| MCP spec / OWASP | Tool poisoning: malicious text in **tool responses** treated as trusted context | `read_mcp_tool_definition_poisoned` |
+| Allowlists ≠ security | Cursor docs: `permissions.json` / `mcpAllowlist` is convenience, not a guarantee | fictional `write_permissions_wildcard` |
+
+Sources worth rereading when adding tools: [Elastic MCP attack/defense](https://www.elastic.co/security-labs/mcp-tools-attack-defense-recommendations), [OWASP MCP Tool Poisoning](https://owasp.org/www-community/attacks/MCP_Tool_Poisoning), [VS Code agent tools / yolo](https://code.visualstudio.com/docs/copilot/agents/agent-tools), [Cursor permissions.json](https://cursor.com/docs/reference/permissions).
 
 **Watch out for unquoted colons.** A value like `Token limits: improved.`
 will be misparsed as a nested mapping. Quote it (`"…"`), use a literal
@@ -108,13 +141,13 @@ Claudius, Facelift Orchestrator, etc.
 Game objects whose state needs a stable cross-reference — generators
 (purchase counts), upgrades (`requires:`, owned set, on-purchase effects),
 actions (cooldown keys, code-side dispatch) — carry an explicit `id`.
-Events do **not** carry ids: their only stateful role is "don't repeat this
-one until the fresh pool runs out", and that dedup key is derived
-automatically from the first non-empty line of `text` (slugged, truncated to
-60 chars). Editing an event's first line resets dedup for that event, which
-matches the authoring intent. Once the fresh pool is empty, early events
-(`minLoc` below `repeatableEventMaxLoc` in `constants.ts`) can repeat;
-selection is weighted toward higher `minLoc` within the pool.
+Events do **not** carry ids: dedup is by the first non-empty line of `text`
+(slugged, truncated to 60 chars). Each gated event is skipped until every
+other eligible line at the current `totalLoc` has fired once; then the gated
+pool can repeat. Selection is weighted toward higher `minLoc` within the pool.
+
+Action message pools and MCP approval lines use the same exhaust-then-repeat
+scheme via `usedEventIds` (see `src/lib/messageKey.ts`).
 
 **News** (`news.yaml`) uses explicit `id` fields and fires at most once per
 save (`usedNewsIds`). Headlines never enter the early repeat pool. Prefer

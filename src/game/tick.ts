@@ -18,6 +18,7 @@ import {
   calcRates,
   calcTokenConfig,
   calcUptime,
+  snapRate,
 } from './rates';
 import { appendLog } from './log';
 import { advanceMcpTiming } from './mcpApproval';
@@ -53,13 +54,15 @@ export function tickReducer(state: GameState, dtMs: number = TICK_MS): GameState
   const agentMult = calcAgentLocMult(prev.upgrades);
   const mcMiniCodeRate =
     mcMinis > 0 ? calcMcMiniCodeLocRate(lanes.code, prev.upgrades) * bugPenalty : 0;
-  const effectiveLoc = (locRate + mcMiniCodeRate) * dt;
+  const effectiveLocRate = snapRate(locRate + mcMiniCodeRate);
+  const effectiveLoc = effectiveLocRate * dt;
   const mcMiniBugs =
     mcMinis > 0 && prev.totalLoc >= thresholds.bugSpawnLoc && lanes.code > 0
       ? bugRate * INVESTOR.codeBugRateMult * lanes.code
       : 0;
-  const effectiveBugRate =
-    prev.totalLoc >= thresholds.bugSpawnLoc ? bugRate + mcMiniBugs : 0;
+  const effectiveBugRate = snapRate(
+    prev.totalLoc >= thresholds.bugSpawnLoc ? bugRate + mcMiniBugs : 0,
+  );
 
   const ninesTracking = hasFlag(flags, 'nines_tracking');
   const ninesRate = ninesTracking ? calcNinesRate(prev.upgrades, prev.bugs) : 0;
@@ -72,7 +75,8 @@ export function tickReducer(state: GameState, dtMs: number = TICK_MS): GameState
       ? buzzGainPerSec(lanes) * dt
       : 0;
 
-  const newBugs = prev.bugs + (effectiveBugRate - fixRate) * dt - autoBugDrain;
+  const netBugDeltaRate = snapRate(effectiveBugRate - fixRate);
+  const newBugs = prev.bugs + netBugDeltaRate * dt - autoBugDrain;
   let next: GameState = {
     ...prev,
     mcMiniLanes: lanes,

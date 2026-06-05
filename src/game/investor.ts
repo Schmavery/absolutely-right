@@ -64,6 +64,11 @@ export function canRaise(state: GameState): boolean {
   return calcInfraBurnPerSec(state.upgrades) >= round.minBurnPerSec;
 }
 
+export function raiseRoundRequirementsLabel(round: { minBurnPerSec: number }): string {
+  const burn = round.minBurnPerSec > 0 ? `≥ $${round.minBurnPerSec}/s burn · ` : '';
+  return `${burn}100% buzz`;
+}
+
 export function raiseBlockReason(state: GameState): string | null {
   const round = nextFundingRound(state);
   if (!round) return 'no rounds left';

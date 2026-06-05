@@ -23,7 +23,7 @@ const TARGET_CHAPTERS: { id: string; title: string; bugStrategy: string; status:
     id: 'mid',
     title: 'Mid — tools & approvals',
     bugStrategy: 'Approve/deny tool calls; then Always → YOLO upgrade',
-    status: 'MCP card; always_allow auto; yolo skips; 5s execute spinner',
+    status: 'MCP approval card → tool log; yolo skips card; 5s execute spinner',
   },
   {
     id: 'min-late',
@@ -93,6 +93,7 @@ export function PhasesDebug() {
     'clear_context',
     'launch',
     'mcp_allow',
+    'mcp_always_allow',
     'mcp_deny',
     'bug_bounty',
   ] as const;

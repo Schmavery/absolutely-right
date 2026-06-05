@@ -2,26 +2,66 @@ import type { GameState } from '../types';
 import { UPGRADES } from '../game/data';
 import { fmt } from '../lib/format';
 import { getMove, rechargeProgress } from '../game/availability';
+import {
+  nextFundingRound,
+  raiseBlockReason,
+  raiseRoundRequirementsLabel,
+} from '../game/investor';
 import { Button } from './Button';
 
 interface Props {
   state: GameState;
   onBuyUpgrade: (id: string) => void;
+  onRaiseRound: () => void;
 }
 
-export function Upgrades({ state, onBuyUpgrade }: Props) {
+export function Upgrades({ state, onBuyUpgrade, onRaiseRound }: Props) {
   const now = Date.now();
+  const round = nextFundingRound(state);
+  const raiseMove = round ? getMove(state, 'raise_round', now)! : null;
+  const showRaise = raiseMove?.visible ?? false;
+
   const visible = UPGRADES.map((u) => ({
     u,
     move: getMove(state, `buy_upgrade:${u.id}`, now)!,
   })).filter(({ move }) => move.visible);
-  if (visible.length === 0) return null;
+
+  if (visible.length === 0 && !showRaise) return null;
 
   return (
     <div>
       <div className="text-dim text-[11px] tracking-[0.12em] uppercase mb-[10px] mt-6 pb-[5px] border-b border-border">
         upgrades
       </div>
+
+      {showRaise && round && raiseMove && (() => {
+        const blockReason = raiseMove.legal ? null : raiseBlockReason(state);
+        return (
+          <div className="grid grid-cols-[180px_56px_1fr] gap-[6px] items-baseline mb-[7px]">
+            <div className="text-fg">Close {round.label}</div>
+            <Button
+              variant={raiseMove.legal ? 'launch' : 'default'}
+              off={!raiseMove.legal}
+              onClick={raiseMove.legal ? onRaiseRound : undefined}
+              title={raiseMove.legal ? `Close ${round.label}` : blockReason ?? undefined}
+            >
+              close
+            </Button>
+            <div className="text-[12px] text-dimmer">
+              {raiseRoundRequirementsLabel(round)}
+              {raiseMove.legal ? (
+                <span className="text-purple ml-[10px]">(ready)</span>
+              ) : (
+                blockReason && <span className="ml-[10px]">({blockReason})</span>
+              )}
+              {round.mcMinisGrant > 0 && (
+                <span className="ml-[10px]">+{round.mcMinisGrant} McMini</span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {visible.map(({ u, move }) => (
         <div
           key={u.id}
