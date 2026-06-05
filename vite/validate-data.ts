@@ -128,7 +128,7 @@ const mcpToolKind = z.discriminatedUnion('tool', [
   z.object({
     tool: z.literal('Shell'),
     command: z.string().min(1),
-    note: z.string().min(1).optional(),
+    output: z.string().min(1).optional(),
   }),
   z.object({
     tool: z.literal('Read'),
@@ -139,7 +139,7 @@ const mcpToolKind = z.discriminatedUnion('tool', [
     tool: z.literal('Write'),
     path: z.string().min(1),
     preview: z.string().min(1).optional(),
-    note: z.string().min(1).optional(),
+    output: z.string().min(1).optional(),
   }),
 ]);
 

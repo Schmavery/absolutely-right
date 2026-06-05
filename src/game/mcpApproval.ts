@@ -90,8 +90,14 @@ export function mcpMayAutoApprove(def: McpToolDef, flags: ReadonlySet<GameFlag>)
   return mcpAutoApproves(flags) && def.safe;
 }
 
+/** Pending card + execute spinner — no Shell/Write `output` yet. */
 function renderToolLine(def: McpToolDef): string {
   return formatMcpToolCall(def, (s) => render(s));
+}
+
+/** Approved log card — includes post-run `output` when defined. */
+function renderApprovedToolLine(def: McpToolDef): string {
+  return formatMcpToolCall(def, (s) => render(s), { includeOutput: true });
 }
 
 function buildAllowAck(
@@ -181,7 +187,6 @@ function startMcpExecution(prev: GameState, at: number): GameState {
 }
 
 function finishMcpExecution(prev: GameState): GameState {
-  const toolText = prev.mcpExecutingLine ?? '';
   const def = prev.mcpActiveToolId ? mcpToolById(prev.mcpActiveToolId) : undefined;
   let next: GameState = {
     ...prev,
@@ -189,8 +194,7 @@ function finishMcpExecution(prev: GameState): GameState {
     mcpExecutingLine: null,
     mcpActiveToolId: null,
   };
-  if (def && toolText.trim()) return finalizeApprovedToolLog(next, toolText, def);
-  if (def) return finalizeApprovedToolLog(next, toolText || renderToolLine(def), def);
+  if (def) return finalizeApprovedToolLog(next, renderApprovedToolLine(def), def);
   return next;
 }
 
@@ -231,7 +235,7 @@ export function maybeMcpApprovalAfterPrompt(prev: GameState, next: GameState): G
   const line = renderToolLine(def);
 
   if (mcpApprovalsSuppressed(flags)) {
-    return finalizeApprovedToolLog(next, line, def);
+    return finalizeApprovedToolLog(next, renderApprovedToolLine(def), def);
   }
 
   return {

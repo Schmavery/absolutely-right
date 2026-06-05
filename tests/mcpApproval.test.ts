@@ -101,6 +101,24 @@ describe('MCP approvals', () => {
     expect(always.loc).toBe(30_000);
   });
 
+  it('pending card omits Shell output until approved', () => {
+    setRandom(() => 0);
+    const prev = {
+      ...defaultState(),
+      upgrades: ['mcp_tools'],
+      launched: true,
+      usedEventIds: MCP_TOOLS.filter((t) => t.id !== 'shell_git_status').map((t) => t.id),
+    };
+    const next = maybeMcpApprovalAfterPrompt(prev, prev);
+    expect(next.mcpApprovalPending).toContain('git status');
+    expect(next.mcpApprovalPending).not.toMatch(/changed files/);
+    const at = 1_000_000;
+    vi.spyOn(Date, 'now').mockReturnValue(at);
+    let done = mcpAllowAction(next);
+    done = advanceMcpTiming(done, at + MCP.executeSpinnerMs);
+    expect(done.log[0]?.text).toMatch(/changed files/);
+  });
+
   it('pending approval does not append the request to the log', () => {
     setRandom(() => 0);
     const prev = {

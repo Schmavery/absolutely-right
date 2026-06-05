@@ -147,10 +147,10 @@ export type McpToolDef = {
       toolName: string;
       args: string;
     }
-  | { tool: 'Shell'; command: string; note?: string }
+  | { tool: 'Shell'; command: string; output?: string }
   /** `snippet` — fake bytes the agent “read” (not a meta caption). */
   | { tool: 'Read'; path: string; snippet?: string }
-  | { tool: 'Write'; path: string; preview?: string; note?: string }
+  | { tool: 'Write'; path: string; preview?: string; output?: string }
 );
 
 /** MCP tool-call definitions in `data/mcp.yaml`. */

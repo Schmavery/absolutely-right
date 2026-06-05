@@ -1,7 +1,17 @@
 import type { McpToolDef } from '../types';
 
+export type FormatMcpToolOpts = {
+  /** Shell/Write `output` lines — shown only after approve (default false). */
+  includeOutput?: boolean;
+};
+
 /** Render templated fields (`{{rand}}`, etc.) then build the in-game tool card body. */
-export function formatMcpToolCall(def: McpToolDef, renderField: (s: string) => string): string {
+export function formatMcpToolCall(
+  def: McpToolDef,
+  renderField: (s: string) => string,
+  opts?: FormatMcpToolOpts,
+): string {
+  const includeOutput = opts?.includeOutput ?? false;
   switch (def.tool) {
     case 'CallMcpTool':
       return [
@@ -12,7 +22,9 @@ export function formatMcpToolCall(def: McpToolDef, renderField: (s: string) => s
       ].join('\n');
     case 'Shell': {
       const head = `Shell command: ${renderField(def.command)}`;
-      return def.note ? [head, renderField(def.note)].join('\n') : head;
+      return includeOutput && def.output
+        ? [head, renderField(def.output)].join('\n')
+        : head;
     }
     case 'Read': {
       const head = `Read path: ${renderField(def.path)}`;
@@ -23,7 +35,7 @@ export function formatMcpToolCall(def: McpToolDef, renderField: (s: string) => s
     case 'Write': {
       const lines = [`Write path: ${renderField(def.path)}`];
       if (def.preview) lines.push(renderField(def.preview));
-      if (def.note) lines.push(renderField(def.note));
+      if (includeOutput && def.output) lines.push(renderField(def.output));
       return lines.join('\n');
     }
   }

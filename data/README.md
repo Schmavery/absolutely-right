@@ -60,8 +60,8 @@ others still show Allow/Deny. Display text is built in `formatMcpToolCall`.
 Each tool has `onAllow` (log line after approval) and, when `safe: false`, `onDeny`.
 Unsafe allows also pick a line from top-level `unsafeAllowLeakAck` (oblivious “code leak” aside).
 **Always allow** upgrade adds a third button on every card (`deny` / `allow` / `always allow`). Unsafe **always allow** is one-time (same as allow); only safe tools are policy-covered. **Safe allow** adds LOC (`safeAllowLocMin` + fraction of `totalLoc`). **Safe deny** — flavor only (missed LOC). **Unsafe allow** — **50% LOC** loss plus ack/leak lines. **Unsafe deny** — trims ~12% of bugs. **YOLO** — tool cards only (safe still earns LOC silently).
-`Read` tools may include `snippet` (fake file body). `Shell` may use `note` for stderr-style
-stats. `Write` uses `preview`.
+`Read` tools may include `snippet` (fake file body). `Shell` / `Write` may use `output` for
+post-run lines on the approved tool card only (hidden while pending; omitted on deny). `Write` uses `preview`.
 
 Template helpers in any string field (expanded when the beat fires):
 

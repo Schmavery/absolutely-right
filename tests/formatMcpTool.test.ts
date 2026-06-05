@@ -12,6 +12,14 @@ describe('formatMcpToolCall', () => {
     ).toBe('Shell command: npm test');
   });
 
+  it('omits Shell output until includeOutput', () => {
+    const def = id({ tool: 'Shell', command: 'npm test', output: '(exit 0)' });
+    expect(formatMcpToolCall(def, (s) => s)).toBe('Shell command: npm test');
+    expect(formatMcpToolCall(def, (s) => s, { includeOutput: true })).toBe(
+      'Shell command: npm test\n(exit 0)',
+    );
+  });
+
   it('formats Read with snippet as fake file body', () => {
     expect(
       formatMcpToolCall(
