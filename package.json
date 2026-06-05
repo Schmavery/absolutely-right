@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "validate-data": "vitest run tests/validateData.test.ts",
+    "check": "npm run typecheck && npm run validate-data",
+    "prepare": "git config core.hooksPath .githooks",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

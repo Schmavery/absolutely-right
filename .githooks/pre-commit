@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+npm run typecheck
+npm run validate-data
