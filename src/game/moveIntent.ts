@@ -192,11 +192,17 @@ export function assessNeeds(state: GameState, t: number = runtimeNow()): NeedVec
   const launchUrgency =
     ui.showLaunchBtn && !state.launched ? clamp01(state.totalLoc / LAUNCH_LOC) : 0;
 
+  // Pre-launch: hygiene must not dominate the grind (seed-sensitive stalls).
+  const preLaunchHygieneDamp =
+    !state.launched && launchGapUrgency > 0.35
+      ? 1 - launchGapUrgency * 0.85
+      : 1;
+
   return {
     loc: locUrgency,
     tokens: tokensUrgency,
-    bugs: bugsUrgency,
-    tests: testsUrgency,
+    bugs: bugsUrgency * preLaunchHygieneDamp,
+    tests: testsUrgency * preLaunchHygieneDamp,
     economy: economyUrgency,
     launch: launchUrgency,
   };
@@ -283,7 +289,7 @@ export function filterMovesForPlanner(
   const minScore = opts.minScore ?? 0.28;
   const top = topNeeds(needs, 2);
 
-  return moves.filter((m) => {
+  const filtered = moves.filter((m) => {
     if (m.waitMs === null && !m.legal) return false;
     if (m.kind === 'buy_upgrade' || m.kind === 'buy_gen') return true;
     if (m.id === 'launch') return true;
@@ -292,6 +298,14 @@ export function filterMovesForPlanner(
     const helps = moveHelps(m, state, t);
     return top.some((axis) => (helps[axis] ?? 0) >= 0.5);
   });
+
+  if (!state.launched) {
+    for (const id of ['kick_agent', 'prompt'] as const) {
+      const keep = moves.find((m) => m.id === id);
+      if (keep && !filtered.some((m) => m.id === id)) filtered.push(keep);
+    }
+  }
+  return filtered;
 }
 
 export function topNeeds(needs: NeedVector, n: number): NeedAxis[] {

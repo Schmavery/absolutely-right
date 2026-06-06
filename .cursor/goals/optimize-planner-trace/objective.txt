@@ -1,0 +1,10 @@
+Optimize the planner A* heuristic and trace bots together using the opt loop harness.
+
+Each iteration:
+1. Run npm run opt:loop:launch (or smoke) and read heuristicDebt in debug-reports/opt-loop-last.txt.
+2. If heuristicDebt < 1: graph search lost — tune planHeuristic.ts, heuristicWeight, filterMoves/pruneShop in planReach.ts. Characterize the faster bot path as a counterexample. Do NOT tune bots to match worse search.
+3. If heuristicDebt > 1: bot policy lag — tune moveIntent.ts / bots.ts.
+4. Replay must launch before trusting debt numbers.
+5. Verify with npm test and relevant bench scripts.
+
+Keep rules generic so game data changes do not break the optimization loop.

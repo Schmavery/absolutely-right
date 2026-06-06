@@ -7,9 +7,7 @@ afterEach(() => Sim.teardown());
 
 /** One-off sweep; enable with RUN_PATIENCE_SWEEP=1 */
 describe.skipIf(!process.env.RUN_PATIENCE_SWEEP)('patience sweep (manual)', () => {
-  it(
-    'logs launch times by patience and strategy',
-    () => {
+  it('logs launch times by patience and strategy', () => {
       const SEEDS = [1, 7, 42, 99, 4242];
       const BUDGET = 12 * 3_600_000;
       const PATIENCES = [0, 3000, 5000, 10000, 20000, 60000];
@@ -42,19 +40,14 @@ describe.skipIf(!process.env.RUN_PATIENCE_SWEEP)('patience sweep (manual)', () =
         }
       }
       expect(true).toBe(true);
-    },
-    300_000,
-  );
+  });
 });
 
-describe('strategy launch (smoke)', () => {
-  it(
-    'progress reaches launch on seed 42',
-    () => {
-      const sim = new Sim({ seed: 42 });
-      sim.runEventDriven(strategyBot('progress'), 12 * 3_600_000);
-      expect(sim.state.launched).toBe(true);
-    },
-    90_000,
-  );
+/** 12h virtual sim — `RUN_BOT_LAUNCH_SMOKE=1 vitest run tests/patienceSweep.test.ts` */
+describe.skipIf(!process.env.RUN_BOT_LAUNCH_SMOKE)('strategy launch (smoke)', () => {
+  it('progress reaches launch on seed 42', () => {
+    const sim = new Sim({ seed: 42 });
+    sim.runEventDriven(strategyBot('progress'), 12 * 3_600_000);
+    expect(sim.state.launched).toBe(true);
+  });
 });

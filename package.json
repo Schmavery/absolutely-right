@@ -12,10 +12,16 @@
     "prepare": "git config core.hooksPath .githooks",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:cruise": "vitest run tests/cruiseEstimate.test.ts",
+    "test:metaplan": "vitest run tests/metaPlan.test.ts",
+    "test:plan:launch": "RUN_PLAN_INTEGRATION=1 vitest run tests/planReach.test.ts -t \"fastest launch\"",
     "test:slow": "RUN_BOT_STRATEGIES=1 vitest run tests/botStrategies.test.ts",
     "test:watch": "vitest",
     "bench:launch": "RUN_LAUNCH_BENCH=1 vitest run tests/launchBench.test.ts",
-    "bench:phase2": "RUN_PHASE2_BENCH=1 vitest run tests/launchBench.test.ts -t \"phase 2\""
+    "bench:phase2": "RUN_PHASE2_BENCH=1 vitest run tests/launchBench.test.ts -t \"phase 2\"",
+    "opt:loop": "RUN_OPT_LOOP=1 vitest run tests/optLoop.test.ts -t full",
+    "opt:loop:launch": "RUN_OPT_LAUNCH=1 vitest run tests/optLoop.test.ts -t \"launch report\"",
+    "opt:loop:smoke": "vitest run tests/optLoop.test.ts -t smoke"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",

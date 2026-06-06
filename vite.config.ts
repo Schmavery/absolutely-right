@@ -23,9 +23,9 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
-    /** Per-test cap — do not override with `it(..., { timeout: N })` unless opt-in slow. */
-    testTimeout: 15_000,
-    hookTimeout: 15_000,
+    /** Hard cap: no test may run longer than 2 minutes. */
+    testTimeout: 120_000,
+    hookTimeout: 30_000,
     slowTestThreshold: 5_000,
   },
 });

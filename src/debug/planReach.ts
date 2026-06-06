@@ -1,29 +1,15 @@
-import { ACTION_DURATION_MS, LAUNCH_LOC, LOC_PER_CLICK_POWER, THRESHOLDS } from '../game/constants';
-import { action, UPGRADES } from '../game/data';
-import { defaultState, withBugs } from '../game/state';
+import { LAUNCH_LOC, THRESHOLDS } from '../game/constants';
+import { UPGRADES } from '../game/data';
+import { defaultState } from '../game/state';
 import { getPhase } from '../game/phases';
-import {
-  affordWaitMs,
-  boolBlocked,
-  legalIgnoringCooldown,
-  moveTable,
-  visibleMoves,
-  type Move,
-} from '../game/availability';
+import { moveTable, visibleMoves, type Move } from '../game/availability';
 import type { GameState } from '../types';
-import { setClock, setRandom, resetClock, resetRandom, now } from '../game/runtime';
+import { setClock, setRandom, resetClock, resetRandom } from '../game/runtime';
 import { tickReducer } from '../game/tick';
-import { appendLog } from '../game/log';
-import {
-  calcClickBonus,
-  calcClickPower,
-  calcKickAgentTokenCost,
-  calcPromptCooldownMs,
-  calcRates,
-} from '../game/rates';
-import { filterMovesForPlanner } from '../game/moveIntent';
-import { render } from '../lib/template';
 import { mulberry32 } from '../sim/Sim';
+import { calcPromptCooldownMs } from '../game/rates';
+import { filterMovesForPlanner } from '../game/moveIntent';
+import { defaultPlanHeuristic, type PlanHeuristicFn } from './planHeuristic';
 import { fmtLoc, fmtTime } from './traceAnalyze';
 
 export type PlanGoal =
@@ -115,14 +101,24 @@ export interface PlanSearchOpts {
   /** Report search progress every N states visited (worker / UI streaming). */
   progressEveryStates?: number;
   onProgress?: (p: PlanSearchProgress) => void;
-  /** Drop low-value actions (keeps buys, launch, goal-relevant shop). Default true. */
+  /**
+   * Legacy hard filter (`filterMovesForPlanner`). Prefer `maxActionBranches` ranking.
+   * Default false — same legal set as sim bots; ranking trims branching.
+   */
   filterMoves?: boolean;
-  /** Goal-directed upgrade shop pruning for `upgrade` goals. Default true. */
+  /**
+   * Top legal action edges per node, ranked by one-step `planHeuristic` (like `heuristicBot`).
+   * Economic + kick/prompt moves are always pinned. 0 = expand all legal. Default 14.
+   */
+  maxActionBranches?: number;
+  /** Goal-directed upgrade shop pruning for `upgrade` / `launched` goals. Default true. */
   pruneShop?: boolean;
   /** Expand by f = t + weight×h (weight above 1 = greedier, best-effort). Default true. */
   useAStar?: boolean;
   /** Heuristic scale on A* priority (default 1.35 — not admissible, finds goals faster). */
   heuristicWeight?: number;
+  /** Custom ms-left estimate; default `defaultPlanHeuristic`. */
+  heuristic?: PlanHeuristicFn;
   /** When search stops early, promote closest frontier if progress ≥ threshold. Default true. */
   acceptBestEffort?: boolean;
   /** Min goal progress 0–1 to accept a best-effort witness (default 0.06). */
@@ -305,7 +301,8 @@ function stateKey(state: GameState, t: number): string {
     .slice(-6)
     .map((e) => e.id)
     .join(',');
-  return `${state.launched ? 1 : 0}|${[...state.upgrades].sort().join(',')}|u:${unlocked}|${gens}|loc:${loc}|tl:${totalLoc}|tok:${tok}|bugs:${Math.floor(state.bugs)}|tests:${state.tests}|clk:${state.totalClicks}|buff:${buffLeft}|lt:${logTail}`;
+  // Wall clock is part of the node — waits advance `t` without changing economics.
+  return `${state.launched ? 1 : 0}|${[...state.upgrades].sort().join(',')}|u:${unlocked}|${gens}|loc:${loc}|tl:${totalLoc}|tok:${tok}|bugs:${Math.floor(state.bugs)}|tests:${state.tests}|clk:${state.totalClicks}|buff:${buffLeft}|lt:${logTail}|t:${t}`;
 }
 
 function fastForward(state: GameState, t: number, dtMs: number): GameState {
@@ -315,126 +312,66 @@ function fastForward(state: GameState, t: number, dtMs: number): GameState {
 }
 
 /**
- * Prompt for planner: scripted early lines only, no RNG bugs/events.
- * Keeps the search graph finite while modeling LOC grind + log stream cost.
+ * Path-independent RNG: same economic snapshot → same stochastic action outcome
+ * regardless of A* exploration order.
  */
-export function applyPlanPrompt(prev: GameState): GameState {
-  const a = action('prompt');
-  const power = calcClickPower(prev.upgrades);
-  const locGain = power * LOC_PER_CLICK_POWER + calcClickBonus(prev.upgrades);
-  let next: GameState = {
-    ...prev,
-    loc: prev.loc + locGain,
-    ...withBugs(prev, prev.bugs),
-    totalLoc: prev.totalLoc + locGain,
-    totalClicks: prev.totalClicks + 1,
-    started: true,
-  };
-  const scripted = a.earlyPromptMsgs ?? [];
-  if (prev.totalClicks < scripted.length) {
-    next = appendLog(next, render(scripted[prev.totalClicks]!), 'info');
+/** Path-independent RNG for planner apply + witness replay (must match search). */
+export function plannerRngForState(baseSeed: number, state: GameState, t: number): () => number {
+  let h = baseSeed >>> 0;
+  const key = stateKey(state, t);
+  for (let i = 0; i < key.length; i++) {
+    h = Math.imul(h ^ key.charCodeAt(i), 0x9e3779b9) >>> 0;
   }
-  return next;
+  return mulberry32(h);
 }
 
-/** Deterministic kick: first message pool entry, no random events. */
-export function applyPlanKick(prev: GameState): GameState {
-  const a = action('kick_agent');
-  const tokenCost = calcKickAgentTokenCost(prev.upgrades);
-  if (prev.tokens < tokenCost) return prev;
-  if (now() < (prev.agentBuffExpires ?? 0)) return prev;
-  let next: GameState = {
-    ...prev,
-    tokens: prev.tokens - tokenCost,
-    totalTokensSpent: (prev.totalTokensSpent ?? 0) + tokenCost,
-    agentBuffExpires: now() + (a.buffMs ?? 0),
-  };
-  const msg = a.messages?.[0];
-  if (msg) next = appendLog(next, render(msg), 'info');
-  return next;
+/** Min wait edge — sub-second ticks explode the search graph. */
+export const PLANNER_MIN_WAIT_DT_MS = 2_000;
+
+/** Max single wait edge (matches sim `maxEventDtMs` default chunk). */
+const PLANNER_MAX_WAIT_DT_MS = 30_000;
+
+function clampPlannerWaitDt(ms: number): number {
+  return Math.max(PLANNER_MIN_WAIT_DT_MS, Math.min(ms, PLANNER_MAX_WAIT_DT_MS));
 }
 
-/** Caller must `setClock` to the step time before invoking. */
-function applyPlanAction(state: GameState, move: Move): GameState {
-  if (move.id === 'prompt') return applyPlanPrompt(state);
-  if (move.id === 'kick_agent') return applyPlanKick(state);
-  return move.apply(state);
+/**
+ * Next wait edge — mirrors sim `nextEventDt`: jump to the nearest gate (≥2s, ≤30s).
+ * One wait branch per node, same as bots returning null to advance time.
+ */
+export function plannerNextWaitDt(state: GameState, t: number): number {
+  let next = PLANNER_MAX_WAIT_DT_MS;
+  for (const m of visibleMoves(state, t)) {
+    if (m.waitMs == null || m.waitMs <= 0) continue;
+    next = Math.min(next, clampPlannerWaitDt(m.waitMs));
+  }
+  const buffLeft = Math.max(0, (state.agentBuffExpires ?? 0) - t);
+  if (buffLeft > 0) next = Math.min(next, clampPlannerWaitDt(buffLeft));
+  return Math.max(PLANNER_MIN_WAIT_DT_MS, Math.min(next, PLANNER_MAX_WAIT_DT_MS));
 }
 
-interface StepCostOpts {
-  promptCostMult: number;
-  promptPenaltyMs: number;
+/** @deprecated Prefer `plannerNextWaitDt` — returns a single next-event wait. */
+export function plannerWaitDeltas(state: GameState, t: number): number[] {
+  return [plannerNextWaitDt(state, t)];
 }
 
-/** Virtual ms charged per planner action — cooldowns are costs, not idle-wait branches. */
-function plannerActionCostMs(move: Move, state: GameState): number {
-  if (move.id === 'prompt') return calcPromptCooldownMs(state.upgrades);
-  const a = move.actionId ? action(move.actionId) : null;
-  if (a?.cooldownMs) return a.cooldownMs;
-  return ACTION_DURATION_MS;
+/** Wait edge: passive loc/tok, cooldown progress — no button press. */
+function advancePlannerTime(state: GameState, t: number, dtMs: number): GameState {
+  return fastForward(state, t, dtMs);
 }
 
-function stepMove(
+/** Action edge: legal only, instant at `t` — pays loc/tokens, sets cooldowns. */
+function applyPlannerAction(
   state: GameState,
   t: number,
   move: Move,
-  cost: StepCostOpts,
-): {
-  state: GameState;
-  t: number;
-  waitMs: number;
-  promptFrictionMs: number;
-} | null {
-  const startT = t;
-  const table = moveTable(state, t);
-  const m = table.byId[move.id];
-  if (!m || !m.visible) return null;
-
-  let s = state;
-  let curT = t;
-  let waitMs = 0;
-
-  setClock(() => curT);
-  const gate = moveTable(s, curT).byId[move.id];
-  if (!gate) return null;
-
-  if (!gate.legal) {
-    if (boolBlocked(gate)) return null;
-    if (!legalIgnoringCooldown(gate)) {
-      const affordWait = affordWaitMs(gate);
-      if (affordWait === null) return null;
-      if (affordWait > 0) {
-        waitMs = affordWait;
-        s = fastForward(s, curT, waitMs);
-        curT += waitMs;
-        setClock(() => curT);
-      }
-    }
-  }
-
-  const before = s;
-  setClock(() => curT);
-  const resolved = moveTable(s, curT).byId[move.id];
-  if (!resolved || boolBlocked(resolved)) return null;
-  if (!resolved.legal && !legalIgnoringCooldown(resolved)) return null;
-  s = applyPlanAction(s, move);
-  if (s === before) return null;
-
-  const actionDt = plannerActionCostMs(move, s);
-  if (actionDt > 0) {
-    s = fastForward(s, curT, actionDt);
-    curT += actionDt;
-  }
-
-  let promptFrictionMs = 0;
-  if (move.id === 'prompt') {
-    const baseDt = curT - startT;
-    const scaledT = startT + Math.round(baseDt * cost.promptCostMult) + cost.promptPenaltyMs;
-    promptFrictionMs = scaledT - curT;
-    curT = scaledT;
-  }
-
-  return { state: s, t: curT, waitMs, promptFrictionMs };
+  searchSeed: number,
+): GameState | null {
+  if (!move.legal) return null;
+  setClock(() => t);
+  setRandom(plannerRngForState(searchSeed, state, t));
+  const next = move.apply(state);
+  return next === state ? null : next;
 }
 
 /** All `requires` ancestors for an upgrade (not including the target). */
@@ -452,46 +389,6 @@ function upgradePrereqAncestors(targetId: string): Set<string> {
   };
   walk(targetId);
   return anc;
-}
-
-/** Optimistic lower bound on ms left (current rates only — guides A*, not game balance). */
-function planHeuristic(state: GameState, goal: PlanGoal): number {
-  if (goalMet(state, goal)) return 0;
-  const { locRate } = calcRates(state.genCounts, state.upgrades, state.tests ?? 0);
-  const cd = Math.max(1, calcPromptCooldownMs(state.upgrades));
-  const clickLoc =
-    calcClickPower(state.upgrades) * LOC_PER_CLICK_POWER + calcClickBonus(state.upgrades);
-  const locPerMs = locRate / 1000 + clickLoc / cd;
-  const floor = locPerMs > 1e-6 ? locPerMs : 0.02;
-
-  switch (goal.kind) {
-    case 'launched': {
-      const gap = Math.max(0, LAUNCH_LOC - state.totalLoc);
-      return gap / floor;
-    }
-    case 'upgrade': {
-      const def = UPGRADES.find((u) => u.id === goal.id);
-      if (!def) return 0;
-      let gap = Math.max(0, def.cost - state.loc);
-      const unlockAt = def.unlockAt * THRESHOLDS.upgradeUnlockFraction;
-      gap = Math.max(gap, Math.max(0, unlockAt - state.totalLoc) * 0.35);
-      for (const r of def.requires ?? []) {
-        if (!state.upgrades.includes(r)) {
-          const rd = UPGRADES.find((u) => u.id === r);
-          if (rd) gap += rd.cost;
-        }
-      }
-      if (def.requiresLaunch && !state.launched) {
-        gap += Math.max(0, LAUNCH_LOC - state.totalLoc) * 0.5;
-      }
-      return gap / floor;
-    }
-    case 'phase': {
-      const cur = getPhase(state);
-      const gap = Math.max(0, goal.index - cur);
-      return (gap * LAUNCH_LOC * 0.35) / floor;
-    }
-  }
 }
 
 function pruneUpgradeShop(moves: Move[], goal: PlanGoal): Move[] {
@@ -515,17 +412,79 @@ function pruneUpgradeShop(moves: Move[], goal: PlanGoal): Move[] {
   return moves;
 }
 
-function searchCandidates(
+function movePlannerKey(m: Move): string {
+  return m.target ? `${m.id}:${m.target}` : m.id;
+}
+
+/** Always expand these — bot traces may use any of them; ranking only caps the rest. */
+function pinPlannerActions(moves: Move[], state: GameState): Set<string> {
+  const pinned = new Set<string>();
+  for (const m of moves) {
+    if (!m.legal) continue;
+    if (m.kind === 'buy_gen' || m.kind === 'buy_upgrade' || m.id === 'launch') {
+      pinned.add(movePlannerKey(m));
+    }
+    if (!state.launched && (m.id === 'kick_agent' || m.id === 'prompt')) {
+      pinned.add(movePlannerKey(m));
+    }
+  }
+  return pinned;
+}
+
+/**
+ * Legal action edges for this node: same pool as sim, ranked like `heuristicBot`,
+ * capped to `maxBranches` with economic/kick/prompt moves pinned.
+ */
+function actionBranches(
   state: GameState,
   t: number,
   goal: PlanGoal,
   filterMoves: boolean,
   pruneShop: boolean,
+  maxBranches: number,
+  heuristicFn: PlanHeuristicFn,
+  searchSeed: number,
 ): Move[] {
   let moves = visibleMoves(state, t);
   if (filterMoves) moves = filterMovesForPlanner(moves, state, t, { minScore: 0.2 });
   if (pruneShop) moves = pruneUpgradeShop(moves, goal);
-  return moves;
+
+  const legal = moves.filter((m) => m.legal);
+  if (maxBranches <= 0 || legal.length <= maxBranches) return legal;
+
+  setClock(() => t);
+  const scored: { m: Move; h: number }[] = [];
+  for (const m of legal) {
+    setRandom(plannerRngForState(searchSeed, state, t));
+    const next = m.apply(state);
+    if (next === state) continue;
+    scored.push({ m, h: heuristicFn(next, goal) });
+  }
+  scored.sort(
+    (a, b) => a.h - b.h || movePlannerKey(a.m).localeCompare(movePlannerKey(b.m)),
+  );
+
+  const pinned = pinPlannerActions(legal, state);
+  const out: Move[] = [];
+  const seen = new Set<string>();
+  const add = (m: Move) => {
+    const k = movePlannerKey(m);
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(m);
+  };
+
+  for (const m of legal) {
+    if (pinned.has(movePlannerKey(m))) add(m);
+  }
+  for (const { m } of scored) {
+    if (out.length >= maxBranches) break;
+    add(m);
+  }
+  for (const m of legal) {
+    if (pinned.has(movePlannerKey(m))) add(m);
+  }
+  return out.length > 0 ? out : legal;
 }
 
 const LAUNCH_PLAN_GOAL: PlanGoal = { kind: 'launched' };
@@ -652,17 +611,19 @@ function runPlanSearchOnce(
   const progressEvery = Math.max(50, opts.progressEveryStates ?? 500);
   const onProgress = opts.onProgress;
   const maxStatesTotal = opts.maxStates ?? 8000;
-  const filterMoves = opts.filterMoves ?? true;
+  const filterMoves = opts.filterMoves ?? false;
+  const maxActionBranches = opts.maxActionBranches ?? 18;
   const pruneShop = opts.pruneShop ?? true;
   const useAStar = opts.useAStar ?? true;
-  const hWeight = opts.heuristicWeight ?? 1.15;
+  const hWeight = opts.heuristicWeight ?? 1;
+  const heuristicFn = opts.heuristic ?? defaultPlanHeuristic;
   const acceptBestEffort = opts.acceptBestEffort ?? true;
   const minBestEffortProgress = opts.minBestEffortProgress ?? 0.001;
-  const stepCost: StepCostOpts = { promptCostMult, promptPenaltyMs };
+  const searchSeed = opts.seed ?? 42;
 
   const nodePrio = (t: number, state: GameState) => {
     if (!useAStar) return t;
-    return t + planHeuristic(state, goal) * hWeight;
+    return t + heuristicFn(state, goal) * hWeight;
   };
 
   const start = restart.state;
@@ -706,13 +667,14 @@ function runPlanSearchOnce(
   let closest: { node: Node; progress: PlanGoalProgress } | null = null;
   let closestPlayed: { node: Node; progress: PlanGoalProgress } | null = null;
 
-  const push = (n: Omit<Node, 'prio'>) => {
+  const push = (n: Omit<Node, 'prio'> & { prio?: number }) => {
     const norm = { ...n };
     const k = stateKey(norm.state, norm.t);
     const prev = best.get(k);
     if (prev != null && norm.t >= prev) return;
     best.set(k, norm.t);
-    heap.push({ ...norm, prio: nodePrio(norm.t, norm.state) });
+    const prio = n.prio ?? nodePrio(norm.t, norm.state);
+    heap.push({ ...norm, prio });
   };
 
   while (heap.length > 0 && statesVisited < stateBudget) {
@@ -755,23 +717,48 @@ function runPlanSearchOnce(
     if (cur.t >= maxTimeMs) continue;
 
     setClock(() => cur.t);
-    const candidates = searchCandidates(cur.state, cur.t, goal, filterMoves, pruneShop);
+    const candidates = actionBranches(
+      cur.state,
+      cur.t,
+      goal,
+      filterMoves,
+      pruneShop,
+      maxActionBranches,
+      heuristicFn,
+      searchSeed,
+    );
 
+    // Wait edge: next gate event (same model as sim bots waiting).
+    const waitDt = plannerNextWaitDt(cur.state, cur.t);
+    const nextT = cur.t + waitDt;
+    if (nextT <= maxTimeMs) {
+      const nextState = advancePlannerTime(cur.state, cur.t, waitDt);
+      push({ t: nextT, state: nextState, steps: cur.steps });
+    }
+
+    // Action edges: legal now; wall clock unchanged on press.
+    const prevActionT =
+      cur.steps.length > 0 ? cur.steps[cur.steps.length - 1]!.t : 0;
     for (const m of candidates) {
-      if (m.waitMs === null && !m.legal) continue;
-      const next = stepMove(cur.state, cur.t, m, stepCost);
-      if (!next) continue;
-      if (next.t > maxTimeMs) continue;
+      if (!m.legal) continue;
+      const nextState = applyPlannerAction(cur.state, cur.t, m, searchSeed);
+      if (!nextState) continue;
+      const promptCd =
+        m.id === 'prompt' ? calcPromptCooldownMs(nextState.upgrades) : 0;
+      const promptFrictionMs =
+        m.id === 'prompt'
+          ? promptPenaltyMs + Math.max(0, promptCostMult - 1) * promptCd
+          : 0;
       push({
-        t: next.t,
-        state: next.state,
+        t: cur.t,
+        prio: nodePrio(cur.t + promptFrictionMs, nextState),
+        state: nextState,
         steps: [
           ...cur.steps,
           {
-            t: next.t,
-            waitMs: next.waitMs,
-            promptFrictionMs:
-              next.promptFrictionMs > 0 ? next.promptFrictionMs : undefined,
+            t: cur.t,
+            waitMs: Math.max(0, cur.t - prevActionT),
+            promptFrictionMs: promptFrictionMs > 0 ? promptFrictionMs : undefined,
             moveId: m.id,
             moveKind: m.kind,
             target: m.target,
@@ -867,18 +854,19 @@ export function planShortestPath(
   setClock(() => 0);
   setRandom(mulberry32(seed));
 
-  const fresh = defaultState();
-  const initial: SearchRestart = {
-    state: fresh,
-    t: 0,
-    steps: [],
-  };
+  const initial: SearchRestart = { state: defaultState(), t: 0, steps: [] };
 
-  if (goalMet(fresh, goal)) {
+  if (goalMet(initial.state, goal)) {
     resetClock();
     resetRandom();
     return {
-      result: { goal, totalMs: 0, steps: [], statesVisited: 1, truncated: false },
+      result: {
+        goal,
+        totalMs: initial.t,
+        steps: initial.steps,
+        statesVisited: 1,
+        truncated: false,
+      },
       closest: null,
       statesVisited: 1,
       maxStates,
@@ -976,6 +964,7 @@ export const PLAN_GOALS: { id: string; goal: PlanGoal; label: string }[] = [
   { id: 'pro_plan', goal: { kind: 'upgrade', id: 'pro_plan' }, label: 'Own pro_plan' },
   { id: 'code_review', goal: { kind: 'upgrade', id: 'code_review' }, label: 'Own code_review' },
   { id: 'revamp', goal: { kind: 'upgrade', id: 'revamp_status_page' }, label: 'Own revamp_status_page' },
+  { id: 'phase-4', goal: { kind: 'phase', index: 4 }, label: 'Flavor phase 4 (nines / full game)' },
 ];
 
 export function formatPlanStep(step: PlanStep): string {

@@ -1,0 +1,86 @@
+---
+description: Planner ↔ trace-bot optimization loop — tune heuristics using plan bounds and bot sims
+globs: src/debug/**,src/game/moveIntent.ts,src/sim/bots.ts,tests/optLoop.test.ts,tests/planReach.test.ts,tests/launchBench.test.ts
+alwaysApply: false
+---
+
+# Planner ↔ trace-bot optimization
+
+The planner is **another bot strategy** on the same `(state, t)` space as trace bots — just one that runs A* instead of greedy one-step policy.
+
+Graph search should not lose to greedy bots on a monotonic growth curve. **If a bot beats search, that is heuristic debt — tune the planner strategy knobs first.**
+
+## Shared state space
+
+Nodes are `(state, t)`. From each node expand two edge kinds:
+
+1. **Wait** — one `plannerNextWaitDt` jump (same idea as sim `nextEventDt` when a bot returns null); `tickReducer` runs. No button press.
+2. **Action** — moves **legal at current `t`**; `move.apply` at same `t`. Never bundle wait+action; never charge cooldown as press cost.
+
+Every bot trace is a valid planner path. Hard move filters that drop bot-used edges are bugs in the planner strategy, not different physics.
+
+## Planner strategy knobs (tune these)
+
+| Knob | Role | Analogous bot knob |
+|------|------|-------------------|
+| `planHeuristic` | A* distance estimate | — |
+| `heuristicWeight` | A* greediness | — |
+| `maxActionBranches` | Top legal moves by one-step `h` (pinned: buys, kick, prompt) | bot picks 1 |
+| `filterMoves` | Legacy hard filter — avoid; use ranking instead | `WEIGHTS_*` / `minScore` |
+| `pruneShop` | Goal-directed shop trim | — |
+| `promptCostMult` | Search-only prompt discouragement | — |
+
+## Primary signal: `heuristicDebt`
+
+`heuristicDebt = botMs / boundMs` where `boundMs` is sim-replay of the search witness.
+
+| debt | Meaning | Action |
+|------|---------|--------|
+| < 0.95 | Search lost to a legal bot path | Tune planner knobs above. Do not weaken bots. |
+| 0.95–1.1 | Parity | OK for this target/seed |
+| > 1.1 | Bot policy lag | Tune `NeedWeights`, `MOVE_HELPS`, patience |
+
+Especially damning: **heuristic-as-bot** beats A* with the same `planHeuristic` — ranking/`heuristicWeight`/`maxActionBranches` wrong.
+
+## Iteration workflow (do not run full suite while hillclimbing)
+
+State a **concrete hypothesis**, run **one targeted command**, read the signal, change one knob, repeat.
+
+**Never** use `npm test` as the inner loop — save it for pre-commit / CI only.
+
+| Hypothesis | Command | Wall budget |
+|------------|---------|-------------|
+| Cruise rates / probe / open-loop | `npm run test:cruise` | &lt;2s |
+| Metaplan unit (targets, cache, segment API) | `npm run test:metaplan` | &lt;5s |
+| Micro-A* launch plan quality | `npm run test:plan:launch` | &lt;30s |
+| Opt debt on seed 42 | `npm run opt:loop:smoke` | &lt;2m |
+| Metaplan launch integration | `RUN_METAPLAN_INTEGRATION=1 npm run test:metaplan` | &lt;2m |
+| Full cross-goal / benches | `RUN_*=1` scripts below | opt-in only |
+
+Add a new row when you need a new signal — keep each test file focused on one hypothesis.
+
+## Loop (each iteration)
+
+1. **Hypothesis** — e.g. “loc-heavy probe beats progress for shop-unlock cruise.”
+2. **Measure** — targeted command from table above (not full suite).
+3. **Tune** — one knob (`cruiseEstimate`, `planHeuristic`, `maxMetaBranches`, `MOVE_HELPS`, …).
+4. **Re-measure** — same targeted command until signal moves.
+5. **Debt check** (launch only) — `npm run opt:loop:smoke`; read `heuristicDebt` in report.
+6. **Gate** — `npm test` only before merge / when touching unrelated areas.
+
+## Metaplan (`src/debug/metaPlan.ts`)
+
+Two-level planner (preferred for full-game goals):
+
+1. **Level 2** — ranked purchase branches (`maxMetaBranches`), not exhaustive DAG search.
+2. **Level 1 — cruise** (`src/debug/cruiseEstimate.ts`): **rate estimate → fixed-window probe → open-loop**. No per-segment A* or multi-strategy sim races.
+
+Goals are **phases** — any legal upgrade path per game rules.
+
+**Tests:** `tests/cruiseEstimate.test.ts` (rate/probe hypotheses). Extend with one new `it` per hypothesis — not a goal sweep.
+
+## Do not
+
+- Treat a faster bot as success — it is a counterexample the search must explain.
+- Hard-prune moves bots use (`pruneLaunchEconomy`-style edge removal).
+- Change YAML costs / sim physics to make search win.
