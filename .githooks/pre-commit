@@ -1,5 +1,6 @@
 #!/bin/sh
+# Mirrors GitHub Pages CI (`npm run ci`): data validation + prod build (includes tsc).
+# Skips the full test suite (~50s) — run `npm test` before merge.
 set -e
 
-npm run typecheck
-npm run validate-data
+npm run ci
