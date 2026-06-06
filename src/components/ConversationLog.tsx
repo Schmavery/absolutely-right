@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import type { LogEntry } from '../types';
 import { UI, spinVerbsForPhase } from '../game/data';
 import { STREAMING } from '../game/constants';
+import { useRevealScrollbar } from '../lib/useRevealScrollbar';
 import { Button } from './Button';
 import { McpToolCallBlock } from './McpToolCallBlock';
 
@@ -53,8 +54,10 @@ export function ConversationLog({
   onMcpAlwaysAllow,
   onMcpDeny,
 }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const initialScrollRef = useRef(true);
+  useRevealScrollbar(scrollRef);
   useEffect(() => {
     endRef.current?.scrollIntoView({
       behavior: initialScrollRef.current ? 'instant' : 'smooth',
@@ -125,8 +128,9 @@ export function ConversationLog({
         conversation
       </div>
       <div
+        ref={scrollRef}
         className={[
-          'flex-1 overflow-y-auto min-h-0',
+          'flex-1 overflow-y-auto hairline-scrollbar min-h-0',
           isMobile ? 'pb-12' : 'pb-24',
         ].join(' ')}
       >

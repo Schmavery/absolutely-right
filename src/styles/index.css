@@ -13,3 +13,92 @@ body {
 #root {
   height: 100%;
 }
+
+@property --hairline-fade {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+/* Plain class — not @utility scrollbar-* (Tailwind v4 auto-adds scrollbar-width: thin) */
+.hairline-scrollbar {
+  --hairline-scrollbar-size: 2px;
+  --hairline-scrollbar-offset: 4px;
+  --hairline-scrollbar-fade-ms: 280ms;
+  --hairline-fade: 0;
+  transition: --hairline-fade var(--hairline-scrollbar-fade-ms) ease;
+  /* Theme token: --dimmer (tertiary text), mixed for a soft hairline */
+  --hairline-scrollbar-peak: color-mix(in srgb, var(--dimmer) 28%, transparent);
+  --hairline-scrollbar-peak-hover: color-mix(in srgb, var(--dimmer) 42%, transparent);
+}
+
+.hairline-scrollbar.is-scrolling {
+  --hairline-fade: 1;
+}
+
+.hairline-scrollbar.is-hiding {
+  --hairline-fade: 0;
+}
+
+.hairline-scrollbar::-webkit-scrollbar {
+  width: calc(var(--hairline-scrollbar-offset) + var(--hairline-scrollbar-size));
+}
+
+.hairline-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hairline-scrollbar::-webkit-scrollbar-thumb {
+  border-left: var(--hairline-scrollbar-offset) solid transparent;
+  background-image: none;
+  background-clip: padding-box;
+  border-radius: 1px;
+}
+
+.hairline-scrollbar.is-scrolling::-webkit-scrollbar-thumb,
+.hairline-scrollbar.is-hiding::-webkit-scrollbar-thumb {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(
+        in srgb,
+        var(--hairline-scrollbar-peak) calc(var(--hairline-fade) * 100%),
+        transparent
+      )
+      10%,
+    color-mix(
+        in srgb,
+        var(--hairline-scrollbar-peak) calc(var(--hairline-fade) * 100%),
+        transparent
+      )
+      90%,
+    transparent 100%
+  );
+}
+
+.hairline-scrollbar.is-scrolling::-webkit-scrollbar-thumb:hover {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(
+        in srgb,
+        var(--hairline-scrollbar-peak-hover) calc(var(--hairline-fade) * 100%),
+        transparent
+      )
+      10%,
+    color-mix(
+        in srgb,
+        var(--hairline-scrollbar-peak-hover) calc(var(--hairline-fade) * 100%),
+        transparent
+      )
+      90%,
+    transparent 100%
+  );
+}
+
+/* Firefox can't do sub-8px scrollbars */
+@supports (-moz-appearance: none) {
+  .hairline-scrollbar {
+    scrollbar-width: none;
+  }
+}

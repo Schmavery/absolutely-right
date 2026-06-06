@@ -41,6 +41,7 @@ import {
 import { isLogEntryFullyDisplayed, useStreamingLog } from './lib/useStreamingLog';
 import { useForegroundGame } from './lib/useForegroundGame';
 import { useGameActive } from './lib/useGameActive';
+import { useRevealScrollbar } from './lib/useRevealScrollbar';
 import { useIsMobile } from './lib/useWindowWidth';
 import { Button } from './components/Button';
 import { FooterBarrel } from './components/FooterBarrel';
@@ -75,6 +76,8 @@ export function Game() {
   const sessionIdRef = useRef(createWriterSessionId());
   const persistedDiskRef = useRef<SaveDiskSnapshot>(readSaveDiskSnapshot());
   const pausedAtRef = useRef<number | null>(null);
+  const leftScrollRef = useRef<HTMLDivElement>(null);
+  useRevealScrollbar(leftScrollRef);
 
   const resetStreamRef = useRef<(syncLog?: LogEntry[]) => void>(() => {});
 
@@ -417,10 +420,11 @@ export function Game() {
       >
         {/* ── Left ── */}
         <div
+          ref={leftScrollRef}
           className={
             isMobile
-              ? 'overflow-y-auto flex-1 min-h-0 pb-6'
-              : 'overflow-y-auto min-w-0 h-full pb-6'
+              ? 'overflow-y-auto hairline-scrollbar flex-1 min-h-0 pb-6'
+              : 'overflow-y-auto hairline-scrollbar min-w-0 h-full pb-6'
           }
         >
           {!isMobile && (
