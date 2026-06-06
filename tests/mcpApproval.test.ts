@@ -245,7 +245,8 @@ describe('MCP approvals', () => {
     next = advanceMcpTiming(next, at + MCP.executeSpinnerMs);
     expect(next.loc).toBe(40_000);
     expect(next.totalLoc).toBe(200_000);
-    expect(next.log.some((e) => e.text.includes('Data leak'))).toBe(true);
+    const leak = next.log.find((e) => e.text.includes('Data leak'));
+    expect(leak?.type).toBe('bad');
     expect(next.log[0]?.toolAck).toMatch(/leak|exfil|off the machine|phoning home/i);
   });
 

@@ -62,7 +62,7 @@ function appendUnsafeLeakLog(prev: GameState, def: McpToolDef, leaked: number): 
   return appendLog(
     prev,
     `Data leak after that tool call. −${fmt(leaked)} LOC (${pct}% of your buffer).`,
-    'info',
+    'bad',
   );
 }
 

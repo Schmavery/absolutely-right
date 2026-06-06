@@ -21,7 +21,7 @@ describe('rehydratePoolUsage', () => {
   it('marks multi-line gated events from split log entries', () => {
     const ev = EVENTS.find((e) => e.minLoc === 250)!;
     let state = defaultState();
-    state = appendLog(state, render(ev.text), 'bad');
+    state = appendLog(state, render(ev.text), 'info');
     state = { ...state, usedEventIds: [] };
 
     const next = rehydratePoolUsage(state);

@@ -374,11 +374,12 @@ export function Game() {
 
   // ── derived ──
   const derived = deriveGame(state);
+  const mcpPendingUnsafe =
+    state.mcpActiveToolId != null && !mcpToolIsSafe(state.mcpActiveToolId);
   const mcpUnsafePolicyBlocked =
     state.mcpApprovalPending != null &&
     state.mcpAutoApproveAt == null &&
-    state.mcpActiveToolId != null &&
-    !mcpToolIsSafe(state.mcpActiveToolId) &&
+    mcpPendingUnsafe &&
     derived.hasFlag('mcp_auto_approve');
   const phase = getPhase(state);
   const showLog = state.log.length >= 1;
@@ -522,6 +523,7 @@ export function Game() {
             mcpApprovalMessage={state.mcpApprovalPending}
             mcpShowAlwaysAllow={derived.hasFlag('mcp_auto_approve')}
             mcpUnsafePolicyBlocked={mcpUnsafePolicyBlocked}
+            mcpPendingUnsafe={mcpPendingUnsafe}
             mcpExecutingMessage={mcpRunning ? state.mcpExecutingLine : null}
             showThinking={showThinking || mcpRunning}
             phase={phase}

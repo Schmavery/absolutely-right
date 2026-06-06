@@ -22,6 +22,8 @@ interface Props {
   mcpShowAlwaysAllow?: boolean;
   /** Unsafe tool while always_allow owned — Always allow is one-time only. */
   mcpUnsafePolicyBlocked?: boolean;
+  /** Pending MCP beat is `safe: false`. */
+  mcpPendingUnsafe?: boolean;
   /** Post-allow execute spinner (tool text in `mcpExecutingMessage`). */
   mcpExecutingMessage: string | null;
   onMcpAllow: () => void;
@@ -49,6 +51,7 @@ export function ConversationLog({
   mcpApprovalMessage,
   mcpShowAlwaysAllow,
   mcpUnsafePolicyBlocked,
+  mcpPendingUnsafe,
   mcpExecutingMessage,
   onMcpAllow,
   onMcpAlwaysAllow,
@@ -86,7 +89,7 @@ export function ConversationLog({
     mcpFooter = (
       <div className="flex flex-col items-end gap-1">
         {mcpUnsafePolicyBlocked && (
-          <div className="text-[11px] text-dimmer text-right">
+          <div className="text-[11px] text-log-bad text-right">
             always allow won&apos;t stick on risky tools
           </div>
         )}
@@ -160,6 +163,7 @@ export function ConversationLog({
           <McpToolCallBlock
             tool={mcpExecutingMessage ?? mcpApprovalMessage!}
             footer={mcpFooter}
+            unsafe={mcpPendingUnsafe}
           />
         )}
         <div ref={endRef} />

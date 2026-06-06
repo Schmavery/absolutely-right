@@ -6,10 +6,12 @@ interface Props {
   footer?: ReactNode;
   /** Persistent log entry after approval — minimal chrome. */
   approved?: boolean;
+  /** Risky MCP tool — use error emphasis on the pending card. */
+  unsafe?: boolean;
 }
 
 /** Shared card for pending MCP approval, execute spinner, and approved `tool` log lines. */
-export function McpToolCallBlock({ tool, ack, footer, approved = false }: Props) {
+export function McpToolCallBlock({ tool, ack, footer, approved = false, unsafe = false }: Props) {
   if (approved) {
     return (
       <div className="mb-[9px] border border-border/80 rounded-sm px-2 py-[6px]">
@@ -27,7 +29,14 @@ export function McpToolCallBlock({ tool, ack, footer, approved = false }: Props)
   return (
     <div className="mb-[11px] border border-card-border bg-card-bg px-[10px] pt-2 pb-2">
       <div className="text-dimmer text-[10px] tracking-[0.12em] uppercase mb-[7px]">tool call</div>
-      <div className="text-[12px] leading-[1.55] mb-3 pl-[10px] border-l-2 border-l-log-event-border text-log-event whitespace-pre-wrap">
+      <div
+        className={[
+          'text-[12px] leading-[1.55] mb-3 pl-[10px] border-l-2 whitespace-pre-wrap',
+          unsafe
+            ? 'border-l-log-bad-border text-log-bad'
+            : 'border-l-log-info-border text-log-info',
+        ].join(' ')}
+      >
         {tool}
       </div>
       {ack && (

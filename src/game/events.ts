@@ -111,8 +111,8 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
     next = applyEventEffects(next, ev);
     text = ev.text;
     eventSource = ev.text;
-    logType =
-      ev.type === 'bad' ? 'bad' : ev.type === 'event' ? 'event' : 'info';
+    // Dialogue events share normal reply styling; reserve `bad` for MCP fallout.
+    logType = 'info';
   }
 
   next = addLog(next, render(text), logType);
