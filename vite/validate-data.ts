@@ -119,7 +119,7 @@ const actionSchema = z
 const uiSchema = z.object({
   phases: z.array(z.string().min(1)).min(1),
   spinFrames: z.array(z.string().min(1)).min(1),
-  spinVerbs: z.array(z.string().min(1)).min(1),
+  spinVerbs: z.array(z.array(z.string().min(1)).min(1)).min(1),
 });
 
 const mcpToolKind = z.discriminatedUnion('tool', [
@@ -348,7 +348,12 @@ export function validateGameDataDir(dataDir: string): void {
     }
   }
 
-  uiSchema.parse(raw['ui.yaml']);
+  const ui = uiSchema.parse(raw['ui.yaml']);
+  if (ui.spinVerbs.length !== ui.phases.length) {
+    throw new Error(
+      `[data/ui.yaml] spinVerbs: expected ${ui.phases.length} lists (one per phase), got ${ui.spinVerbs.length}`,
+    );
+  }
 
   assertNoMessageKeyCollisions(
     collectUsedEventIdTemplates(events, actions, mcp.unsafeAllowLeakAck),

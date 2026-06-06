@@ -17,7 +17,7 @@ plain JS modules — there is **no** YAML parser shipped to the browser.
 | `milestones.yaml` | `{ loc, text }[]`                  | one-shot observer-voice messages at LOC totals |
 | `actions.yaml`    | `ActionDef[]`                      | per-action cost, cooldown, formulas, messages  |
 | `mcp.yaml`        | `McpCopy`                          | MCP `tools` (+ `safe` flag) + allow / deny     |
-| `ui.yaml`         | `{ phases, spinFrames, spinVerbs }`| UI strings and animation frames                |
+| `ui.yaml`         | `{ phases, spinFrames, spinVerbs[][] }`| UI strings; one spinner-verb list per phase |
 
 The TypeScript shapes live in `src/types.ts`. `UpgDef` in particular has a
 rich set of optional effect fields that drive the game balance (token bonuses,

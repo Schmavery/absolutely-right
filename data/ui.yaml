@@ -36,23 +36,67 @@ spinFrames:
   - ▓
   - ▒
   - ░
+# One nested list per `phases:` index — overlap is fine; later lists get slightly stranger.
 spinVerbs:
-  - thinking
-  - ideating
-  - delving
-  - refactoring
-  - synergizing
-  - hallucinating
-  - vibe coding
-  - architecting
-  - tokenizing
-  - overthinking
-  - "¯\\_(ツ)_/¯"
-  - being robust
-  - being scalable
-  - consulting goblins
-  - adding em dashes
-  - being comprehensive
-  - pivoting
-  - (╯°□°)╯︵ ┻━┻
-  - doing the thing
+  - - thinking
+    - ideating
+    - delving
+    - refactoring
+    - vibe coding
+    - architecting
+    - overthinking
+    - pondering
+    - iterating
+    - doing the thing
+  - - thinking
+    - ideating
+    - refactoring
+    - vibe coding
+    - being robust
+    - being scalable
+    - hallucinating
+    - tokenizing
+    - synergizing
+    - pivoting
+    - deploying
+    - monitoring
+    - doing the thing
+  - - thinking
+    - refactoring
+    - architecting
+    - synergizing
+    - hallucinating
+    - tokenizing
+    - maximizing token use
+    - being robust
+    - being scalable
+    - consulting goblins
+    - adding em dashes
+    - being comprehensive
+    - being agentic
+    - waiting for capacity
+    - pivoting
+  - - thinking
+    - overthinking
+    - hallucinating
+    - consulting goblins
+    - adding em dashes
+    - being comprehensive
+    - reviewing
+    - awaiting sign-off
+    - generating disclaimers
+    - being humble
+    - self-correcting
+    - summarizing the summary
+    - approving its own PR
+  - - thinking
+    - being absolutely right
+    - consulting goblins
+    - being on-brand
+    - vibing harder
+    - writing the post-mortem
+    - merging to main
+    - waiting for the bill
+    - doing the thing
+    - "¯\\_(ツ)_/¯"
+    - (╯°□°)╯︵ ┻━┻

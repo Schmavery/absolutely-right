@@ -1,17 +1,18 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { LogEntry } from '../types';
-import { UI } from '../game/data';
+import { UI, spinVerbsForPhase } from '../game/data';
 import { STREAMING } from '../game/constants';
 import { Button } from './Button';
 import { McpToolCallBlock } from './McpToolCallBlock';
 
 const SPIN_FRAMES = UI.spinFrames;
-const SPIN_VERBS = UI.spinVerbs;
 
 interface Props {
   displayLog: LogEntry[];
   queuedUserEntries: LogEntry[];
   showThinking: boolean;
+  /** Flavor phase from `getPhase()` — picks which `spinVerbs` list to cycle. */
+  phase: number;
   spinTick: number;
   isMobile: boolean;
   /** MCP tool-call card (pending Allow/Deny). */
@@ -41,6 +42,7 @@ export function ConversationLog({
   displayLog,
   queuedUserEntries,
   showThinking,
+  phase,
   spinTick,
   isMobile,
   mcpApprovalMessage,
@@ -66,8 +68,9 @@ export function ConversationLog({
   ]);
 
   const spinnerChar = SPIN_FRAMES[spinTick % SPIN_FRAMES.length];
+  const spinVerbs = spinVerbsForPhase(phase);
   const spinnerVerb =
-    SPIN_VERBS[Math.floor(spinTick / STREAMING.spinnerVerbEvery) % SPIN_VERBS.length];
+    spinVerbs[Math.floor(spinTick / STREAMING.spinnerVerbEvery) % spinVerbs.length];
 
   let mcpFooter: ReactNode = null;
   if (mcpExecutingMessage) {

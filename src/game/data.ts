@@ -38,9 +38,16 @@ export function mcpToolIsSafe(id: string): boolean {
 interface UiData {
   phases: string[];
   spinFrames: string[];
-  spinVerbs: string[];
+  /** One verb list per flavor phase index (`phases.length` entries). */
+  spinVerbs: string[][];
 }
 export const UI = UI_DATA as UiData;
+
+/** Spinner copy for the current flavor phase; falls back to phase 0. */
+export function spinVerbsForPhase(phase: number): readonly string[] {
+  const list = UI.spinVerbs[phase] ?? UI.spinVerbs[0];
+  return list?.length ? list : UI.spinVerbs[0];
+}
 
 export const ACTIONS = ACTIONS_DATA as ActionDef[];
 const ACTION_MAP = new Map<string, ActionDef>(ACTIONS.map((a) => [a.id, a]));

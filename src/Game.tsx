@@ -505,6 +505,7 @@ export function Game() {
             mcpUnsafePolicyBlocked={mcpUnsafePolicyBlocked}
             mcpExecutingMessage={mcpRunning ? state.mcpExecutingLine : null}
             showThinking={showThinking || mcpRunning}
+            phase={phase}
             spinTick={mcpRunning ? mcpSpinTick : spinTick}
             onMcpAllow={handlers.mcpAllow}
             onMcpAlwaysAllow={handlers.mcpAlwaysAllow}
