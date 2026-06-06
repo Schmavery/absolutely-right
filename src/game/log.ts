@@ -19,6 +19,7 @@ export function appendLog(
 ): GameState {
   const lines = text.split('\n').filter((l) => l.trim().length > 0);
   let next = prev;
+  const burstId = next.logId + 1;
   const last = prev.log[prev.log.length - 1];
   let prevWasUser = last?.type === 'user';
   for (const line of lines) {
@@ -29,7 +30,7 @@ export function appendLog(
       afterUserReply: prevWasUser && !isUser,
     });
     prevWasUser = isUser;
-    const entry: LogEntry = { id: next.logId + 1, text: clean, type: entryType, streamMs };
+    const entry: LogEntry = { id: next.logId + 1, text: clean, type: entryType, streamMs, burstId };
     next = {
       ...next,
       logId: next.logId + 1,
@@ -70,11 +71,19 @@ export function appendLogInstant(
 ): GameState {
   const lines = text.split('\n').filter((l) => l.trim().length > 0);
   let next = prev;
+  const burstId = next.logId + 1;
   for (const line of lines) {
     const isUser = line.trimStart().startsWith('>');
     const clean = isUser ? line.replace(/^\s*>\s*/, '') : line;
     const entryType: LogEntryType = isUser ? 'user' : type;
-    const entry: LogEntry = { id: next.logId + 1, text: clean, type: entryType, streamMs: 0, instant: true };
+    const entry: LogEntry = {
+      id: next.logId + 1,
+      text: clean,
+      type: entryType,
+      streamMs: 0,
+      instant: true,
+      burstId,
+    };
     next = {
       ...next,
       logId: next.logId + 1,

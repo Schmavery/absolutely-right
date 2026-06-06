@@ -35,6 +35,7 @@ import {
 } from './game/actions';
 import { mcpAllowAction, mcpAlwaysAllowAction, mcpDenyAction } from './game/mcpApproval';
 import {
+  computeQueuedUserEntries,
   queuedUserEntries as getQueuedUserEntries,
   syncQueuedUserFlags,
 } from './lib/queuedUserLog';
@@ -282,8 +283,8 @@ export function Game() {
   resetStreamRef.current = resetStream;
 
   useEffect(() => {
-    setState((prev) => syncQueuedUserFlags(prev, displayLog));
-  }, [displayLog]);
+    setState((prev) => syncQueuedUserFlags(prev, displayLog, isAnimating));
+  }, [displayLog, isAnimating]);
 
   const [mcpSpinTick, setMcpSpinTick] = useState(0);
   const mcpRunning = mcpExecuting(state);
@@ -373,7 +374,10 @@ export function Game() {
   const { showGenSection, showUpgSection, showInvestor } = derived.ui;
   const fundingRoundOpen = showInvestor && nextFundingRound(state) !== undefined;
 
-  const queuedUserEntries = useMemo(() => getQueuedUserEntries(state), [state.log]);
+  const queuedUserEntries = useMemo(
+    () => computeQueuedUserEntries(state.log, displayLog, isAnimating),
+    [displayLog, state.log, isAnimating],
+  );
 
   const postStartupUi = useMemo(() => {
     if (!state.milestonesSeen.includes(FIRST_MILESTONE_LOC)) return false;
