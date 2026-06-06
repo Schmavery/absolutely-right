@@ -2,12 +2,19 @@ import { ACTION_DURATION_MS, LAUNCH_LOC, LOC_PER_CLICK_POWER, THRESHOLDS } from 
 import { action, UPGRADES } from '../game/data';
 import { defaultState, withBugs } from '../game/state';
 import { getPhase } from '../game/phases';
-import { moveTable, visibleMoves, type Move } from '../game/availability';
+import {
+  affordWaitMs,
+  boolBlocked,
+  legalIgnoringCooldown,
+  moveTable,
+  visibleMoves,
+  type Move,
+} from '../game/availability';
 import type { GameState } from '../types';
 import { setClock, setRandom, resetClock, resetRandom, now } from '../game/runtime';
 import { tickReducer } from '../game/tick';
 import { appendLog } from '../game/log';
-import { calcClickBonus, calcClickPower, calcRates } from '../game/rates';
+import { calcClickBonus, calcClickPower, calcPromptCooldownMs, calcRates } from '../game/rates';
 import { filterMovesForPlanner } from '../game/moveIntent';
 import { render } from '../lib/template';
 import { mulberry32 } from '../sim/Sim';
@@ -298,24 +305,12 @@ function fastForward(state: GameState, t: number, dtMs: number): GameState {
   return tickReducer(state, dtMs);
 }
 
-function isOnCooldown(prev: GameState, key: string, ms: number): boolean {
-  return now() - (prev.actionCooldowns[key] ?? 0) < ms;
-}
-
-function startCooldown(prev: GameState, key: string): GameState {
-  return {
-    ...prev,
-    actionCooldowns: { ...prev.actionCooldowns, [key]: now() },
-  };
-}
-
 /**
  * Prompt for planner: scripted early lines only, no RNG bugs/events.
  * Keeps the search graph finite while modeling LOC grind + log stream cost.
  */
 export function applyPlanPrompt(prev: GameState): GameState {
   const a = action('prompt');
-  if (a.cooldownMs && isOnCooldown(prev, 'prompt', a.cooldownMs)) return prev;
   const power = calcClickPower(prev.upgrades);
   const locGain = power * LOC_PER_CLICK_POWER + calcClickBonus(prev.upgrades);
   let next: GameState = {
@@ -330,7 +325,6 @@ export function applyPlanPrompt(prev: GameState): GameState {
   if (prev.totalClicks < scripted.length) {
     next = appendLog(next, render(scripted[prev.totalClicks]!), 'info');
   }
-  if (a.cooldownMs) next = startCooldown(next, 'prompt');
   return next;
 }
 
@@ -362,6 +356,14 @@ interface StepCostOpts {
   promptPenaltyMs: number;
 }
 
+/** Virtual ms charged per planner action — cooldowns are costs, not idle-wait branches. */
+function plannerActionCostMs(move: Move, state: GameState): number {
+  if (move.id === 'prompt') return calcPromptCooldownMs(state.upgrades);
+  const a = move.actionId ? action(move.actionId) : null;
+  if (a?.cooldownMs) return a.cooldownMs;
+  return ACTION_DURATION_MS;
+}
+
 function stepMove(
   state: GameState,
   t: number,
@@ -387,26 +389,28 @@ function stepMove(
   if (!gate) return null;
 
   if (!gate.legal) {
-    if (gate.waitMs == null || gate.waitMs === Infinity) return null;
-    waitMs = gate.waitMs;
-    s = fastForward(s, curT, waitMs);
-    curT += waitMs;
-    setClock(() => curT);
-    const again = moveTable(s, curT).byId[move.id];
-    if (!again?.legal) return null;
+    if (boolBlocked(gate)) return null;
+    if (!legalIgnoringCooldown(gate)) {
+      const affordWait = affordWaitMs(gate);
+      if (affordWait === null) return null;
+      if (affordWait > 0) {
+        waitMs = affordWait;
+        s = fastForward(s, curT, waitMs);
+        curT += waitMs;
+        setClock(() => curT);
+      }
+    }
   }
 
   const before = s;
   setClock(() => curT);
   const resolved = moveTable(s, curT).byId[move.id];
-  if (!resolved?.legal) return null;
+  if (!resolved || boolBlocked(resolved)) return null;
+  if (!resolved.legal && !legalIgnoringCooldown(resolved)) return null;
   s = applyPlanAction(s, move);
   if (s === before) return null;
 
-  const actionDt =
-    move.id === 'prompt'
-      ? action('prompt').cooldownMs ?? ACTION_DURATION_MS
-      : ACTION_DURATION_MS;
+  const actionDt = plannerActionCostMs(move, s);
   if (actionDt > 0) {
     s = fastForward(s, curT, actionDt);
     curT += actionDt;
@@ -444,8 +448,7 @@ function upgradePrereqAncestors(targetId: string): Set<string> {
 function planHeuristic(state: GameState, goal: PlanGoal): number {
   if (goalMet(state, goal)) return 0;
   const { locRate } = calcRates(state.genCounts, state.upgrades, state.tests ?? 0);
-  const prompt = action('prompt');
-  const cd = Math.max(1, prompt.cooldownMs ?? 4000);
+  const cd = Math.max(1, calcPromptCooldownMs(state.upgrades));
   const clickLoc =
     calcClickPower(state.upgrades) * LOC_PER_CLICK_POWER + calcClickBonus(state.upgrades);
   const locPerMs = locRate / 1000 + clickLoc / cd;

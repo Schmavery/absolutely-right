@@ -33,7 +33,7 @@ import {
   mcpBlocksPlay,
   mcpDenyAction,
 } from './mcpApproval';
-import { calcBugPenalty, calcRates, calcTokenConfig, genCost } from './rates';
+import { calcBugPenalty, calcPromptCooldownMs, calcRates, calcTokenConfig, genCost } from './rates';
 import {
   buyGenAction,
   buyUpgradeAction,
@@ -152,6 +152,28 @@ function cooldownProgressFromGates(gates: readonly Gate[]): number {
 /** True when a bool gate blocks the move (MCP pending, no bugs, etc.). */
 export function boolBlocked(m: Move): boolean {
   return m.gates.some((g) => g.kind === 'bool' && !g.ok);
+}
+
+/** Legal if cooldown gates were cleared; afford and bool gates still apply. */
+export function legalIgnoringCooldown(m: Move): boolean {
+  for (const g of m.gates) {
+    if (g.kind === 'bool' && !g.ok) return false;
+    if (g.kind === 'wait' && g.role !== 'cooldown' && !g.ok) return false;
+  }
+  return true;
+}
+
+/** Ms to idle before afford gates clear; null when bool-blocked or unaffordable forever. */
+export function affordWaitMs(m: Move): number | null {
+  let max = 0;
+  for (const g of m.gates) {
+    if (g.kind === 'bool' && !g.ok) return null;
+    if (g.kind === 'wait' && g.role === 'afford' && !g.ok) {
+      if (g.waitMs === null) return null;
+      max = Math.max(max, g.waitMs);
+    }
+  }
+  return max;
 }
 
 /** Bar fill for UI: wait-gate mins, and 0 when a bool gate blocks the move. */
@@ -361,7 +383,7 @@ interface Ctx {
 }
 
 function prompt(c: Ctx): Move {
-  const a = action('prompt');
+  const promptCd = calcPromptCooldownMs(c.state.upgrades);
   return buildMove(
     {
       id: 'prompt',
@@ -370,7 +392,7 @@ function prompt(c: Ctx): Move {
       visible: true,
       apply: promptAction,
     },
-    withMcpIdle(c.state, [cooldownGate(c.state, 'prompt', a.cooldownMs, c.t)], c.t),
+    withMcpIdle(c.state, [cooldownGate(c.state, 'prompt', promptCd, c.t)], c.t),
   );
 }
 

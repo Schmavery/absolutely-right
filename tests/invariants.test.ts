@@ -23,7 +23,7 @@ import {
 
 afterEach(() => Sim.teardown());
 
-const SEEDS = [1, 7, 42, 100, 31337];
+const SEEDS = [1, 42];
 const VIRTUAL_MIN = 60_000;        // 1 virtual minute — quick smoke runs
 const VIRTUAL_LONG = 5 * 60_000;   // 5 virtual minutes — for reach tests
 

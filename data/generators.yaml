@@ -1,7 +1,7 @@
 - id: autocomplete
   name: Autocomplete
   desc: presses tab repeatedly until something compiles
-  locPerSec: 15
+  locPerSec: 3
   bugsPerSec: 0.02
   fixPerSec: 0
   baseCost: 1000

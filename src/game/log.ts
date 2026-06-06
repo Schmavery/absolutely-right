@@ -21,7 +21,6 @@ export function appendLog(
   let next = prev;
   const last = prev.log[prev.log.length - 1];
   let prevWasUser = last?.type === 'user';
-
   for (const line of lines) {
     const isUser = line.trimStart().startsWith('>');
     const clean = isUser ? line.replace(/^\s*>\s*/, '') : line;

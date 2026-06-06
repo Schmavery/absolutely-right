@@ -72,6 +72,8 @@ export interface UpgDef {
   ninesFloor?: number;
   /** Flavor line shown in the conversation log when this upgrade is bought. */
   purchaseMsg?: string;
+  /** Prompt action cooldown (ms). Min-wins across owned upgrades vs `actions.yaml` base. */
+  promptCooldownMs?: number;
 
   /**
    * Feature flags this upgrade grants while owned. See `GAME_FLAGS` in
@@ -223,6 +225,8 @@ export interface ActionDef {
   /** Per-test bug-rate damping factor (`1 / (1 + tests * this)`). */
   bugDamping?: number;
   milestones?: { count: number; text: string }[];
+  /** One-shot AI line when this action first becomes available. */
+  introMsg?: string;
 
   // buy_gen
   firstPurchaseMsg?: string;
@@ -275,6 +279,8 @@ export interface GameState {
   launched: boolean;
   /** Slug keys for dialogue/events/action pools already shown (no repeats per save). */
   usedEventIds: string[];
+  /** Action ids whose `introMsg` has been shown (one-shot per save). */
+  actionsIntroduced?: string[];
   /** Stable ids from `data/news.yaml`; each headline fires at most once per save. */
   usedNewsIds: string[];
   tokens: number;

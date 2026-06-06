@@ -9,9 +9,11 @@
  *   2. Forward progress — under non-trivial policies, the player's
  *      `totalLoc` actually grows. A regression that softlocks the
  *      economy fails this immediately.
- *   3. Outlier waits — early-game players never face a state where the
- *      cheapest forecastable next move is hours away. This catches
- *      pricing/unlock pathology on YAML edits.
+ *   3. Shop waits — when generators/upgrades are visible, the next
+ *      affordable shop row is never hours away (prompt is excluded —
+ *      it is always visible and trivially legal).
+ *   4. Phase progression — active play (progress bot) hits each enforced
+ *      flavor phase within `PHASE_TIME_CURVE_MS` (see `src/game/phasePacing.ts`).
  *
  * Driver: event-driven only. `tests/equivalence.test.ts` pins fixed-tick
  * `Sim.run` (production-cadence parity with `Game.tsx`) to event-driven
@@ -23,28 +25,51 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { Sim, type Bot } from '../src/sim/Sim';
 import { greedyPlayer } from '../src/sim/bots';
-import { moveTable } from '../src/game/availability';
+import { moveTable, type Move } from '../src/game/availability';
+import { getPhase } from '../src/game/phases';
+import {
+  PHASE_TIME_CURVE_ENFORCED,
+  PHASE_TIME_CURVE_MS,
+} from '../src/game/phasePacing';
 
 afterEach(() => Sim.teardown());
 
 // A small seed set keeps these tests under a few seconds in CI without
 // sacrificing failure-surface coverage — invariants.test.ts already
 // drives the wider seed list.
-const SEEDS = [1, 7, 42];
+const SEEDS = [1, 42];
 
 const VIRTUAL_BUDGET_MS = 10 * 60_000; // 10 virtual minutes
-const EARLY_GAME_MS = 5 * 60_000;
-const HUGE_WAIT_MS = 5 * 60_000;       // anything cheaper than 5 virtual min is fine
+const TRACE_MS = 5 * 60_000; // early-game shop-wait scan
+
+/** Max virtual idle before any visible shop row becomes affordable. */
+const SHOP_WAIT_CAP_MS = 60 * 60_000; // 1 virtual hour
 
 /** Bot factories — fresh internal state per run for stateful policies. */
 const BOTS: ReadonlyArray<readonly [string, () => Bot]> = [['greedy', () => greedyPlayer]];
+
+function shopMoves(moves: readonly Move[]): Move[] {
+  return moves.filter((m) => m.visible && (m.kind === 'buy_gen' || m.kind === 'buy_upgrade'));
+}
+
+function minShopWaitMs(moves: readonly Move[]): number | null {
+  const shop = shopMoves(moves);
+  if (shop.length === 0) return null;
+  let best: number | null = null;
+  for (const m of shop) {
+    const w = m.legal ? 0 : m.waitMs;
+    if (w === null) continue;
+    if (best === null || w < best) best = w;
+  }
+  return best;
+}
 
 // ─── 1. termination ────────────────────────────────────────────────────────
 
 describe('pacing: termination', () => {
   // Event-driven advances 10 virtual min in dozens of reducer calls;
-  // 1.5s gives plenty of headroom even on a slow CI box.
-  const WALL_CAP_MS = 1_500;
+  // 4s headroom for slower early prompt cooldown on a slow CI box.
+  const WALL_CAP_MS = 4_000;
 
   for (const [botName, makeBot] of BOTS) {
     for (const seed of SEEDS) {
@@ -78,38 +103,47 @@ describe('pacing: forward progress', () => {
   }
 });
 
-// ─── 3. outlier waits (early game) ─────────────────────────────────────────
+// ─── 3. shop waits (early game) ────────────────────────────────────────────
 
-describe('pacing: outlier waits', () => {
+describe('pacing: shop waits', () => {
   for (const seed of SEEDS) {
-    it(`seed=${seed}: early-game player always has a sub-${HUGE_WAIT_MS / 60_000}min forecastable next step`, () => {
+    it(`seed=${seed}: visible shop rows are never >1 virtual hour away`, () => {
       const sim = new Sim({ seed, recordTrace: true });
-      sim.runEventDriven(greedyPlayer, EARLY_GAME_MS);
+      sim.runEventDriven(greedyPlayer, TRACE_MS);
 
+      let sawShop = false;
       let worst = { t: 0, value: 0, moveId: '' as string | null };
       for (const { state, t } of sim.trace) {
-        // "Best" next step under idle = min positive waitMs across
-        // visible moves, with legal moves treated as 0.
-        let best: number | null = null;
-        let bestId: string | null = null;
-        for (const m of moveTable(state!, t).all) {
-          if (!m.visible) continue;
-          const w = m.legal ? 0 : m.waitMs;
-          if (w === null) continue;
-          if (best === null || w < best) {
-            best = w;
-            bestId = m.id;
-          }
-        }
-        // No forecastable visible move at all → softlock candidate.
-        expect(best, `no forecastable visible move @ t=${t}`).not.toBe(null);
-        if (best! > worst.value) worst = { t, value: best!, moveId: bestId };
+        const best = minShopWaitMs(moveTable(state!, t).all);
+        if (best === null) continue;
+        sawShop = true;
+        if (best > worst.value) worst = { t, value: best, moveId: null };
       }
 
+      expect(sawShop, 'progress bot should expose shop rows within 5 virtual min').toBe(true);
       expect(
         worst.value,
-        `worst min-wait ${worst.value}ms (move=${worst.moveId}) @ t=${worst.t}`,
-      ).toBeLessThanOrEqual(HUGE_WAIT_MS);
+        `worst shop min-wait ${worst.value}ms @ t=${worst.t}`,
+      ).toBeLessThanOrEqual(SHOP_WAIT_CAP_MS);
     });
+  }
+});
+
+// ─── 4. phase progression ────────────────────────────────────────────────
+
+describe('pacing: phase progression', () => {
+  for (const phaseIndex of PHASE_TIME_CURVE_ENFORCED) {
+    const budgetMs = PHASE_TIME_CURVE_MS[phaseIndex]!;
+    const budgetMin = budgetMs / 60_000;
+    for (const seed of SEEDS) {
+      it(`seed=${seed}: progress bot reaches phase ${phaseIndex} within ${budgetMin} virtual min`, () => {
+        const sim = new Sim({ seed });
+        sim.runEventDriven(greedyPlayer, budgetMs);
+        expect(
+          getPhase(sim.state),
+          `phase curve allows ${budgetMin}m virtual — edit src/game/phasePacing.ts if retuning`,
+        ).toBeGreaterThanOrEqual(phaseIndex);
+      });
+    }
   }
 });

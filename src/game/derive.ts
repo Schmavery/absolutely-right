@@ -67,7 +67,7 @@ export function deriveGame(state: GameState): DerivedGame {
     showInvestor: state.launched,
     showMcMinis: (state.mcMinis ?? 0) > 0,
     ninesTracking: flag('nines_tracking'),
-    showBugs: (state.lifetimeBugs ?? 0) > 1,
+    showBugs: (state.lifetimeBugs ?? 0) >= thresholds.showPasteErrorBugs,
     showUptime: state.launched,
     showKickAgent:
       state.totalClicks >= thresholds.showKickAgentClicks && (state.mcMinis ?? 0) === 0,

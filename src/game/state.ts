@@ -36,6 +36,7 @@ export function defaultState(): GameState {
     launched: false,
     usedEventIds: [],
     usedNewsIds: [],
+    actionsIntroduced: [],
     tokens: 120,
     buzzMeter: 0,
     fundingRound: 0,
@@ -68,6 +69,9 @@ export function initState(): GameState {
         fundingRound: parsed.fundingRound ?? base.fundingRound,
         usedEventIds: Array.isArray(parsed.usedEventIds) ? parsed.usedEventIds : base.usedEventIds,
         usedNewsIds: Array.isArray(parsed.usedNewsIds) ? parsed.usedNewsIds : base.usedNewsIds,
+        actionsIntroduced: Array.isArray(parsed.actionsIntroduced)
+          ? parsed.actionsIntroduced
+          : base.actionsIntroduced,
       };
     }
   } catch {

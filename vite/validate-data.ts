@@ -8,6 +8,10 @@ import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 import { messageKey } from '../src/lib/messageKey';
+import {
+  assertNoMessageKeyCollisions,
+  collectUsedEventIdTemplates,
+} from '../src/lib/messagePoolKeys';
 
 /** Action ids referenced from `src/game/actions.ts` and UI. */
 export const ACTION_IDS = [
@@ -345,6 +349,10 @@ export function validateGameDataDir(dataDir: string): void {
   }
 
   uiSchema.parse(raw['ui.yaml']);
+
+  assertNoMessageKeyCollisions(
+    collectUsedEventIdTemplates(events, actions, mcp.unsafeAllowLeakAck),
+  );
 }
 
 let lastValidatedKey = '';

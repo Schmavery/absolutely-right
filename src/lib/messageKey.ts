@@ -1,16 +1,22 @@
 import { random } from '../game/runtime';
 
 /**
- * Stable dedup key from a log template's first non-empty line (pre-`render()`).
- * `{{rand}}` and other variables do not split keys across fires.
+ * Stable dedup key from a log template's full body (pre-`render()`).
+ * Multi-line pools often reuse the same `>` user prompt on line one — keying
+ * only that line falsely exhausts unrelated beats. `{{rand}}` and other
+ * variables do not split keys across fires.
  */
 export function messageKey(source: string): string {
-  const firstLine = source.split('\n').find((l) => l.trim().length > 0) ?? source;
-  return firstLine
+  const body = source
+    .split('\n')
+    .filter((l) => l.trim().length > 0)
+    .map((l) => l.trim())
+    .join('\n');
+  return body
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
+    .slice(0, 120)
     .replace(/-+$/, '');
 }
 

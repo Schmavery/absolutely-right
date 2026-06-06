@@ -65,7 +65,7 @@ function upgradeNotes(u: UpgDef): string[] {
 const ACTION_GATES: Record<string, string> = {
   prompt: 'cooldown only (see actions.yaml)',
   kick_agent: `≥ ${THRESHOLDS.showKickAgentClicks} prompts`,
-  paste_error: `lifetime bugs ≥ ${THRESHOLDS.showPasteErrorBugs} (grey at 0)`,
+  paste_error: `lifetime bugs ≥ ${THRESHOLDS.showPasteErrorBugs}`,
   launch: `≥ ${fmtLoc(LAUNCH_LOC)} LOC, not launched`,
   bug_bounty: 'nines_tracking & bugs (not auto bounty)',
 };

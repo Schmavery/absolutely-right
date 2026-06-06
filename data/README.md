@@ -141,8 +141,8 @@ Claudius, Facelift Orchestrator, etc.
 Game objects whose state needs a stable cross-reference — generators
 (purchase counts), upgrades (`requires:`, owned set, on-purchase effects),
 actions (cooldown keys, code-side dispatch) — carry an explicit `id`.
-Events do **not** carry ids: dedup is by the first non-empty line of `text`
-(slugged, truncated to 60 chars). Each gated event is skipped until every
+Events do **not** carry ids: dedup is by the full `text` template (pre-render,
+slugged, truncated to 120 chars). Each gated event is skipped until every
 other eligible line at the current `totalLoc` has fired once; then the gated
 pool can repeat. Selection is weighted toward higher `minLoc` within the pool.
 

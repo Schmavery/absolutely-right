@@ -20,12 +20,14 @@ import { computeFlags, effectiveThresholds, hasFlag } from './flags';
 import {
   calcClickBonus,
   calcClickPower,
+  calcPromptCooldownMs,
   calcPromptEventProbability,
   calcTokenConfig,
   genCost,
 } from './rates';
 import { markMessageUsed, pickUnused } from '../lib/messageKey';
 import { render } from '../lib/template';
+import { introduceUnseenActions } from './actionIntros';
 import { clearMcpApproval, maybeMcpApprovalAfterPrompt, mcpApprovalsSuppressed } from './mcpApproval';
 import { now, random } from './runtime';
 
@@ -76,7 +78,8 @@ function canAfford(prev: GameState, a: ActionDef): boolean {
 
 export function promptAction(prev: GameState): GameState {
   const a = action('prompt');
-  if (a.cooldownMs && isOnCooldown(prev, 'prompt', a.cooldownMs)) return prev;
+  const promptCd = calcPromptCooldownMs(prev.upgrades);
+  if (promptCd && isOnCooldown(prev, 'prompt', promptCd)) return prev;
   const thresholds = effectiveThresholds(prev.upgrades);
   const power = calcClickPower(prev.upgrades);
   const locGain = power * LOC_PER_CLICK_POWER + calcClickBonus(prev.upgrades);
@@ -100,8 +103,8 @@ export function promptAction(prev: GameState): GameState {
     const prob = calcPromptEventProbability(a.eventProbability, past);
     next = maybeFireEvent(next, prob, appendLog);
   }
-  if (a.cooldownMs) next = startCooldown(next, 'prompt');
-  return maybeMcpApprovalAfterPrompt(prev, next);
+  if (promptCd) next = startCooldown(next, 'prompt');
+  return introduceUnseenActions(maybeMcpApprovalAfterPrompt(prev, next));
 }
 
 // ─── agent ─────────────────────────────────────────────────────────────────

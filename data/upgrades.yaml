@@ -5,10 +5,12 @@
 # ── Ch1 early — prompts & basic tests ───────────────────────────────────────
 - id: model_update_1
   name: Faster Inference
-  desc: +5 LOC per prompt — the model runs a bit quicker now
-  cost: 1500
-  unlockAt: 1000
+  desc: 1s prompt cooldown. +5 LOC per prompt.
+  cost: 300
+  unlockAt: 100
   clickBonus: 5
+  promptCooldownMs: 1000
+  purchaseMsg: Faster inference enabled. I'll get back to you sooner. Accuracy unchanged.
 - id: model_update_2
   name: Extended Context
   desc: +15 LOC per prompt — longer context window, more output per call

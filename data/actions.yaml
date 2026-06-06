@@ -8,7 +8,7 @@
 # `src/game/constants.ts`.
 
 - id: prompt
-  cooldownMs: 2000
+  cooldownMs: 4000
   # Random events after earlyPromptMsgs; decay see PROMPT_EVENT in constants.ts.
   eventProbability: 0.12
   earlyPromptMsgs:
@@ -29,6 +29,7 @@
   tokenCost: 60
   buffMs: 30000
   eventProbability: 0.2
+  introMsg: "Kick off a subagent to get some work done while we get some work done."
   messages:
     - |-
       > kick off an agent
@@ -52,6 +53,7 @@
   fixChance: 0.5
   baseLocGain: 20
   extraLocRange: 30
+  introMsg: "You can paste in an error and I'll try to track down and fix the bug."
   goodMessages:
     - |-
       > why is this failing
@@ -96,6 +98,7 @@
 
 - id: clear_context
   cooldownMs: 30000
+  introMsg: "Try clearing the context to get some tokens back"
   messages:
     - Context cleared! I have a perfect picture of everything. Ready when you are.
     - Fresh context loaded. I recall all the important things from before. The auth module. Definitely.
@@ -112,6 +115,7 @@
   minCost: 100
   costFraction: 0.005
   logCooldownMs: 4000
+  introMsg: "Now that we have some tests, we can run them to find and fix existing bugs"
   messages:
     - Tests run. {{n}} {{plural n "bug" "bugs"}} resolved. The ones that remain are 'by design.'
     - "{{n}} {{plural n \"bug\" \"bugs\"}} fixed. I've also quietly deleted {{rand 2 5}} tests that were being overly critical."
@@ -143,6 +147,7 @@
   tokenCost: 12
   cooldownMs: 8000
   buzzGain: 28
+  introMsg: "Ask me to post on Lobstagram! That will help us farm some engagement."
   messages:
     - |-
       > post on Lobstagram
@@ -155,6 +160,7 @@
       Hot take deployed. Investors love engagement metrics. I love engagement metrics.
 
 - id: raise_round
+  introMsg: "I've decided we need to raise some money. Maybe then we can afford to run a persistent agent on a McMini machine"
   messages:
     - |-
       > raise {{round}}
@@ -180,6 +186,7 @@
   baseCost: 200
   costMult: 1.04
   bugDamping: 0.01
+  introMsg: "You can ask me to write a test! Maybe that will stop the bugs from piling up"
   milestones:
     - count: 1
       text: "Test suite initialized. I've written the first test. It asserts that the code exists. Coverage: technically 100%."

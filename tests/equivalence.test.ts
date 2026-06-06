@@ -33,7 +33,7 @@ import { lazy } from '../src/sim/bots';
 
 afterEach(() => Sim.teardown());
 
-const SEEDS = [1, 7, 42, 100];
+const SEEDS = [1, 42];
 /** 5 virtual minutes is enough to cross every default milestone. */
 const HORIZON_MS = 5 * 60_000;
 

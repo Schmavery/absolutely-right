@@ -37,6 +37,16 @@ export function calcClickBonus(upgrades: string[]): number {
   return bonus;
 }
 
+/** Prompt button cooldown; min-wins owned `promptCooldownMs` vs `actions.yaml` base. */
+export function calcPromptCooldownMs(upgrades: string[]): number {
+  const base = action('prompt').cooldownMs ?? 4000;
+  let cd = base;
+  for (const u of ownedDefs(upgrades)) {
+    if (u.promptCooldownMs != null) cd = Math.min(cd, u.promptCooldownMs);
+  }
+  return cd;
+}
+
 /** Random prompt event chance after scripted msgs; decays to `baseProbability`. */
 export function calcPromptEventProbability(
   baseProbability: number,

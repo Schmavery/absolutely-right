@@ -12,6 +12,7 @@
     "prepare": "git config core.hooksPath .githooks",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:slow": "RUN_BOT_STRATEGIES=1 vitest run tests/botStrategies.test.ts",
     "test:watch": "vitest",
     "bench:launch": "RUN_LAUNCH_BENCH=1 vitest run tests/launchBench.test.ts",
     "bench:phase2": "RUN_PHASE2_BENCH=1 vitest run tests/launchBench.test.ts -t \"phase 2\""

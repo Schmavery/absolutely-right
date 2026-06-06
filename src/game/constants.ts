@@ -39,7 +39,7 @@ export const THRESHOLDS = {
   /** Generators section becomes visible. */
   showGeneratorsLoc: 450,
   /** Upgrades section becomes visible. */
-  showUpgradesLoc: 2000,
+  showUpgradesLoc: 80,
 
   /** "Free Account" generator row becomes visible. */
   showNewFreeAccountTokens: 500,
@@ -51,10 +51,10 @@ export const THRESHOLDS = {
   upgradeAffordFraction: 0.25,
 
   // Action visibility ─────────────────────────────────────────────────────
-  /** Reveal paste-the-error once `lifetimeBugs` reaches this (stays visible at 0 bugs). */
+  /** Reveal paste-the-error and the bugs counter once `lifetimeBugs` reaches this. */
   showPasteErrorBugs: 1,
   showKickAgentClicks: 10,
-  showWriteTestsBugs: 5,
+  showWriteTestsBugs: 10,
   showRunTestsBugs: 2,
   showClearContextLoc: 4000,
   showClearContextMinTokens: 10,
@@ -178,9 +178,9 @@ export const AGENT_BUFF = {
 // ─── Simulator / pacing ────────────────────────────────────────────────────
 
 /**
- * Virtual time (ms) charged per planner step after a successful action.
- * Matches `prompt.cooldownMs` so debug paths use the same pacing as play.
- * The sim harness does not use this — it relies on move-table cooldowns only.
+ * Default virtual time (ms) per planner step for actions without a yaml cooldown.
+ * Prompt and other cooldown actions use their gameplay cooldown values as a direct
+ * time cost in `planReach.ts` (no separate idle-wait search branches).
  */
 export const ACTION_DURATION_MS = 2000;
 
