@@ -6,7 +6,7 @@
 - id: model_update_1
   name: Faster Inference
   desc: 1s prompt cooldown. +5 LOC per prompt.
-  cost: 300
+  cost: 150
   unlockAt: 100
   clickBonus: 5
   promptCooldownMs: 1000

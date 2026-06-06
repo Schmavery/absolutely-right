@@ -9,13 +9,19 @@ import { advanceTick } from './game/foregroundTick';
 import { loadStateWithCatchup } from './game/snapshotPlay';
 import { clearSave, defaultState, saveState } from './game/state';
 import {
-  createWriterSessionId,
   isSaveEditorTabOpen,
   isSaveStorageKey,
   readSaveDiskSnapshot,
   shouldFollowDiskSnapshot,
   type SaveDiskSnapshot,
 } from './game/saveSync';
+import {
+  getOrCreateHmrWriterSessionId,
+  isHmrEnabled,
+  loadGameBootState,
+  registerHmrGameFlush,
+  stashHmrState,
+} from './lib/hmrGameSession';
 import { appendLog } from './game/log';
 import { getMove, rechargeProgress } from './game/availability';
 import {
@@ -69,12 +75,12 @@ const CLAIM_GRACE_MS = 1_000;
 export function Game() {
   const isMobile = useIsMobile();
 
-  const [state, setState] = useState<GameState>(() => loadStateWithCatchup());
+  const sessionIdRef = useRef(getOrCreateHmrWriterSessionId());
+  const [state, setState] = useState<GameState>(() => loadGameBootState(sessionIdRef.current));
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [blockedByOtherTab, setBlockedByOtherTab] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const sessionIdRef = useRef(createWriterSessionId());
   const persistedDiskRef = useRef<SaveDiskSnapshot>(readSaveDiskSnapshot());
   const pausedAtRef = useRef<number | null>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -230,9 +236,21 @@ export function Game() {
   }, []);
 
   useEffect(() => {
+    return registerHmrGameFlush(() => {
+      if (isSaveEditorTabOpen()) return undefined;
+      const toSave = stateRef.current;
+      saveState(toSave, 'game', sessionIdRef.current);
+      stashHmrState(toSave, sessionIdRef.current);
+      const disk = readSaveDiskSnapshot();
+      persistedDiskRef.current = disk;
+      return disk;
+    });
+  }, []);
+
+  useEffect(() => {
     const disk = readSaveDiskSnapshot();
     debugToast(
-      `mount · load+catchup · rev=${disk.rev} · session=${sessionLabel()} · writer=${disk.writerSessionId?.slice(0, 8) ?? '?'}`,
+      `mount · ${isHmrEnabled() ? 'hmr' : 'load'}+catchup · rev=${disk.rev} · session=${sessionLabel()} · writer=${disk.writerSessionId?.slice(0, 8) ?? '?'}`,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -246,13 +264,12 @@ export function Game() {
     );
   }, [isActive, isForeground]);
 
-  // Snapshot on blur / tab hide (rAF so React state from the last tick is committed).
+  // Snapshot on blur / tab hide. Pause time is recorded immediately; disk write
+  // is deferred one frame so the last React commit is included.
   useEffect(() => {
     const snapshot = (reason: string) => {
-      requestAnimationFrame(() => {
-        snapshotToDisk(reason);
-        pausedAtRef.current = Date.now();
-      });
+      if (pausedAtRef.current == null) pausedAtRef.current = Date.now();
+      requestAnimationFrame(() => snapshotToDisk(reason));
     };
     const onBlur = () => snapshot('blur');
     const onVisibility = () => {

@@ -14,10 +14,18 @@ const MESSAGE_POOL_KEYS = [
   'runMsg',
 ] as const satisfies readonly (keyof ActionDef)[];
 
-function logHasText(log: LogEntry[], text: string): boolean {
+const PASTE_SUFFIX_RE = / \[Pasted text #\d+ · \d+ lines\]$/;
+
+function logHasText(log: LogEntry[], text: string, opts?: { userLine?: boolean }): boolean {
   const t = text.trim();
   if (!t) return false;
-  return log.some((e) => e.text.trim() === t);
+  return log.some((e) => {
+    const entry = e.text.trim();
+    if (opts?.userLine || e.type === 'user') {
+      return entry === t || (entry.startsWith(t) && PASTE_SUFFIX_RE.test(entry));
+    }
+    return entry === t;
+  });
 }
 
 /** True when every checkable line from a template already appears in the log. */
@@ -29,7 +37,7 @@ function templateSeenInLog(source: string, log: LogEntry[]): boolean {
     const isUser = line.trimStart().startsWith('>');
     if (isUser) {
       const clean = line.replace(/^\s*>\s*/, '').trim();
-      if (!logHasText(log, clean)) return false;
+      if (!logHasText(log, clean, { userLine: true })) return false;
       continue;
     }
     if (line.includes('{{')) continue;
@@ -58,13 +66,13 @@ export function rehydratePoolUsage(state: GameState): GameState {
   const usedNewsIds = new Set(state.usedNewsIds);
 
   for (const ev of EVENTS) {
-    if (logHasText(log, render(ev.text).trim())) {
+    if (templateSeenInLog(ev.text, log)) {
       usedEventIds.add(eventKey(ev));
     }
   }
 
   for (const item of NEWS) {
-    if (logHasText(log, render(item.text).trim())) {
+    if (templateSeenInLog(item.text, log)) {
       usedNewsIds.add(item.id);
     }
   }
