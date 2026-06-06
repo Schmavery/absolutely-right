@@ -1,6 +1,9 @@
 /**
- * Cross-tab save coordination: revision metadata, editor-tab heartbeat, and
- * storage listeners so the game and /debug/save do not clobber each other.
+ * Save metadata and cross-tab detection.
+ *
+ * While a tab is open, in-memory state is authoritative; localStorage is a
+ * backup written on a timer, blur, unload, and player actions. Disk is read on
+ * mount and when another tab fires a `storage` event (game tab, save editor).
  */
 
 import type { GameState } from '../types';
@@ -165,3 +168,4 @@ export function shouldFollowDiskSnapshot(
   }
   return false;
 }
+

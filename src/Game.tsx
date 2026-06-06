@@ -108,6 +108,9 @@ export function Game() {
     );
   }, []);
 
+  const snapshotToDiskRef = useRef(snapshotToDisk);
+  snapshotToDiskRef.current = snapshotToDisk;
+
   const claimGraceUntilRef = useRef(0);
 
   const reloadFromDisk = useCallback(
@@ -158,7 +161,7 @@ export function Game() {
   const claimWriterRef = useRef(claimWriter);
   claimWriterRef.current = claimWriter;
 
-  /** Reload when disk diverged — steal if we're focused, block only in background. */
+  /** Another tab or the save editor wrote localStorage — adopt only via storage events. */
   const syncFromDisk = useCallback(
     (reason: string) => {
       const disk = readSaveDiskSnapshot();
@@ -184,6 +187,7 @@ export function Game() {
   const syncFromDiskRef = useRef(syncFromDisk);
   syncFromDiskRef.current = syncFromDisk;
 
+  /** Tab refocused — catch up in memory only; never reload disk in the same tab. */
   const resumeGameplay = useCallback(() => {
     if (skipNextActivateRef.current) {
       skipNextActivateRef.current = false;
@@ -192,26 +196,17 @@ export function Game() {
     }
 
     setBlockedByOtherTab(false);
-    const disk = readSaveDiskSnapshot();
-    const ownSnapshot =
-      disk.writerSessionId === sessionIdRef.current &&
-      !shouldFollowDiskSnapshot(persistedDiskRef.current, disk, sessionIdRef.current);
+    if (pausedAtRef.current == null) return;
 
-    if (ownSnapshot && pausedAtRef.current != null) {
-      const elapsed = Date.now() - pausedAtRef.current;
-      pausedAtRef.current = null;
-      setState((prev) => {
-        const next = elapsed > 0 ? advanceTick(prev, elapsed) : prev;
-        requestAnimationFrame(() => snapshotToDisk('focus catchup', next));
-        return next;
-      });
-      debugToast(`focus · catchup ${elapsed}ms · session=${sessionLabel()}`);
-      return;
-    }
-
-    const adopted = reloadFromDisk('focus');
-    snapshotToDisk('focus resume', adopted);
-  }, [reloadFromDisk, sessionLabel, snapshotToDisk]);
+    const elapsed = Date.now() - pausedAtRef.current;
+    pausedAtRef.current = null;
+    setState((prev) => {
+      const next = elapsed > 0 ? advanceTick(prev, elapsed) : prev;
+      requestAnimationFrame(() => snapshotToDisk('focus catchup', next));
+      return next;
+    });
+    debugToast(`focus · catchup ${elapsed}ms · session=${sessionLabel()}`);
+  }, [sessionLabel, snapshotToDisk]);
 
   const isGameplayActive = isActive && !blockedByOtherTab;
 
@@ -311,16 +306,11 @@ export function Game() {
     return () => clearInterval(id);
   }, [isGameplayActive, mcpRunning, state.mcpExecutingUntil]);
 
-  // Periodic snapshot while active; paused while /debug/save tab is open — see saveSync.
+  // Periodic backup while active. Memory is authoritative — never reload here.
   useEffect(() => {
     const id = setInterval(() => {
       if (!isGameplayActive) return;
       if (isSaveEditorTabOpen()) return;
-      const disk = readSaveDiskSnapshot();
-      if (shouldFollowDiskSnapshot(persistedDiskRef.current, disk, sessionIdRef.current)) {
-        syncFromDiskRef.current('periodic · disk ahead');
-        return;
-      }
       snapshotToDisk('autosave');
     }, SAVE_INTERVAL_MS);
     return () => clearInterval(id);
@@ -341,7 +331,11 @@ export function Game() {
   const dispatch = useCallback(
     <Args extends unknown[]>(fn: (s: GameState, ...args: Args) => GameState) =>
       (...args: Args) =>
-        setState((prev) => fn(prev, ...args)),
+        setState((prev) => {
+          const next = fn(prev, ...args);
+          requestAnimationFrame(() => snapshotToDiskRef.current('action', next));
+          return next;
+        }),
     [],
   );
 
