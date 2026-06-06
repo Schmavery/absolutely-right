@@ -15,7 +15,7 @@ export function introduceUnseenActions(state: GameState): GameState {
     if (!def.introMsg || introduced.has(def.id)) continue;
     const move = getMove(next, def.id, t);
     if (!move?.visible) continue;
-    next = appendLog(next, def.introMsg, 'info');
+    next = appendLog(next, def.introMsg, 'system', { priority: true });
     introduced.add(def.id);
     changed = true;
   }

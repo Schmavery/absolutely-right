@@ -12,10 +12,13 @@ export { computeTextStreamMs as streamingDurationMs } from './streamSchedule';
  *
  * Each entry gets `streamMs` at enqueue for `useStreamingLog` playback only.
  */
+export type AppendLogOpts = { priority?: boolean };
+
 export function appendLog(
   prev: GameState,
   text: string,
   type: LogEntryType,
+  opts?: AppendLogOpts,
 ): GameState {
   const lines = text.split('\n').filter((l) => l.trim().length > 0);
   let next = prev;
@@ -30,7 +33,14 @@ export function appendLog(
       afterUserReply: prevWasUser && !isUser,
     });
     prevWasUser = isUser;
-    const entry: LogEntry = { id: next.logId + 1, text: clean, type: entryType, streamMs, burstId };
+    const entry: LogEntry = {
+      id: next.logId + 1,
+      text: clean,
+      type: entryType,
+      streamMs,
+      burstId,
+      ...(opts?.priority ? { priority: true } : {}),
+    };
     next = {
       ...next,
       logId: next.logId + 1,
@@ -63,7 +73,7 @@ export function appendMcpToolLog(
   };
 }
 
-/** Append a line that appears in the log immediately (no token streaming). */
+/** Append a line that jumps to the front of the pending queue (no token animation). */
 export function appendLogInstant(
   prev: GameState,
   text: string,

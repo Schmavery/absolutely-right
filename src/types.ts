@@ -252,7 +252,9 @@ export interface LogEntry {
   burstId?: number;
   /** Ms for `useStreamingLog` to drain this entry; fixed in `appendLog`. */
   streamMs?: number;
-  /** Skip token streaming — show full line at once (MCP tool card, etc.). */
+  /** Jump to front of pending queue once the current line finishes. */
+  priority?: boolean;
+  /** Front of queue + no token animation (MCP tool cards, etc.). */
   instant?: boolean;
   /** Short post-approve line under an MCP `tool` entry body. */
   toolAck?: string;

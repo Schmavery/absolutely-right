@@ -17,6 +17,8 @@ describe('action intros', () => {
     const next = introduceUnseenActions(prev);
     expect(next.actionsIntroduced).toContain('write_test');
     expect(next.log.at(-1)?.text).toBe(action('write_test').introMsg);
+    expect(next.log.at(-1)?.type).toBe('system');
+    expect(next.log.at(-1)?.priority).toBe(true);
     expect(introduceUnseenActions(next)).toBe(next);
   });
 

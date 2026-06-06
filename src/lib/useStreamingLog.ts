@@ -2,20 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogEntry, LogEntryType } from '../types';
 import { STREAMING } from '../game/constants';
 import { aiStreamPhases, effectiveStreamMs } from '../game/streamSchedule';
+import { activeBurstIds, insertPriorityEntries } from './logQueue';
+
+export { isLogEntryFullyDisplayed } from './logQueue';
 
 /** Chat reply after a `>` line — not milestones/news (those use AI-only pacing). */
 const PROMPT_REPLY_TYPES: ReadonlySet<LogEntryType> = new Set(['info', 'bad', 'event']);
-
-/** True when `displayLog` has finished streaming an entry from `stateLog`. */
-export function isLogEntryFullyDisplayed(
-  entryId: number,
-  stateLog: LogEntry[],
-  displayLog: LogEntry[],
-): boolean {
-  const src = stateLog.find((e) => e.id === entryId);
-  const d = displayLog.find((e) => e.id === entryId);
-  return !!src && !!d && d.text === src.text;
-}
 
 /**
  * Subscribes to `state.log`-style append-only log and streams new entries
@@ -32,6 +24,9 @@ export function useStreamingLog(
   const [displayLog, setDisplayLog] = useState<LogEntry[]>(stateLog);
   const lastSeenIdRef = useRef(stateLog.reduce((m, e) => Math.max(m, e.id), 0));
   const pendingRef = useRef<LogEntry[]>([]);
+  const displayLogRef = useRef(stateLog);
+  displayLogRef.current = displayLog;
+  const currentEntryRef = useRef<LogEntry | null>(null);
   const isProcessingRef = useRef(false);
   const processRef = useRef<() => void>(null!);
   const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -110,10 +105,12 @@ export function useStreamingLog(
       return;
     }
     if (pendingRef.current.length === 0) {
+      currentEntryRef.current = null;
       finishQueue();
       return;
     }
     const entry = pendingRef.current.shift()!;
+    currentEntryRef.current = entry;
     const prevWasUser = prevEntryWasUserRef.current;
     const streamMs = effectiveStreamMs(entry, prevWasUser);
     const afterUserReply = prevWasUser && entry.type !== 'user';
@@ -123,7 +120,10 @@ export function useStreamingLog(
       setShowThinking(false);
       appendDisplayed((prev) => [...prev, entry]);
       prevEntryWasUserRef.current = false;
-      defer(() => processRef.current());
+      defer(() => {
+        currentEntryRef.current = null;
+        processRef.current();
+      });
       return;
     }
 
@@ -139,7 +139,10 @@ export function useStreamingLog(
           scheduleThinking(STREAMING.thinkingDelayMs);
         }
         prevEntryWasUserRef.current = true;
-        defer(() => processRef.current(), afterShowMs);
+        defer(() => {
+          currentEntryRef.current = null;
+          processRef.current();
+        }, afterShowMs);
       }, STREAMING.userLeadInMs);
       return;
     }
@@ -162,7 +165,10 @@ export function useStreamingLog(
             return next;
           });
           prevEntryWasUserRef.current = false;
-          defer(() => processRef.current(), phases.afterMs);
+          defer(() => {
+            currentEntryRef.current = null;
+            processRef.current();
+          }, phases.afterMs);
           return;
         }
         i++;
@@ -197,9 +203,27 @@ export function useStreamingLog(
     const newEntries = stateLog.filter((e) => e.id > lastSeenIdRef.current);
     if (newEntries.length === 0) return;
     lastSeenIdRef.current = stateLog[stateLog.length - 1]?.id ?? lastSeenIdRef.current;
-    pendingRef.current.push(...newEntries);
+
+    const priority: LogEntry[] = [];
+    const deferred: LogEntry[] = [];
+    for (const entry of newEntries) {
+      if (entry.instant || entry.priority) priority.push(entry);
+      else deferred.push(entry);
+    }
+    if (priority.length === 0 && deferred.length === 0) return;
+
+    if (priority.length > 0) {
+      const active = activeBurstIds(
+        stateLog,
+        displayLogRef.current,
+        currentEntryRef.current,
+      );
+      pendingRef.current = insertPriorityEntries(pendingRef.current, priority, active);
+    }
+    if (deferred.length > 0) pendingRef.current.push(...deferred);
+
     if (!isProcessingRef.current) {
-      const firstId = newEntries[0]!.id;
+      const firstId = pendingRef.current[0]!.id;
       const prior = stateLog.filter((e) => e.id < firstId).at(-1);
       prevEntryWasUserRef.current = prior?.type === 'user';
     }
@@ -236,6 +260,7 @@ export function useStreamingLog(
       setShowThinking(false);
       setIsAnimating(false);
       pendingRef.current = [];
+      currentEntryRef.current = null;
       isProcessingRef.current = false;
       spinnerPrimedRef.current = false;
       prevEntryWasUserRef.current = false;
