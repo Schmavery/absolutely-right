@@ -22,13 +22,11 @@ describe('action intros', () => {
     expect(introduceUnseenActions(next)).toBe(next);
   });
 
-  it('shows run_tests intro once when tests exist and bugs exceed the run threshold', () => {
+  it('shows run_tests intro once when tests reach the run threshold', () => {
     const prev = {
       ...defaultState(),
       started: true,
-      bugs: THRESHOLDS.showRunTestsBugs + 1,
-      lifetimeBugs: THRESHOLDS.showRunTestsBugs + 1,
-      tests: 1,
+      tests: THRESHOLDS.showRunTestsTests,
       actionsIntroduced: ['write_test'],
     };
     const next = introduceUnseenActions(prev);

@@ -42,7 +42,7 @@ export const THRESHOLDS = {
   showUpgradesLoc: 80,
 
   /** "Free Account" generator row becomes visible. */
-  showNewFreeAccountTokens: 500,
+  showNewFreeAccountTokens: 2000,
   /** Each generator becomes visible at `unlockAt * this`. */
   generatorVisibleFraction: 0.8,
   /** Each upgrade becomes a candidate for unlock at `unlockAt * this`. */
@@ -54,8 +54,9 @@ export const THRESHOLDS = {
   /** Reveal paste-the-error and the bugs counter once `lifetimeBugs` reaches this. */
   showPasteErrorBugs: 1,
   showKickAgentClicks: 10,
-  showWriteTestsBugs: 10,
-  showRunTestsBugs: 2,
+  showWriteTestsBugs: 50,
+  /** Reveal run_tests once the player has written at least this many tests. */
+  showRunTestsTests: 1,
   showClearContextLoc: 4000,
   showClearContextMinTokens: 10,
   showBugBountyBugs: 50,

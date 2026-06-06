@@ -4,7 +4,7 @@
   locPerSec: 3
   bugsPerSec: 0.02
   fixPerSec: 0
-  baseCost: 1000
+  baseCost: 500
   costMult: 1.12
   unlockAt: 500
 - id: copilot

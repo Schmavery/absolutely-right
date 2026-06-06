@@ -102,7 +102,7 @@ export interface UpgDef {
       | 'showPasteErrorBugs'
       | 'showKickAgentClicks'
       | 'showWriteTestsBugs'
-      | 'showRunTestsBugs'
+      | 'showRunTestsTests'
       | 'showClearContextLoc'
       | 'showClearContextMinTokens'
       | 'showBugBountyBugs'

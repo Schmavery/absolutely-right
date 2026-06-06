@@ -112,7 +112,8 @@
   # total fix fraction is 1 - (1 - p)^tests. With p=0.15: 1 test ≈ 15%,
   # 5 ≈ 56%, 10 ≈ 80%, 25 ≈ 98%. Approaches but never reaches 100%.
   perTestFixFraction: 0.15
-  minCost: 100
+  cooldownMs: 30000
+  minCost: 50
   costFraction: 0.005
   logCooldownMs: 4000
   introMsg: "Now that we have some tests, we can run them to find and fix existing bugs"

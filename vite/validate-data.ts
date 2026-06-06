@@ -48,7 +48,7 @@ const thresholdOverrideKey = z.enum([
   'showPasteErrorBugs',
   'showKickAgentClicks',
   'showWriteTestsBugs',
-  'showRunTestsBugs',
+  'showRunTestsTests',
   'showClearContextLoc',
   'showClearContextMinTokens',
   'showBugBountyBugs',

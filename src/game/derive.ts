@@ -52,9 +52,7 @@ export function deriveGame(state: GameState): DerivedGame {
       (state.bugs >= thresholds.showWriteTestsBugs || (state.tests ?? 0) > 0) &&
       !flag('ai_review'),
     showRunTests:
-      state.bugs > thresholds.showRunTestsBugs &&
-      (state.tests ?? 0) > 0 &&
-      !flag('ai_review'),
+      (state.tests ?? 0) >= thresholds.showRunTestsTests && !flag('ai_review'),
     showClearContext:
       (state.minTokensSeen ?? 9999) < thresholds.showClearContextMinTokens ||
       state.totalLoc >= thresholds.showClearContextLoc,

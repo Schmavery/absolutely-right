@@ -127,8 +127,8 @@ export function assessNeeds(state: GameState, t: number = runtimeNow()): NeedVec
 
   let testsUrgency = 0;
   if (state.bugs >= thresholds.showWriteTestsBugs && (state.tests ?? 0) === 0) {
-    testsUrgency = clamp01(state.bugs / Math.max(1, thresholds.showRunTestsBugs));
-  } else if (state.bugs >= thresholds.showRunTestsBugs && (state.tests ?? 0) > 0) {
+    testsUrgency = clamp01(state.bugs / Math.max(1, thresholds.showWriteTestsBugs));
+  } else if ((state.tests ?? 0) >= thresholds.showRunTestsTests) {
     testsUrgency = clamp01(0.4 * state.bugs / THRESHOLDS.warnBugsElevated);
   }
 
