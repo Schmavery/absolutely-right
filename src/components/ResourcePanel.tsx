@@ -6,6 +6,7 @@ import {
   calcMcMiniCodeLocRate,
   calcNinesRate,
   calcRates,
+  calcTestFixRate,
   calcTokenConfig,
   calcUptime,
   formatNinesPct,
@@ -14,7 +15,7 @@ import {
 import { AGENT_BUFF, INVESTOR, THRESHOLDS, TOKENS } from '../game/constants';
 import { deriveGame } from '../game/derive';
 import { normalizeMcMiniLanes } from '../game/investor';
-import { action, UPGRADES } from '../game/data';
+import { action } from '../game/data';
 
 interface RowProps {
   label: string;
@@ -103,11 +104,9 @@ export function ResourcePanel({ state }: Props) {
         <Row label="tests">
           <span className="text-dim">{state.tests}</span>
           <span className="text-dimmer text-[12px]">
-            (−{Math.round(100 * (1 - 1 / (1 + state.tests * (action('write_test').bugDamping ?? 0))))}% bugs
+            (−{Math.round(100 * (1 - 1 / (1 + state.tests * (action('write_test').bugDamping ?? 0))))}% bug rate
             {(() => {
-              const ciFix = snapRate(
-                state.tests * (UPGRADES.find((u) => u.id === 'cicd')?.testFixRate ?? 0),
-              );
+              const ciFix = snapRate((state.tests ?? 0) * calcTestFixRate(state.upgrades));
               return ciFix !== 0 ? ` · CI +${ciFix.toFixed(1)}/s fix` : '';
             })()}
             )

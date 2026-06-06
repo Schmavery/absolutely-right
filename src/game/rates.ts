@@ -72,6 +72,13 @@ export function snapRate(rate: number): number {
   return Math.abs(rate) < NEGLIGIBLE_RATE ? 0 : rate;
 }
 
+/** Per-test bug-fix rate from owned CI-style upgrades (summed). */
+export function calcTestFixRate(upgrades: string[]): number {
+  let testFixRate = 0;
+  for (const u of ownedDefs(upgrades)) if (u.testFixRate) testFixRate += u.testFixRate;
+  return testFixRate;
+}
+
 export function calcRates(
   genCounts: Record<string, number>,
   upgrades: string[],
@@ -85,14 +92,13 @@ export function calcRates(
   let bugMult = 1;
   let reviewLocMult = 1;
   let reviewBugMult = 1;
-  let testFixRate = 0;
+  const testFixRate = calcTestFixRate(upgrades);
 
   for (const u of ownedDefs(upgrades)) {
     if (u.globalMult) globalMult *= u.globalMult;
     if (u.bugMult) bugMult *= u.bugMult;
     if (u.reviewLocMult !== undefined) reviewLocMult = u.reviewLocMult; // last-wins
     if (u.reviewBugMult !== undefined) reviewBugMult = u.reviewBugMult; // last-wins
-    if (u.testFixRate) testFixRate += u.testFixRate;
   }
 
   // Each test reduces bug generation rate.
