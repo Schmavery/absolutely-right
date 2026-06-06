@@ -1,27 +1,37 @@
-import type { LogEntry } from '../types';
+import type { GameState, LogEntry } from '../types';
 import { isLogEntryFullyDisplayed } from './useStreamingLog';
 
-/**
- * User lines waiting in `state.log` while earlier entries still stream.
- * Scans all user entries (not only the first incomplete log line) so a
- * second `>` prompt during an AI reply still surfaces in the queued panel.
- */
-export function computeQueuedUserEntries(
-  stateLog: LogEntry[],
-  displayLog: LogEntry[],
-  isAnimating: boolean,
-): LogEntry[] {
-  if (!isAnimating) return [];
+/** User lines tagged `queued` in persisted state. */
+export function queuedUserEntries(state: GameState): LogEntry[] {
+  return state.log.filter((e) => e.type === 'user' && e.queued);
+}
 
-  const queued: LogEntry[] = [];
-  for (let i = 0; i < stateLog.length; i++) {
-    const entry = stateLog[i]!;
-    if (entry.type !== 'user') continue;
-    if (isLogEntryFullyDisplayed(entry.id, stateLog, displayLog)) continue;
-    const blocked = stateLog
+/**
+ * Tag blocked user lines as queued; clear the flag once they have streamed in.
+ * Persisted on `GameState.log` so reload / blur snapshot keeps the queue.
+ */
+export function syncQueuedUserFlags(state: GameState, displayLog: LogEntry[]): GameState {
+  let changed = false;
+  const log = state.log.map((entry, i) => {
+    if (entry.type !== 'user') return entry;
+
+    const displayed = isLogEntryFullyDisplayed(entry.id, state.log, displayLog);
+    const blocked = state.log
       .slice(0, i)
-      .some((prior) => !isLogEntryFullyDisplayed(prior.id, stateLog, displayLog));
-    if (blocked) queued.push(entry);
-  }
-  return queued;
+      .some((prior) => !isLogEntryFullyDisplayed(prior.id, state.log, displayLog));
+    const shouldQueue = !displayed && blocked;
+
+    if (shouldQueue && !entry.queued) {
+      changed = true;
+      return { ...entry, queued: true };
+    }
+    if (entry.queued && displayed) {
+      changed = true;
+      const { queued: _queued, ...rest } = entry;
+      return rest;
+    }
+    return entry;
+  });
+
+  return changed ? { ...state, log } : state;
 }

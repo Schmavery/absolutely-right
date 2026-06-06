@@ -42,7 +42,7 @@ interface UiData {
 }
 export const UI = UI_DATA as UiData;
 
-const ACTIONS = ACTIONS_DATA as ActionDef[];
+export const ACTIONS = ACTIONS_DATA as ActionDef[];
 const ACTION_MAP = new Map<string, ActionDef>(ACTIONS.map((a) => [a.id, a]));
 
 /**

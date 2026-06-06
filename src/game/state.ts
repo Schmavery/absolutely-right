@@ -66,6 +66,8 @@ export function initState(): GameState {
         mcMiniLanes: normalizeMcMiniLanes(mcMinis, parsed.mcMiniLanes ?? base.mcMiniLanes),
         buzzMeter: parsed.buzzMeter ?? base.buzzMeter,
         fundingRound: parsed.fundingRound ?? base.fundingRound,
+        usedEventIds: Array.isArray(parsed.usedEventIds) ? parsed.usedEventIds : base.usedEventIds,
+        usedNewsIds: Array.isArray(parsed.usedNewsIds) ? parsed.usedNewsIds : base.usedNewsIds,
       };
     }
   } catch {
@@ -74,8 +76,12 @@ export function initState(): GameState {
   return defaultState();
 }
 
-export function saveState(s: GameState, source: SaveSource = 'game'): number {
-  return writeSaveWithMeta(s, source);
+export function saveState(
+  s: GameState,
+  source: SaveSource = 'game',
+  writerSessionId?: string | null,
+): number {
+  return writeSaveWithMeta(s, source, writerSessionId);
 }
 
 export function clearSave(): void {

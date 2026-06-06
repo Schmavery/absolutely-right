@@ -12,6 +12,8 @@
  */
 
 export const TICK_MS = 100;
+/** Max virtual time applied in one foreground catch-up (tab refocus or throttled interval). */
+export const MAX_CATCHUP_MS = 30 * 60 * 1000;
 
 /** Per-second rates with |value| below this are treated as zero (ticks and UI). */
 export const NEGLIGIBLE_RATE = 0.01;

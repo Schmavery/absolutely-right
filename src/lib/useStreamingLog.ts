@@ -24,7 +24,11 @@ export function isLogEntryFullyDisplayed(
  *
  * Playback uses each entry's enqueue-time `streamMs` (see `streamSchedule.ts`).
  */
-export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
+export function useStreamingLog(
+  stateLog: LogEntry[],
+  stateLogId: number,
+  paused = false,
+) {
   const [displayLog, setDisplayLog] = useState<LogEntry[]>(stateLog);
   const lastSeenIdRef = useRef(stateLog.reduce((m, e) => Math.max(m, e.id), 0));
   const pendingRef = useRef<LogEntry[]>([]);
@@ -37,6 +41,31 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
   const [showThinking, setShowThinking] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [spinTick, setSpinTick] = useState(0);
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  /** Bumped on `reset` so in-flight stream timeouts cannot append after a reload. */
+  const generationRef = useRef(0);
+
+  const defer = useCallback((fn: () => void, ms = 0) => {
+    const gen = generationRef.current;
+    setTimeout(() => {
+      if (gen !== generationRef.current) return;
+      fn();
+    }, ms);
+  }, []);
+
+  const appendDisplayed = useCallback(
+    (append: (prev: LogEntry[]) => LogEntry[]) => {
+      setDisplayLog((prev) => {
+        const next = append(prev);
+        if (next.length <= prev.length) return next;
+        const added = next[next.length - 1]!;
+        if (prev.some((e) => e.id === added.id)) return prev;
+        return next;
+      });
+    },
+    [],
+  );
 
   const clearThinkingTimer = useCallback(() => {
     if (thinkingTimerRef.current !== null) {
@@ -45,13 +74,18 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     }
   }, []);
 
-  const scheduleThinking = useCallback((delayMs: number) => {
-    clearThinkingTimer();
-    thinkingTimerRef.current = setTimeout(() => {
-      thinkingTimerRef.current = null;
-      setShowThinking(true);
-    }, delayMs);
-  }, [clearThinkingTimer]);
+  const scheduleThinking = useCallback(
+    (delayMs: number) => {
+      clearThinkingTimer();
+      const gen = generationRef.current;
+      thinkingTimerRef.current = setTimeout(() => {
+        thinkingTimerRef.current = null;
+        if (gen !== generationRef.current) return;
+        setShowThinking(true);
+      }, delayMs);
+    },
+    [clearThinkingTimer],
+  );
 
   const finishQueue = useCallback(() => {
     clearThinkingTimer();
@@ -61,7 +95,20 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     prevEntryWasUserRef.current = false;
   }, [clearThinkingTimer]);
 
+  const kickProcess = useCallback(() => {
+    if (pausedRef.current) return;
+    if (pendingRef.current.length === 0) return;
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setIsAnimating(true);
+    processRef.current();
+  }, []);
+
   const processEntry = useCallback(() => {
+    if (pausedRef.current) {
+      isProcessingRef.current = false;
+      return;
+    }
     if (pendingRef.current.length === 0) {
       finishQueue();
       return;
@@ -74,9 +121,9 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     if (entry.instant) {
       clearThinkingTimer();
       setShowThinking(false);
-      setDisplayLog((prev) => [...prev, entry]);
+      appendDisplayed((prev) => [...prev, entry]);
       prevEntryWasUserRef.current = false;
-      setTimeout(() => processRef.current(), 0);
+      defer(() => processRef.current());
       return;
     }
 
@@ -84,15 +131,15 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
       clearThinkingTimer();
       setShowThinking(false);
       const afterShowMs = Math.max(0, streamMs - STREAMING.userLeadInMs);
-      setTimeout(() => {
-        setDisplayLog((prev) => [...prev, entry]);
+      defer(() => {
+        appendDisplayed((prev) => [...prev, entry]);
         const next = pendingRef.current[0];
         if (next && PROMPT_REPLY_TYPES.has(next.type)) {
           spinnerPrimedRef.current = true;
           scheduleThinking(STREAMING.thinkingDelayMs);
         }
         prevEntryWasUserRef.current = true;
-        setTimeout(() => processRef.current(), afterShowMs);
+        defer(() => processRef.current(), afterShowMs);
       }, STREAMING.userLeadInMs);
       return;
     }
@@ -104,29 +151,33 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
     const startAiStream = () => {
       clearThinkingTimer();
       setShowThinking(false);
-      setDisplayLog((prev) => [...prev, { ...entry, text: '' }]);
+      appendDisplayed((prev) => [...prev, { ...entry, text: '' }]);
       const tick = () => {
         if (i >= chunks.length) {
           setDisplayLog((prev) => {
             const next = [...prev];
-            if (next.length > 0) next[next.length - 1] = { ...entry, text: entry.text };
+            const idx = next.findIndex((e) => e.id === entry.id);
+            if (idx >= 0) next[idx] = { ...entry, text: entry.text };
+            else if (next.length > 0) next[next.length - 1] = { ...entry, text: entry.text };
             return next;
           });
           prevEntryWasUserRef.current = false;
-          setTimeout(() => processRef.current(), phases.afterMs);
+          defer(() => processRef.current(), phases.afterMs);
           return;
         }
         i++;
         const partial = chunks.slice(0, i).join('') + '|';
         setDisplayLog((prev) => {
           const next = [...prev];
-          if (next.length > 0) next[next.length - 1] = { ...entry, text: partial };
+          const idx = next.findIndex((e) => e.id === entry.id);
+          if (idx >= 0) next[idx] = { ...entry, text: partial };
+          else if (next.length > 0) next[next.length - 1] = { ...entry, text: partial };
           return next;
         });
         const isSpace = chunks[i - 1].trim() === '';
-        setTimeout(tick, isSpace ? 0 : phases.tokenDelayMs);
+        defer(tick, isSpace ? 0 : phases.tokenDelayMs);
       };
-      setTimeout(tick, phases.leadInMs);
+      defer(tick, phases.leadInMs);
     };
 
     prevEntryWasUserRef.current = false;
@@ -136,9 +187,9 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
       startAiStream();
     } else {
       setShowThinking(true);
-      setTimeout(startAiStream, phases.spinnerHoldMs);
+      defer(startAiStream, phases.spinnerHoldMs);
     }
-  }, [clearThinkingTimer, finishQueue, scheduleThinking]);
+  }, [appendDisplayed, clearThinkingTimer, defer, finishQueue, scheduleThinking]);
 
   processRef.current = processEntry;
 
@@ -151,30 +202,46 @@ export function useStreamingLog(stateLog: LogEntry[], stateLogId: number) {
       const firstId = newEntries[0]!.id;
       const prior = stateLog.filter((e) => e.id < firstId).at(-1);
       prevEntryWasUserRef.current = prior?.type === 'user';
-      isProcessingRef.current = true;
-      setIsAnimating(true);
-      processRef.current();
     }
+    kickProcess();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stateLogId]);
 
   useEffect(() => {
-    if (!showThinking) return;
+    if (paused) {
+      clearThinkingTimer();
+      return;
+    }
+    kickProcess();
+  }, [paused, clearThinkingTimer, kickProcess]);
+
+  useEffect(() => {
+    if (!showThinking || paused) return;
     const id = setInterval(() => setSpinTick((t) => t + 1), STREAMING.spinnerMs);
     return () => clearInterval(id);
-  }, [showThinking]);
+  }, [showThinking, paused]);
 
-  const reset = useCallback(() => {
-    clearThinkingTimer();
-    setDisplayLog([]);
-    setShowThinking(false);
-    setIsAnimating(false);
-    lastSeenIdRef.current = 0;
-    pendingRef.current = [];
-    isProcessingRef.current = false;
-    spinnerPrimedRef.current = false;
-    prevEntryWasUserRef.current = false;
-  }, [clearThinkingTimer]);
+  /** Pass `syncLog` after a disk reload so backlog entries are not re-streamed. */
+  const reset = useCallback(
+    (syncLog?: LogEntry[]) => {
+      generationRef.current += 1;
+      clearThinkingTimer();
+      if (syncLog) {
+        setDisplayLog(syncLog);
+        lastSeenIdRef.current = syncLog.reduce((m, e) => Math.max(m, e.id), 0);
+      } else {
+        setDisplayLog([]);
+        lastSeenIdRef.current = 0;
+      }
+      setShowThinking(false);
+      setIsAnimating(false);
+      pendingRef.current = [];
+      isProcessingRef.current = false;
+      spinnerPrimedRef.current = false;
+      prevEntryWasUserRef.current = false;
+    },
+    [clearThinkingTimer],
+  );
 
   return { displayLog, showThinking, isAnimating, spinTick, reset };
 }

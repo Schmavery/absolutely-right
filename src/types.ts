@@ -242,6 +242,8 @@ export interface LogEntry {
   id: number;
   text: string;
   type: LogEntryType;
+  /** User line waiting behind earlier log playback; cleared once streamed in. */
+  queued?: boolean;
   /** Ms for `useStreamingLog` to drain this entry; fixed in `appendLog`. */
   streamMs?: number;
   /** Skip token streaming — show full line at once (MCP tool card, etc.). */
