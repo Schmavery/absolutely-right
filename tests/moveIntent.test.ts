@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { defaultState } from '../src/game/state';
-import { assessNeeds, moveHelps, scoreMove, WEIGHTS_HYGIENE, WEIGHTS_LOC } from '../src/game/moveIntent';
+import {
+  assessNeeds,
+  kickLocHelp,
+  moveHelps,
+  scoreMove,
+  WEIGHTS_HYGIENE,
+  WEIGHTS_LOC,
+  WEIGHTS_PROGRESS,
+} from '../src/game/moveIntent';
 import type { Move } from '../src/game/availability';
 
 function actionMove(id: string): Move {
@@ -46,6 +54,21 @@ describe('scoreMove', () => {
     const clear = scoreMove(actionMove('clear_context'), needs, WEIGHTS_LOC);
     const prompt = scoreMove(actionMove('prompt'), needs, WEIGHTS_LOC);
     expect(clear).toBeGreaterThan(prompt);
+  });
+
+  it('scores kick_agent at least as high as prompt when racing to launch', () => {
+    const state = defaultState();
+    state.totalLoc = 7500;
+    state.loc = 2000;
+    state.tokens = 120;
+    state.upgrades = ['model_update_1'];
+    state.totalClicks = 20;
+    state.started = true;
+    const needs = assessNeeds(state, 0);
+    expect(kickLocHelp(state, 0)).toBeGreaterThan(0.5);
+    const kick = scoreMove(actionMove('kick_agent'), needs, WEIGHTS_PROGRESS, 0, state, 0);
+    const prompt = scoreMove(actionMove('prompt'), needs, WEIGHTS_PROGRESS, 0, state, 0);
+    expect(kick).toBeGreaterThanOrEqual(prompt);
   });
 
   it('prefers run_tests over prompt when bugs are high', () => {

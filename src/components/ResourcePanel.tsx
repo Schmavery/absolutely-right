@@ -3,7 +3,9 @@ import { fmt, fmtRate } from '../lib/format';
 import {
   calcBugPenalty,
   calcInfraBurnPerSec,
+  calcKickAgentLocPerSec,
   calcMcMiniCodeLocRate,
+  kickAgentBuffActive,
   calcNinesRate,
   calcRates,
   calcTestFixRate,
@@ -51,7 +53,10 @@ export function ResourcePanel({ state }: Props) {
 
   const lanes = normalizeMcMiniLanes(state.mcMinis ?? 0, state.mcMiniLanes);
   const mcMiniLoc = calcMcMiniCodeLocRate(lanes.code, state.upgrades) * bugPenalty;
-  const displayLocRate = snapRate(locRate * bugPenalty + mcMiniLoc);
+  const kickAgentLoc = kickAgentBuffActive(state, Date.now())
+    ? calcKickAgentLocPerSec(state.upgrades) * bugPenalty
+    : 0;
+  const displayLocRate = snapRate(locRate * bugPenalty + kickAgentLoc + mcMiniLoc);
   const burnRate = calcInfraBurnPerSec(state.upgrades);
   const buzz = state.buzzMeter ?? 0;
 

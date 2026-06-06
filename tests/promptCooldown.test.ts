@@ -4,8 +4,8 @@ import { getMove } from '../src/game/availability';
 import { defaultState } from '../src/game/state';
 
 describe('prompt cooldown', () => {
-  it('starts at 4s before Faster Inference', () => {
-    expect(calcPromptCooldownMs([])).toBe(4000);
+  it('starts at 5s before Faster Inference', () => {
+    expect(calcPromptCooldownMs([])).toBe(5000);
   });
 
   it('drops to 1s with Faster Inference', () => {
@@ -21,6 +21,6 @@ describe('prompt cooldown', () => {
     const move = getMove(state, 'prompt', Date.now())!;
     expect(move.legal).toBe(false);
     expect(move.waitMs).toBeGreaterThan(0);
-    expect(move.waitMs).toBeLessThanOrEqual(4000);
+    expect(move.waitMs).toBeLessThanOrEqual(5000);
   });
 });

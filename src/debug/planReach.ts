@@ -14,7 +14,13 @@ import type { GameState } from '../types';
 import { setClock, setRandom, resetClock, resetRandom, now } from '../game/runtime';
 import { tickReducer } from '../game/tick';
 import { appendLog } from '../game/log';
-import { calcClickBonus, calcClickPower, calcPromptCooldownMs, calcRates } from '../game/rates';
+import {
+  calcClickBonus,
+  calcClickPower,
+  calcKickAgentTokenCost,
+  calcPromptCooldownMs,
+  calcRates,
+} from '../game/rates';
 import { filterMovesForPlanner } from '../game/moveIntent';
 import { render } from '../lib/template';
 import { mulberry32 } from '../sim/Sim';
@@ -295,8 +301,11 @@ function stateKey(state: GameState, t: number): string {
   const totalLoc = Math.floor(state.totalLoc);
   const buffLeft = Math.max(0, (state.agentBuffExpires ?? 0) - t);
   const unlocked = [...state.unlockedUpgrades].sort().join(',');
-  const events = [...state.usedEventIds].sort().join(',');
-  return `${state.launched ? 1 : 0}|${[...state.upgrades].sort().join(',')}|u:${unlocked}|${gens}|loc:${loc}|tl:${totalLoc}|tok:${tok}|bugs:${Math.floor(state.bugs)}|tests:${state.tests}|clk:${state.totalClicks}|buff:${buffLeft}|ev:${events}`;
+  const logTail = state.log
+    .slice(-6)
+    .map((e) => e.id)
+    .join(',');
+  return `${state.launched ? 1 : 0}|${[...state.upgrades].sort().join(',')}|u:${unlocked}|${gens}|loc:${loc}|tl:${totalLoc}|tok:${tok}|bugs:${Math.floor(state.bugs)}|tests:${state.tests}|clk:${state.totalClicks}|buff:${buffLeft}|lt:${logTail}`;
 }
 
 function fastForward(state: GameState, t: number, dtMs: number): GameState {
@@ -331,12 +340,13 @@ export function applyPlanPrompt(prev: GameState): GameState {
 /** Deterministic kick: first message pool entry, no random events. */
 export function applyPlanKick(prev: GameState): GameState {
   const a = action('kick_agent');
-  if (a.tokenCost != null && prev.tokens < a.tokenCost) return prev;
+  const tokenCost = calcKickAgentTokenCost(prev.upgrades);
+  if (prev.tokens < tokenCost) return prev;
   if (now() < (prev.agentBuffExpires ?? 0)) return prev;
   let next: GameState = {
     ...prev,
-    tokens: prev.tokens - (a.tokenCost ?? 0),
-    totalTokensSpent: (prev.totalTokensSpent ?? 0) + (a.tokenCost ?? 0),
+    tokens: prev.tokens - tokenCost,
+    totalTokensSpent: (prev.totalTokensSpent ?? 0) + tokenCost,
     agentBuffExpires: now() + (a.buffMs ?? 0),
   };
   const msg = a.messages?.[0];

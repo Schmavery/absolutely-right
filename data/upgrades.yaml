@@ -57,6 +57,14 @@
   clickMult: 3
   requires:
     - better_prompts
+- id: subagent_harness
+  name: Subagent Harness
+  desc: Kick agent costs +30 tokens; +22 LOC/s while it runs (30s, scales independently)
+  cost: 1800
+  unlockAt: 600
+  kickAgentTokenCostBonus: 30
+  kickAgentLocPerSec: 22
+  purchaseMsg: Subagent harness installed. They run in parallel now. So does the meter.
 
 # ── Ch2 early mid — launch, CI, lint, smarter models ───────────────────────
 - id: cicd

@@ -33,7 +33,14 @@ import {
   mcpBlocksPlay,
   mcpDenyAction,
 } from './mcpApproval';
-import { calcBugPenalty, calcPromptCooldownMs, calcRates, calcTokenConfig, genCost } from './rates';
+import {
+  calcBugPenalty,
+  calcKickAgentTokenCost,
+  calcPromptCooldownMs,
+  calcRates,
+  calcTokenConfig,
+  genCost,
+} from './rates';
 import {
   buyGenAction,
   buyUpgradeAction,
@@ -383,6 +390,7 @@ interface Ctx {
 }
 
 function prompt(c: Ctx): Move {
+  const a = action('prompt');
   const promptCd = calcPromptCooldownMs(c.state.upgrades);
   return buildMove(
     {
@@ -392,7 +400,11 @@ function prompt(c: Ctx): Move {
       visible: true,
       apply: promptAction,
     },
-    withMcpIdle(c.state, [cooldownGate(c.state, 'prompt', promptCd, c.t)], c.t),
+    withMcpIdle(
+      c.state,
+      [cooldownGate(c.state, 'prompt', promptCd, c.t), tokenGate(c.state, a.tokenCost)],
+      c.t,
+    ),
   );
 }
 
@@ -483,6 +495,7 @@ function writeTest(c: Ctx): Move {
 
 function kickAgent(c: Ctx): Move {
   const a = action('kick_agent');
+  const tokenCost = calcKickAgentTokenCost(c.state.upgrades);
   return buildMove(
     {
       id: 'kick_agent',
@@ -491,7 +504,11 @@ function kickAgent(c: Ctx): Move {
       visible: c.ui.showKickAgent,
       apply: kickAgentAction,
     },
-    withMcpIdle(c.state, [tokenGate(c.state, a.tokenCost), buffGate(c.state, c.t, a.buffMs ?? 1)], c.t),
+    withMcpIdle(
+      c.state,
+      [tokenGate(c.state, tokenCost), buffGate(c.state, c.t, a.buffMs ?? 1)],
+      c.t,
+    ),
   );
 }
 

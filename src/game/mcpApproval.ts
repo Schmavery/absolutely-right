@@ -13,7 +13,7 @@ import { appendLog, appendMcpToolLog } from './log';
 import { withBugs } from './state';
 import { computeFlags, hasFlag, type GameFlag } from './flags';
 import { formatMcpToolCall } from '../lib/formatMcpTool';
-import { markIdUsed, markMessageUsed, pickUnused, pickUnusedById } from '../lib/messageKey';
+import { pickFromPool, pickMcpTool } from '../lib/logTemplateMatch';
 import { render } from '../lib/template';
 import { random } from './runtime';
 
@@ -100,21 +100,14 @@ function renderApprovedToolLine(def: McpToolDef): string {
   return formatMcpToolCall(def, (s) => render(s), { includeOutput: true });
 }
 
-function buildAllowAck(
-  prev: GameState,
-  def: McpToolDef,
-): { ack: string; state: GameState } {
+function buildAllowAck(prev: GameState, def: McpToolDef): { ack: string; state: GameState } {
   let ack = render(def.onAllow);
-  let state = prev;
   if (def.safe || mcpYoloSilencesFallout(computeFlags(prev.upgrades))) {
-    return { ack, state };
+    return { ack, state: prev };
   }
-  const leakLine = pickUnused(MCP_UNSAFE_ALLOW_LEAK_ACK, state.usedEventIds);
-  if (leakLine) {
-    ack = `${ack}\n${render(leakLine)}`;
-    state = { ...state, usedEventIds: markMessageUsed(state, leakLine) };
-  }
-  return { ack, state };
+  const leakLine = pickFromPool(MCP_UNSAFE_ALLOW_LEAK_ACK, prev.log);
+  if (leakLine) ack = `${ack}\n${render(leakLine)}`;
+  return { ack, state: prev };
 }
 
 function denyLineFor(def: McpToolDef): string | undefined {
@@ -122,9 +115,9 @@ function denyLineFor(def: McpToolDef): string | undefined {
 }
 
 function pickToolBeat(prev: GameState): { next: GameState; def?: McpToolDef } {
-  const def = pickUnusedById(MCP_TOOLS, prev.usedEventIds);
+  const def = pickMcpTool(MCP_TOOLS, prev.log);
   if (!def) return { next: prev };
-  return { next: { ...prev, usedEventIds: markIdUsed(prev, def.id) }, def };
+  return { next: prev, def };
 }
 
 export function mcpToolsEnabled(flags: ReadonlySet<GameFlag>): boolean {

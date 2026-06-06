@@ -20,12 +20,13 @@ import { computeFlags, effectiveThresholds, hasFlag } from './flags';
 import {
   calcClickBonus,
   calcClickPower,
+  calcKickAgentTokenCost,
   calcPromptCooldownMs,
   calcPromptEventProbability,
   calcTokenConfig,
   genCost,
 } from './rates';
-import { markMessageUsed, pickUnused } from '../lib/messageKey';
+import { pickFromPool } from '../lib/logTemplateMatch';
 import { render } from '../lib/template';
 import { introduceUnseenActions } from './actionIntros';
 import { clearMcpApproval, maybeMcpApprovalAfterPrompt, mcpApprovalsSuppressed } from './mcpApproval';
@@ -44,17 +45,20 @@ function logUnusedPool(
   vars: Record<string, unknown> = {},
 ): GameState {
   if (!pool?.length) return prev;
-  const source = pickUnused(pool, prev.usedEventIds);
+  const source = pickFromPool(pool, prev.log);
   if (!source) return prev;
-  let next = logFromUser(prev, render(source, vars), type);
-  return { ...next, usedEventIds: markMessageUsed(next, source) };
+  return logFromUser(prev, render(source, vars), type);
 }
 
-function spendTokens(prev: GameState, n: number): GameState {
+function spendTokens(prev: GameState, n: number | undefined): GameState {
+  const cost = n ?? 0;
+  if (cost <= 0) return prev;
+  const tokens = prev.tokens - cost;
   return {
     ...prev,
-    tokens: prev.tokens - n,
-    totalTokensSpent: (prev.totalTokensSpent ?? 0) + n,
+    tokens,
+    totalTokensSpent: (prev.totalTokensSpent ?? 0) + cost,
+    minTokensSeen: Math.min(prev.minTokensSeen ?? 9999, tokens),
   };
 }
 
@@ -78,6 +82,7 @@ function canAfford(prev: GameState, a: ActionDef): boolean {
 
 export function promptAction(prev: GameState): GameState {
   const a = action('prompt');
+  if (!canAfford(prev, a)) return prev;
   const promptCd = calcPromptCooldownMs(prev.upgrades);
   if (promptCd && isOnCooldown(prev, 'prompt', promptCd)) return prev;
   const thresholds = effectiveThresholds(prev.upgrades);
@@ -86,7 +91,7 @@ export function promptAction(prev: GameState): GameState {
   const bugFromPrompt =
     prev.totalLoc >= thresholds.bugSpawnLoc && random() < thresholds.promptBugChance ? 1 : 0;
   let next: GameState = {
-    ...prev,
+    ...spendTokens(prev, a.tokenCost!),
     loc: prev.loc + locGain,
     ...withBugs(prev, prev.bugs + bugFromPrompt),
     totalLoc: prev.totalLoc + locGain,
@@ -97,7 +102,6 @@ export function promptAction(prev: GameState): GameState {
   if (prev.totalClicks < scripted.length) {
     const source = scripted[prev.totalClicks]!;
     next = logFromUser(next, render(source), 'info');
-    next = { ...next, usedEventIds: markMessageUsed(next, source) };
   } else if (a.eventProbability) {
     const past = prev.totalClicks - scripted.length;
     const prob = calcPromptEventProbability(a.eventProbability, past);
@@ -111,10 +115,11 @@ export function promptAction(prev: GameState): GameState {
 
 export function kickAgentAction(prev: GameState): GameState {
   const a = action('kick_agent');
-  if (!canAfford(prev, a)) return prev;
+  const tokenCost = calcKickAgentTokenCost(prev.upgrades);
+  if (prev.tokens < tokenCost) return prev;
   if (now() < (prev.agentBuffExpires ?? 0)) return prev;
   let next: GameState = {
-    ...spendTokens(prev, a.tokenCost!),
+    ...spendTokens(prev, tokenCost),
     agentBuffExpires: now() + a.buffMs!,
   };
   next = logUnusedPool(next, a.messages, 'info');
@@ -138,7 +143,7 @@ export function pasteErrorAction(prev: GameState): GameState {
     : random() < 0.5
       ? a.badMessages!
       : a.neutralMessages!;
-  const source = pickUnused(pool, prev.usedEventIds);
+  const source = pickFromPool(pool, prev.log);
 
   let next: GameState = {
     ...spendTokens(prev, a.tokenCost!),
@@ -153,7 +158,6 @@ export function pasteErrorAction(prev: GameState): GameState {
     const ref = 1 + Math.floor(random() * 8);
     const suffixed = render(source).replace(/^(>[^\n]*)/, `$1 [Pasted text #${ref} · ${lines} lines]`);
     next = logFromUser(next, suffixed, 'info');
-    next = { ...next, usedEventIds: markMessageUsed(next, source) };
   }
   return next;
 }

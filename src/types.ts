@@ -36,8 +36,12 @@ export interface UpgDef {
   reviewLocMult?: number;
   /** Last-owned-wins (later upgrades override earlier ones). */
   reviewBugMult?: number;
-  /** Multiplies agent base LOC during the agent buff. Last-owned-wins. */
+  /** Multiplies McMini code LOC/s. Last-owned-wins. */
   agentLocMult?: number;
+  /** Additive flat LOC/s while `kick_agent` buff is active (independent of generators). */
+  kickAgentLocPerSec?: number;
+  /** Additive tokens spent per `kick_agent` (stacks across owned upgrades). */
+  kickAgentTokenCostBonus?: number;
   /** Per-test bug-fix rate from CI. Summed across owned upgrades. */
   testFixRate?: number;
 
@@ -281,7 +285,7 @@ export interface GameState {
   milestonesSeen: number[];
   started: boolean;
   launched: boolean;
-  /** Slug keys for dialogue/events/action pools already shown (no repeats per save). */
+  /** Legacy save field; random pools dedupe from the recent log window now. */
   usedEventIds: string[];
   /** Action ids whose `introMsg` has been shown (one-shot per save). */
   actionsIntroduced?: string[];

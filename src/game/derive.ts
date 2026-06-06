@@ -5,7 +5,8 @@
  */
 
 import type { GameState } from '../types';
-import { LAUNCH_LOC } from './constants';
+import { LAUNCH_LOC, TOKENS } from './constants';
+import { calcTokenConfig } from './rates';
 import { mcpApprovalPending } from './mcpApproval';
 import {
   computeFlags,
@@ -45,8 +46,11 @@ export function deriveGame(state: GameState): DerivedGame {
   const thresholds = effectiveThresholds(state.upgrades);
   const flag = (f: GameFlag) => hasFlag(flags, f);
 
+  const { maxTokens } = calcTokenConfig(state.upgrades, state.freeAccounts);
+  const tokenShowThreshold = maxTokens * TOKENS.showAtMaxFillFraction;
+
   const ui: DerivedUi = {
-    showTokens: (state.totalTokensSpent ?? 0) > 0,
+    showTokens: (state.minTokensSeen ?? maxTokens) <= tokenShowThreshold,
     showPasteError: (state.lifetimeBugs ?? 0) >= thresholds.showPasteErrorBugs,
     showWriteTests:
       (state.bugs >= thresholds.showWriteTestsBugs || (state.tests ?? 0) > 0) &&

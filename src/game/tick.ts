@@ -9,10 +9,11 @@ import {
   normalizeMcMiniLanes,
 } from './investor';
 import {
-  calcAgentLocMult,
   calcAutoBugDrainRate,
   calcBugPenalty,
   calcClickPower,
+  calcKickAgentLocPerSec,
+  kickAgentBuffActive,
   calcMcMiniCodeLocRate,
   calcNinesRate,
   calcRates,
@@ -52,10 +53,13 @@ export function tickReducer(state: GameState, dtMs: number = TICK_MS): GameState
   const bugPenalty = calcBugPenalty(prev.bugs);
   const mcMinis = prev.mcMinis ?? 0;
   const lanes = normalizeMcMiniLanes(mcMinis, prev.mcMiniLanes);
-  const agentMult = calcAgentLocMult(prev.upgrades);
   const mcMiniCodeRate =
     mcMinis > 0 ? calcMcMiniCodeLocRate(lanes.code, prev.upgrades) * bugPenalty : 0;
-  const effectiveLocRate = snapRate(locRate + mcMiniCodeRate);
+  const genLocRate = locRate * bugPenalty;
+  const kickAgentLocRate = kickAgentBuffActive(prev, now())
+    ? calcKickAgentLocPerSec(prev.upgrades) * bugPenalty
+    : 0;
+  const effectiveLocRate = snapRate(genLocRate + kickAgentLocRate + mcMiniCodeRate);
   const effectiveLoc = effectiveLocRate * dt;
   const mcMiniBugs =
     mcMinis > 0 && prev.totalLoc >= thresholds.bugSpawnLoc && lanes.code > 0

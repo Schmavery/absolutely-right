@@ -47,6 +47,16 @@ describe('planShortestPath', () => {
     expect(outcome.launchPhaseStatesVisited).toBeLessThan(outcome.statesVisited);
   });
 
+  it('fastest launch plan kicks agents', () => {
+    const outcome = planShortestPath(
+      { kind: 'launched' },
+      { maxStates: 25_000, maxTimeMs: 20 * 60_000, seed: 42, promptCostMult: 1 },
+    );
+    const kicks = outcome.result?.steps.filter((s) => s.moveId === 'kick_agent').length ?? 0;
+    expect(outcome.result, 'planner should reach launch').not.toBeNull();
+    expect(kicks, 'optimal launch uses parallel subagent buffs').toBeGreaterThanOrEqual(2);
+  });
+
   it('reaches model_update_1 or a strong frontier witness', () => {
     const outcome = planShortestPath(
       { kind: 'upgrade', id: 'model_update_1' },

@@ -2,7 +2,8 @@ import type { EventDef, GameState, LogEntry, LogEntryType, NewsDef } from '../ty
 import { withBugs } from './state';
 import { EVENTS, NEWS } from './data';
 import { EVENT_COOLDOWN_MS, EVENT_MIX, THRESHOLDS } from './constants';
-import { markMessageUsed, messageKey } from '../lib/messageKey';
+import { templateSeenInRecentLog } from '../lib/logTemplateMatch';
+import { messageKey } from '../lib/messageKey';
 import { render } from '../lib/template';
 import { now, random } from './runtime';
 
@@ -51,11 +52,11 @@ function gatedEvents(prev: GameState): EventDef[] {
   });
 }
 
-/** Unused gated events first; when exhausted, the full gated pool is eligible again. */
+/** LOC-gated events not represented in the recent log window. */
 function dialogueEventPool(prev: GameState): EventDef[] {
-  const gated = gatedEvents(prev);
-  const fresh = gated.filter((e) => !prev.usedEventIds.includes(eventKey(e)));
-  return fresh.length > 0 ? fresh : gated;
+  return gatedEvents(prev).filter(
+    (e) => !templateSeenInRecentLog(e.text, prev.log),
+  );
 }
 
 function applyEventEffects(prev: GameState, ev: EventDef): GameState {
@@ -78,7 +79,7 @@ function applyEventEffects(prev: GameState, ev: EventDef): GameState {
  * don't all trigger an event in a single tick.
  *
  * Headlines (`data/news.yaml`) fire at most once per save (by `id`). Dialogue
- * events exhaust all currently gated lines (by first-line key) before any repeat.
+ * events skip lines that appear in the recent log window; empty pool → silence.
  *
  * @param prob  probability the action triggers an event at all (0–1)
  */
@@ -99,7 +100,6 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
   let logType: LogEntry['type'];
   let text: string;
   let newsId: string | undefined;
-  let eventSource: string | undefined;
 
   if (pickNews) {
     const item = weightedPick(newsPool, random());
@@ -110,7 +110,6 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
     const ev = weightedPick(eventPool, random());
     next = applyEventEffects(next, ev);
     text = ev.text;
-    eventSource = ev.text;
     // Dialogue events share normal reply styling; reserve `bad` for MCP fallout.
     logType = 'info';
   }
@@ -118,8 +117,5 @@ export function maybeFireEvent(prev: GameState, prob: number, addLog: AddLogFn):
   next = addLog(next, render(text), logType);
   next = { ...next, lastEventTime: t };
   if (newsId) next = { ...next, usedNewsIds: [...next.usedNewsIds, newsId] };
-  if (eventSource) {
-    next = { ...next, usedEventIds: markMessageUsed(next, eventSource) };
-  }
   return next;
 }

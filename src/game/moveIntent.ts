@@ -5,12 +5,21 @@
  */
 
 import type { Move } from './availability';
-import { LAUNCH_LOC, THRESHOLDS } from './constants';
+import { LAUNCH_LOC, LOC_PER_CLICK_POWER, THRESHOLDS } from './constants';
 import { action, GENS, UPGRADES } from './data';
 import { deriveGame } from './derive';
 import { mcpBlocksPlay } from './mcpApproval';
 import { mcpToolIsSafe } from './data';
-import { calcTokenConfig, genCost } from './rates';
+import {
+  calcClickBonus,
+  calcClickPower,
+  calcKickAgentLocPerSec,
+  calcKickAgentTokenCost,
+  calcPromptCooldownMs,
+  calcTokenConfig,
+  genCost,
+  kickAgentBuffActive,
+} from './rates';
 import type { GameState } from '../types';
 import { now as runtimeNow } from './runtime';
 
@@ -63,7 +72,7 @@ const MOVE_HELPS: Record<string, Partial<Record<NeedAxis, number>>> = {
   paste_error: { bugs: 0.85, loc: 0.25 },
   write_test: { tests: 1, bugs: 0.45 },
   run_tests: { bugs: 1 },
-  kick_agent: { loc: 0.85 },
+  kick_agent: { loc: 0.35, launch: 0.9 },
   clear_context: { tokens: 1 },
   new_free_account: { tokens: 1 },
   launch: { launch: 1 },
@@ -83,8 +92,46 @@ export function moveIntentKey(m: Move): string {
   return m.kind === 'action' ? m.actionId! : m.kind;
 }
 
-export function moveHelps(m: Move): Partial<Record<NeedAxis, number>> {
-  return MOVE_HELPS[moveIntentKey(m)] ?? {};
+/**
+ * Expected LOC from one kick cycle: passive buff output plus prompts fired during
+ * the buff window (parallel with manual clicks).
+ */
+export function kickCycleLocValue(state: GameState, t: number = runtimeNow()): number {
+  if (kickAgentBuffActive(state, t)) return 0;
+  const a = action('kick_agent');
+  const buffSec = (a.buffMs ?? 30_000) / 1000;
+  const passive = calcKickAgentLocPerSec(state.upgrades) * buffSec;
+  const cdMs = Math.max(1, calcPromptCooldownMs(state.upgrades));
+  const perPrompt =
+    calcClickPower(state.upgrades) * LOC_PER_CLICK_POWER + calcClickBonus(state.upgrades);
+  const promptsDuringBuff = (buffSec * 1000) / cdMs * perPrompt;
+  return passive + promptsDuringBuff;
+}
+
+/** 0–1: how much one kick cycle closes the gap to launch (drives bot + planner filters). */
+export function kickLocHelp(state: GameState, t: number = runtimeNow()): number {
+  const gap = Math.max(0, LAUNCH_LOC - state.totalLoc);
+  if (gap <= 0 || kickAgentBuffActive(state, t)) return 0;
+  const cycle = kickCycleLocValue(state, t);
+  const perPrompt =
+    calcClickPower(state.upgrades) * LOC_PER_CLICK_POWER + calcClickBonus(state.upgrades);
+  const equivalentPrompts = cycle / Math.max(1, perPrompt);
+  const launchBoost = state.totalLoc >= LAUNCH_LOC * 0.25 ? 1 + clamp01(state.totalLoc / LAUNCH_LOC) : 1;
+  // One kick cycle replaces several manual prompts during the buff window.
+  return clamp01((equivalentPrompts / 6) * launchBoost);
+}
+
+export function moveHelps(
+  m: Move,
+  state?: GameState,
+  t?: number,
+): Partial<Record<NeedAxis, number>> {
+  const base = MOVE_HELPS[moveIntentKey(m)] ?? {};
+  if (m.actionId === 'kick_agent' && state) {
+    const help = kickLocHelp(state, t);
+    return { ...base, loc: Math.max(base.loc ?? 0, help) };
+  }
+  return base;
 }
 
 /** Cheapest visible gen/upgrade buy target (for loc pressure). */
@@ -112,11 +159,16 @@ export function cheapestBuyTarget(state: GameState): number | null {
 export function assessNeeds(state: GameState, t: number = runtimeNow()): NeedVector {
   const { ui, thresholds } = deriveGame(state);
   const { maxTokens } = calcTokenConfig(state.upgrades, state.freeAccounts);
-  const kickCost = action('kick_agent').tokenCost ?? 60;
+  const kickCost = calcKickAgentTokenCost(state.upgrades);
   const buyTarget = cheapestBuyTarget(state);
   const locDenom = buyTarget ?? LAUNCH_LOC * 0.5;
 
-  const locUrgency = clamp01(1 - state.loc / Math.max(1, locDenom * 0.45));
+  const walletLocUrgency = clamp01(1 - state.loc / Math.max(1, locDenom * 0.45));
+  const launchGapUrgency =
+    !state.launched && state.totalLoc < LAUNCH_LOC
+      ? clamp01(1 - state.totalLoc / LAUNCH_LOC)
+      : 0;
+  const locUrgency = Math.max(walletLocUrgency, launchGapUrgency);
 
   const tokenPressure =
     state.tokens < kickCost * 1.1 ||
@@ -156,8 +208,10 @@ export function scoreMove(
   weights: NeedWeights,
   /** Tiny bias so ties are stable and buys beat noise. */
   tieBias = 0,
+  state?: GameState,
+  t?: number,
 ): number {
-  const helps = moveHelps(move);
+  const helps = moveHelps(move, state, t);
   let s = tieBias;
   for (const axis of Object.keys(needs) as NeedAxis[]) {
     const h = helps[axis] ?? 0;
@@ -186,11 +240,13 @@ export function pickAdaptiveMove(
     );
     if (mcp.length === 0) return null;
     const needs = assessNeeds(ctx.state, ctx.t);
-    const score = (m: Move) => scoreMove(m, needs, opts.weights, opts.tieBias?.(m) ?? 0);
+    const score = (m: Move) =>
+      scoreMove(m, needs, opts.weights, opts.tieBias?.(m) ?? 0, ctx.state, ctx.t);
     return [...mcp].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id))[0]!;
   }
   const needs = assessNeeds(ctx.state, ctx.t);
-  const score = (m: Move) => scoreMove(m, needs, opts.weights, opts.tieBias?.(m) ?? 0);
+  const score = (m: Move) =>
+    scoreMove(m, needs, opts.weights, opts.tieBias?.(m) ?? 0, ctx.state, ctx.t);
 
   const sortedLegal = [...ctx.legal].sort((a, b) => {
     const d = score(b) - score(a);
@@ -231,9 +287,9 @@ export function filterMovesForPlanner(
     if (m.waitMs === null && !m.legal) return false;
     if (m.kind === 'buy_upgrade' || m.kind === 'buy_gen') return true;
     if (m.id === 'launch') return true;
-    const s = scoreMove(m, needs, weights);
+    const s = scoreMove(m, needs, weights, 0, state, t);
     if (s >= minScore) return true;
-    const helps = moveHelps(m);
+    const helps = moveHelps(m, state, t);
     return top.some((axis) => (helps[axis] ?? 0) >= 0.5);
   });
 }

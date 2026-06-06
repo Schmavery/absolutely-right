@@ -8,8 +8,16 @@
  */
 
 import { action, GENS, UPGRADES } from './data';
-import type { GenDef, UpgDef } from '../types';
-import { BUG_GENERATION, INVESTOR, NEGLIGIBLE_RATE, PROMPT_EVENT, TOKENS, UPTIME } from './constants';
+import type { GameState, GenDef, UpgDef } from '../types';
+import {
+  AGENT_BUFF,
+  BUG_GENERATION,
+  INVESTOR,
+  NEGLIGIBLE_RATE,
+  PROMPT_EVENT,
+  TOKENS,
+  UPTIME,
+} from './constants';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -63,6 +71,32 @@ export function calcAgentLocMult(upgrades: string[]): number {
   let mult = 1;
   for (const u of ownedDefs(upgrades)) if (u.agentLocMult !== undefined) mult = u.agentLocMult;
   return mult;
+}
+
+/** Flat LOC/s from legacy `kick_agent` buff (pre-McMini); base + summed upgrade bonuses. */
+export function calcKickAgentLocPerSec(upgrades: string[]): number {
+  let rate = AGENT_BUFF.locPerSec;
+  for (const u of ownedDefs(upgrades)) {
+    if (u.kickAgentLocPerSec) rate += u.kickAgentLocPerSec;
+  }
+  return snapRate(rate);
+}
+
+export function kickAgentBuffActive(
+  state: Pick<GameState, 'agentBuffExpires' | 'mcMinis'>,
+  t: number,
+): boolean {
+  return (state.mcMinis ?? 0) === 0 && t < (state.agentBuffExpires ?? 0);
+}
+
+/** Effective `kick_agent` token cost; base from `actions.yaml` + summed bonuses. */
+export function calcKickAgentTokenCost(upgrades: string[]): number {
+  const base = action('kick_agent').tokenCost ?? 0;
+  let bonus = 0;
+  for (const u of ownedDefs(upgrades)) {
+    if (u.kickAgentTokenCostBonus) bonus += u.kickAgentTokenCostBonus;
+  }
+  return base + bonus;
 }
 
 // ─── rates ─────────────────────────────────────────────────────────────────

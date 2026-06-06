@@ -30,6 +30,11 @@ export const DEFAULT_THEME = 'terminal-light';
 /** Min ms between any two random events firing across actions. */
 export const EVENT_COOLDOWN_MS = 5000;
 
+/** Random dialogue/action pools skip templates seen in this many recent log entries. */
+export const MESSAGE_POOL = {
+  recentWindow: 48,
+} as const;
+
 // ─── UI gating thresholds ──────────────────────────────────────────────────
 //
 // Anything keyed off raw player progress lives here. The names match how the
@@ -129,6 +134,8 @@ export const PROMPT_EVENT = {
 export const TOKENS = {
   baseMax: 120,
   baseRegen: 4,
+  /** Reveal token counter once fill has fallen to this fraction of max (or lower). */
+  showAtMaxFillFraction: 0.1,
   /** Min token reading below which the "low" warning shows. */
   lowWarnThreshold: 20,
 } as const;
@@ -169,6 +176,8 @@ export const BUG_GENERATION: {
 export const AGENT_BUFF = {
   /** Bug-rate multiplier while the agent buff is active. */
   bugRateMult: 1.5,
+  /** Flat LOC/s while `kick_agent` buff is active (independent of generator scaling). */
+  locPerSec: 20,
   /**
    * If `nines` has never been initialized but status was revamped, fall back
    * to this floor when computing nines.
@@ -205,7 +214,7 @@ export const STREAMING = {
   /** Pause before a user line appears (ms). */
   userLeadInMs: 240,
   /** Pause after a user line before the next entry begins (ms). */
-  afterUserMs: 5000,
+  afterUserMs: 3000,
   /** Delay after a user line before the thinking spinner appears (ms). */
   thinkingDelayMs: 500,
   /** How long the spinner stays visible on AI-only lines before typing (ms). */

@@ -17,8 +17,20 @@ import {
 } from '../src/game/mcpApproval';
 import { setRandom } from '../src/game/runtime';
 import { getMove, rechargeProgress } from '../src/game/availability';
+import type { GameState, McpToolDef } from '../src/types';
 import { MCP_TOOLS, mcpToolById } from '../src/game/data';
+import { appendMcpToolLog } from '../src/game/log';
 import { defaultState } from '../src/game/state';
+import { mcpToolHead } from '../src/lib/logTemplateMatch';
+
+function withRecentToolLog(state: GameState, tools: readonly McpToolDef[]): GameState {
+  let next = state;
+  for (const tool of tools) {
+    const head = mcpToolHead(tool);
+    if (head) next = appendMcpToolLog(next, head);
+  }
+  return next;
+}
 
 describe('MCP approvals', () => {
   it('yolo_mode skips approval card and appends a tool log entry', () => {
@@ -72,10 +84,7 @@ describe('MCP approvals', () => {
     expect(safe.mcpAutoApproveAt).toBeNull();
     expect(getMove(safe, 'mcp_always_allow', Date.now())!.legal).toBe(true);
 
-    const usedSafe = {
-      ...prev,
-      usedEventIds: MCP_TOOLS.filter((t) => t.safe).map((t) => t.id),
-    };
+    const usedSafe = withRecentToolLog(prev, MCP_TOOLS.filter((t) => t.safe));
     setRandom(() => 0);
     const unsafe = maybeMcpApprovalAfterPrompt(usedSafe, usedSafe);
     expect(mcpApprovalPending(unsafe)).toBe(true);
@@ -103,12 +112,14 @@ describe('MCP approvals', () => {
 
   it('pending card omits Shell output until approved', () => {
     setRandom(() => 0);
-    const prev = {
-      ...defaultState(),
-      upgrades: ['mcp_tools'],
-      launched: true,
-      usedEventIds: MCP_TOOLS.filter((t) => t.id !== 'shell_git_status').map((t) => t.id),
-    };
+    const prev = withRecentToolLog(
+      {
+        ...defaultState(),
+        upgrades: ['mcp_tools'],
+        launched: true,
+      },
+      MCP_TOOLS.filter((t) => t.id !== 'shell_git_status'),
+    );
     const next = maybeMcpApprovalAfterPrompt(prev, prev);
     expect(next.mcpApprovalPending).toContain('git status');
     expect(next.mcpApprovalPending).not.toMatch(/changed files/);
@@ -116,7 +127,8 @@ describe('MCP approvals', () => {
     vi.spyOn(Date, 'now').mockReturnValue(at);
     let done = mcpAllowAction(next);
     done = advanceMcpTiming(done, at + MCP.executeSpinnerMs);
-    expect(done.log[0]?.text).toMatch(/changed files/);
+    const tool = done.log.find((e) => e.type === 'tool' && e.text.includes('git status'));
+    expect(tool?.text).toMatch(/changed files/);
   });
 
   it('pending approval does not append the request to the log', () => {
@@ -214,20 +226,22 @@ describe('MCP approvals', () => {
 
   it('yolo unsafe beat has no LOC leak or fallout log lines', () => {
     setRandom(() => 0);
-    const prev = {
-      ...defaultState(),
-      loc: 100_000,
-      totalLoc: 500_000,
-      upgrades: ['mcp_tools', 'always_allow', 'yolo_mode'],
-      launched: true,
-      usedEventIds: MCP_TOOLS.filter((t) => t.safe).map((t) => t.id),
-    };
+    const prev = withRecentToolLog(
+      {
+        ...defaultState(),
+        loc: 100_000,
+        totalLoc: 500_000,
+        upgrades: ['mcp_tools', 'always_allow', 'yolo_mode'],
+        launched: true,
+      },
+      MCP_TOOLS.filter((t) => t.safe),
+    );
     const next = maybeMcpApprovalAfterPrompt(prev, prev);
     expect(mcpApprovalPending(next)).toBe(false);
     expect(next.loc).toBe(100_000);
-    expect(next.log).toHaveLength(1);
-    expect(next.log[0]?.type).toBe('tool');
-    expect(next.log[0]?.toolAck).toBeUndefined();
+    const tool = next.log[next.log.length - 1];
+    expect(tool?.type).toBe('tool');
+    expect(tool?.toolAck).toBeUndefined();
     expect(next.log.some((e) => e.text.includes('Data leak'))).toBe(false);
   });
 

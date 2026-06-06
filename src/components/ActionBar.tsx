@@ -1,6 +1,6 @@
 import type { GameState } from '../types';
 import { action } from '../game/data';
-import { calcTokenConfig } from '../game/rates';
+import { calcKickAgentTokenCost, calcTokenConfig } from '../game/rates';
 import { runTestsCost, runTestsFixFraction, writeTestCost } from '../game/actions';
 import { getMove, rechargeProgress } from '../game/availability';
 import { fmt } from '../lib/format';
@@ -31,6 +31,7 @@ export function ActionBar({
 }: Props) {
   const now = Date.now();
   const { maxTokens } = calcTokenConfig(state.upgrades, state.freeAccounts);
+  const kickTokenCost = calcKickAgentTokenCost(state.upgrades);
   const agentBuffRemaining = Math.max(0, state.agentBuffExpires - now);
 
   const A = {
@@ -103,7 +104,7 @@ export function ActionBar({
               }
               progressClassName={buffActive ? 'bg-green/10' : undefined}
             >
-              kick off an agent [{A.kickAgent.tokenCost}t]
+              kick off an agent [{kickTokenCost}t]
             </Button>
             {buffActive && (
               <span className="text-dimmer text-[11px]">

@@ -1,7 +1,7 @@
 import type { ActionDef, EventDef } from '../types';
 import { messageKey } from './messageKey';
 
-/** String pools on `ActionDef` that share `usedEventIds` with events and MCP acks. */
+/** String pools on `ActionDef` checked for slug collisions with MCP ack lines. */
 export const ACTION_MESSAGE_POOL_KEYS = [
   'earlyPromptMsgs',
   'messages',
@@ -15,7 +15,7 @@ export const ACTION_MESSAGE_POOL_KEYS = [
 
 export type MessagePoolEntry = { label: string; source: string };
 
-/** Every template that competes in the shared `usedEventIds` exhaust pool. */
+/** Templates whose slug keys must stay distinct (flavor vs MCP ack collision guard). */
 export function collectUsedEventIdTemplates(
   events: readonly EventDef[],
   actions: readonly ActionDef[],
