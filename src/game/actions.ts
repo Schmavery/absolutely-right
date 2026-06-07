@@ -21,7 +21,11 @@ import {
   calcClickBonus,
   calcClickPower,
   calcKickAgentTokenCost,
+  calcPasteErrorFixChance,
+  calcPasteErrorTokenCost,
+  formatPasteErrorLog,
   calcPromptCooldownMs,
+  calcPromptTokenCost,
   calcPromptEventProbability,
   calcTokenConfig,
   genCost,
@@ -82,7 +86,8 @@ function canAfford(prev: GameState, a: ActionDef): boolean {
 
 export function promptAction(prev: GameState): GameState {
   const a = action('prompt');
-  if (!canAfford(prev, a)) return prev;
+  const tokenCost = calcPromptTokenCost(prev.upgrades);
+  if (prev.tokens < tokenCost) return prev;
   const promptCd = calcPromptCooldownMs(prev.upgrades);
   if (promptCd && isOnCooldown(prev, 'prompt', promptCd)) return prev;
   const thresholds = effectiveThresholds(prev.upgrades);
@@ -91,7 +96,7 @@ export function promptAction(prev: GameState): GameState {
   const bugFromPrompt =
     prev.totalLoc >= thresholds.bugSpawnLoc && random() < thresholds.promptBugChance ? 1 : 0;
   let next: GameState = {
-    ...spendTokens(prev, a.tokenCost!),
+    ...spendTokens(prev, tokenCost),
     loc: prev.loc + locGain,
     ...withBugs(prev, prev.bugs + bugFromPrompt),
     totalLoc: prev.totalLoc + locGain,
@@ -131,11 +136,12 @@ export function kickAgentAction(prev: GameState): GameState {
 
 export function pasteErrorAction(prev: GameState): GameState {
   const a = action('paste_error');
+  const tokenCost = calcPasteErrorTokenCost(prev.upgrades);
   if (prev.bugs <= 0) return prev;
-  if (!canAfford(prev, a)) return prev;
+  if (prev.tokens < tokenCost) return prev;
   if (isOnCooldown(prev, 'paste_error', a.cooldownMs!)) return prev;
 
-  const fixed = random() < a.fixChance!;
+  const fixed = random() < calcPasteErrorFixChance(prev.upgrades);
   const bugDelta = fixed ? -1 : 0;
   const locDelta = a.baseLocGain! + Math.floor(random() * a.extraLocRange!);
   const pool = fixed
@@ -146,7 +152,7 @@ export function pasteErrorAction(prev: GameState): GameState {
   const source = pickFromPool(pool, prev.log);
 
   let next: GameState = {
-    ...spendTokens(prev, a.tokenCost!),
+    ...spendTokens(prev, tokenCost),
     loc: prev.loc + locDelta,
     totalLoc: prev.totalLoc + locDelta,
     ...withBugs(prev, prev.bugs + bugDelta),
@@ -156,7 +162,8 @@ export function pasteErrorAction(prev: GameState): GameState {
   if (source) {
     const lines = 2 + Math.floor(random() * 15);
     const ref = 1 + Math.floor(random() * 8);
-    const suffixed = render(source).replace(/^(>[^\n]*)/, `$1 [Pasted text #${ref} · ${lines} lines]`);
+    const pasteMeta = `[Pasted text #${ref} · ${lines} lines]`;
+    const suffixed = formatPasteErrorLog(render(source), prev.upgrades, pasteMeta);
     next = logFromUser(next, suffixed, 'info');
   }
   return next;

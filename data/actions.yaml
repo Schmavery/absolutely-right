@@ -142,6 +142,7 @@
   tokenCost: 0
 
 - id: launch
+  introMsg: "Deploy to production when you're ready. I've reviewed the codebase — we're good to go."
   messages:
     - I've deployed to production! This is exciting. What could go wrong?
 
@@ -187,7 +188,7 @@
   tokenCost: 5
   baseCost: 200
   costMult: 1.04
-  bugDamping: 0.01
+  bugDamping: 0.013
   introMsg: "You can ask me to write a test! Maybe that will stop the bugs from piling up"
   milestones:
     - count: 1

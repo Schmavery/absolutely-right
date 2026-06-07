@@ -1,6 +1,11 @@
 import type { GameState } from '../types';
 import { action } from '../game/data';
-import { calcKickAgentTokenCost, calcTokenConfig } from '../game/rates';
+import {
+  calcKickAgentTokenCost,
+  calcPasteErrorTokenCost,
+  calcTokenConfig,
+  pasteErrorButtonLabel,
+} from '../game/rates';
 import { runTestsCost, runTestsFixFraction, writeTestCost } from '../game/actions';
 import { getMove, rechargeProgress } from '../game/availability';
 import { fmt } from '../lib/format';
@@ -32,6 +37,8 @@ export function ActionBar({
   const now = Date.now();
   const { maxTokens } = calcTokenConfig(state.upgrades, state.freeAccounts);
   const kickTokenCost = calcKickAgentTokenCost(state.upgrades);
+  const pasteTokenCost = calcPasteErrorTokenCost(state.upgrades);
+  const pasteLabel = pasteErrorButtonLabel(state.upgrades);
   const agentBuffRemaining = Math.max(0, state.agentBuffExpires - now);
 
   const A = {
@@ -68,10 +75,10 @@ export function ActionBar({
         <Button
           off={!m.pasteError.legal}
           onClick={m.pasteError.legal ? onPasteError : undefined}
-          title="paste the error back in"
+          title={pasteLabel === '/fix-bug' ? 'invoke /fix-bug' : 'paste the error back in'}
           progress={rechargeProgress(m.pasteError)}
         >
-          paste the error [{A.pasteError.tokenCost}t]
+          {pasteLabel} [{pasteTokenCost}t]
         </Button>
       )}
 

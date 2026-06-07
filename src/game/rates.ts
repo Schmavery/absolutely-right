@@ -99,6 +99,54 @@ export function calcKickAgentTokenCost(upgrades: string[]): number {
   return base + bonus;
 }
 
+/** Effective `prompt` token cost; base from `actions.yaml` + summed bonuses. */
+export function calcPromptTokenCost(upgrades: string[]): number {
+  const base = action('prompt').tokenCost ?? 0;
+  let bonus = 0;
+  for (const u of ownedDefs(upgrades)) {
+    if (u.promptTokenCostBonus) bonus += u.promptTokenCostBonus;
+  }
+  return base + bonus;
+}
+
+/** Effective `paste_error` token cost; base from `actions.yaml` + summed bonuses. */
+export function calcPasteErrorTokenCost(upgrades: string[]): number {
+  const base = action('paste_error').tokenCost ?? 0;
+  let bonus = 0;
+  for (const u of ownedDefs(upgrades)) {
+    if (u.pasteErrorTokenCostBonus) bonus += u.pasteErrorTokenCostBonus;
+  }
+  return base + bonus;
+}
+
+/** Effective `paste_error` fix chance; base from `actions.yaml` + summed bonuses (max 1). */
+export function calcPasteErrorFixChance(upgrades: string[]): number {
+  const base = action('paste_error').fixChance ?? 0;
+  let bonus = 0;
+  for (const u of ownedDefs(upgrades)) {
+    if (u.pasteErrorFixChanceBonus) bonus += u.pasteErrorFixChanceBonus;
+  }
+  return Math.min(1, base + bonus);
+}
+
+export function hasFixBugSkill(upgrades: string[]): boolean {
+  return upgrades.includes('fix_bug_skill');
+}
+
+/** Action-bar label for `paste_error`; `/fix-bug` after the skill upgrade is owned. */
+export function pasteErrorButtonLabel(upgrades: string[]): string {
+  return hasFixBugSkill(upgrades) ? '/fix-bug' : 'paste the error';
+}
+
+/** First user line of a paste_error beat; prepends `/fix-bug` and pasted-text meta. */
+export function formatPasteErrorLog(rendered: string, upgrades: string[], pasteMeta: string): string {
+  let text = rendered;
+  if (hasFixBugSkill(upgrades)) {
+    text = text.replace(/^(>)( ?)([^\n]*)/, '$1 /fix-bug $3');
+  }
+  return text.replace(/^(>[^\n]*)/, `$1 ${pasteMeta}`);
+}
+
 // ─── rates ─────────────────────────────────────────────────────────────────
 
 /** Snap negligible per-second rates to zero so ticks and UI ignore noise. */

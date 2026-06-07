@@ -42,6 +42,12 @@ export interface UpgDef {
   kickAgentLocPerSec?: number;
   /** Additive tokens spent per `kick_agent` (stacks across owned upgrades). */
   kickAgentTokenCostBonus?: number;
+  /** Additive tokens spent per `prompt` (stacks across owned upgrades). */
+  promptTokenCostBonus?: number;
+  /** Additive tokens spent per `paste_error` (stacks across owned upgrades). */
+  pasteErrorTokenCostBonus?: number;
+  /** Additive fix chance for `paste_error` (stacks; capped at 1). */
+  pasteErrorFixChanceBonus?: number;
   /** Per-test bug-fix rate from CI. Summed across owned upgrades. */
   testFixRate?: number;
 

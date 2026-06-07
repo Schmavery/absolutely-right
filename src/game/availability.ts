@@ -36,7 +36,9 @@ import {
 import {
   calcBugPenalty,
   calcKickAgentTokenCost,
+  calcPasteErrorTokenCost,
   calcPromptCooldownMs,
+  calcPromptTokenCost,
   calcRates,
   calcTokenConfig,
   genCost,
@@ -402,7 +404,7 @@ function prompt(c: Ctx): Move {
     },
     withMcpIdle(
       c.state,
-      [cooldownGate(c.state, 'prompt', promptCd, c.t), tokenGate(c.state, a.tokenCost)],
+      [cooldownGate(c.state, 'prompt', promptCd, c.t), tokenGate(c.state, calcPromptTokenCost(c.state.upgrades))],
       c.t,
     ),
   );
@@ -462,7 +464,7 @@ function pasteError(c: Ctx): Move {
     [
       boolGate(c.state.bugs > 0),
       cooldownGate(c.state, 'paste_error', a.cooldownMs, c.t),
-      tokenGate(c.state, a.tokenCost),
+      tokenGate(c.state, calcPasteErrorTokenCost(c.state.upgrades)),
     ],
     c.t,
   );

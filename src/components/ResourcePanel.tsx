@@ -19,6 +19,12 @@ import { deriveGame } from '../game/derive';
 import { normalizeMcMiniLanes } from '../game/investor';
 import { action } from '../game/data';
 
+function testBugRateReductionPct(tests: number): number {
+  const d = action('write_test').bugDamping ?? 0;
+  if (tests <= 0 || d <= 0) return 0;
+  return Math.round(100 * (1 - 1 / (1 + tests * d)));
+}
+
 interface RowProps {
   label: string;
   children: React.ReactNode;
@@ -105,19 +111,28 @@ export function ResourcePanel({ state }: Props) {
       )}
 
       {/* tests */}
-      {(state.tests ?? 0) > 0 && !hasFlag('ai_review') && (
-        <Row label="tests">
-          <span className="text-dim">{state.tests}</span>
-          <span className="text-dimmer text-[12px]">
-            (−{Math.round(100 * (1 - 1 / (1 + state.tests * (action('write_test').bugDamping ?? 0))))}% bug rate
-            {(() => {
-              const ciFix = snapRate((state.tests ?? 0) * calcTestFixRate(state.upgrades));
-              return ciFix !== 0 ? ` · CI +${ciFix.toFixed(1)}/s fix` : '';
-            })()}
-            )
-          </span>
-        </Row>
-      )}
+      {(state.tests ?? 0) > 0 && !hasFlag('ai_review') && (() => {
+        const tests = state.tests ?? 0;
+        const dampPct = testBugRateReductionPct(tests);
+        const ciFix = snapRate(tests * calcTestFixRate(state.upgrades));
+        return (
+          <Row label="tests">
+            <span className="text-dim">{tests}</span>
+            {(dampPct > 0 || ciFix !== 0) && (
+              <span className="text-dimmer text-[12px]">
+                (
+                {[
+                  dampPct > 0 && `−${dampPct}% bug rate`,
+                  ciFix !== 0 && `CI +${ciFix.toFixed(1)}/s fix`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                )
+              </span>
+            )}
+          </Row>
+        );
+      })()}
 
       {/* uptime / nines */}
       {ui.showUptime && !ui.ninesTracking && (

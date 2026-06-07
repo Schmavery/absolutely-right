@@ -5,15 +5,16 @@
 # ── Ch1 early — prompts & basic tests ───────────────────────────────────────
 - id: model_update_1
   name: Faster Inference
-  desc: 1s prompt cooldown. +5 LOC per prompt.
+  desc: 1s prompt cooldown. +5 LOC per prompt. +3 tokens per prompt.
   cost: 150
   unlockAt: 100
   clickBonus: 5
   promptCooldownMs: 1000
+  promptTokenCostBonus: 3
   purchaseMsg: Faster inference enabled. I'll get back to you sooner. Accuracy unchanged.
 - id: model_update_2
   name: Extended Context
-  desc: +15 LOC per prompt — longer context window, more output per call
+  desc: more output! +15 LOC per prompt
   cost: 6000
   unlockAt: 4000
   clickBonus: 15
@@ -29,10 +30,11 @@
     - model_update_2
 - id: better_prompts
   name: Prompt Engineering
-  desc: 2× manual output
+  desc: 2× manual output. +4 tokens per prompt.
   cost: 5000
   unlockAt: 3000
   clickMult: 2
+  promptTokenCostBonus: 4
   purchaseMsg: Prompt engineering engaged. I'm now 2× more confident. Accuracy unchanged.
 - id: model_update_4
   name: Latest Weights
@@ -59,12 +61,20 @@
     - better_prompts
 - id: subagent_harness
   name: Subagent Harness
-  desc: Kick agent costs +30 tokens; +22 LOC/s while it runs (30s, scales independently)
+  desc: Better subagents. +30 tokens; +22 LOC/s.
   cost: 1800
   unlockAt: 600
   kickAgentTokenCostBonus: 30
   kickAgentLocPerSec: 22
-  purchaseMsg: Subagent harness installed. They run in parallel now. So does the meter.
+  purchaseMsg: Subagent harness installed.
+- id: fix_bug_skill
+  name: /fix-bug Skill
+  desc: Better bug fixing. +5 tokens, +25% fix rate.
+  cost: 1200
+  unlockAt: 300
+  pasteErrorTokenCostBonus: 5
+  pasteErrorFixChanceBonus: 0.25
+  purchaseMsg: /fix-bug skill installed.
 
 # ── Ch2 early mid — launch, CI, lint, smarter models ───────────────────────
 - id: cicd
